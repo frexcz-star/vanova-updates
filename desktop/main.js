@@ -620,12 +620,27 @@ async function runtimeBelongsToThisInstall() {
 async function ensureRuntimeStarted() {
   if (await probeRuntimeHealth(2000)) {
     if (await runtimeBelongsToThisInstall()) {
-      logElectronEvent('Runtime already healthy — skipping spawn (same install)');
-      return true;
+      // BUG-0001 (QA baseline): si el runtime responde pero NO fue lanzado por
+      // este proceso Electron, es un huérfano de una sesión anterior (crash /
+      // force-kill): su stack interno (cloud 8000, connector, Hermes 8642)
+      // puede estar en un estado inconsistente. Reemplazarlo para levantar el
+      // stack completo limpio en lugar de reutilizar un zombie silencioso.
+      if (!runtimeProcess) {
+        logElectronEvent('Runtime healthy but orphaned from a previous session — replacing', {});
+        const killed = killPidsOnPort(RUNTIME_PORT);
+        if (killed.length) {
+          logElectronEvent('Cleared orphaned runtime before re-spawn', { pids: killed });
+          await sleep(800);
+        }
+      } else {
+        logElectronEvent('Runtime already healthy — skipping spawn (same install)');
+        return true;
+      }
+    } else {
+      lastRuntimeStartError = 'FOREIGN_RUNTIME';
+      logElectronEvent('Runtime belongs to another installation — refusing to attach', {});
+      return false;
     }
-    lastRuntimeStartError = 'FOREIGN_RUNTIME';
-    logElectronEvent('Runtime belongs to another installation — refusing to attach', {});
-    return false;
   }
 
   for (let attempt = 1; attempt <= RUNTIME_START_ATTEMPTS; attempt++) {
@@ -971,7 +986,21 @@ if (!gotSingleInstanceLock) {
   logElectronEvent('Second instance blocked — exiting');
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (event, argv, workingDirectory) => {
+    // BUG-0002 (QA baseline): un QA/automatización lanza VANOVA con
+    // --remote-debugging-port mientras la app ya corre en background (tray).
+    // La 2ª instancia se bloquea por diseño (una instalación activa por
+    // máquina), pero el flag se pierde y Playwright ve ECONNREFUSED.
+    // Detectar el flag y relanzar ESTA instancia con él, de modo que el
+    // puerto de depuración quede disponible sin duplicar el perfil de datos.
+    const debugArg = (argv || []).find((a) => a.indexOf('--remote-debugging-port=') === 0);
+    if (debugArg) {
+      logElectronEvent('Debug flag requested — relaunching with remote debugging', { debugArg });
+      const baseArgs = (process.argv.slice(1) || []).filter((a) => a.indexOf('--remote-debugging-port=') !== 0);
+      app.relaunch({ args: baseArgs.concat([debugArg]) });
+      app.quit();
+      return;
+    }
     logElectronEvent('Second instance requested — focusing existing window');
     focusPrimaryWindow();
   });

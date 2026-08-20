@@ -54,6 +54,42 @@ class ElectronHardeningTests(unittest.TestCase):
         ):
             self.assertIn(method, allowed)
 
+    # BUG-0001 (QA baseline): un runtime huérfano de una sesión muerta
+    # (crash / force-kill de Electron) NO debe reutilizarse en silencio.
+    # Si responde /api/health pero no fue lanzado por este proceso
+    # (runtimeProcess === null), debe reemplazarse para que cloud/connector/
+    # Hermes se levanten limpios.
+    def test_bug0001_orphaned_runtime_is_replaced_not_reused(self):
+        source = MAIN_JS.read_text(encoding="utf-8")
+        # El código debe comprobar si el runtime fue lanzado por este proceso.
+        self.assertIn("runtimeBelongsToThisInstall", source)
+        self.assertIn("!runtimeProcess", source)
+        # Debe existir el log que distingue el huérfano del caso sano.
+        self.assertIn(
+            "Runtime healthy but orphaned from a previous session — replacing",
+            source,
+        )
+        self.assertIn("killPidsOnPort(RUNTIME_PORT)", source)
+        # El caso sano (mismo proceso Electron) sigue reutilizando el runtime.
+        self.assertIn("Runtime already healthy — skipping spawn", source)
+        # El caso foráneo sigue rechazándose (P2-2, nunca mezclar perfiles).
+        self.assertIn("FOREIGN_RUNTIME", source)
+        self.assertIn("refusing to attach", source)
+
+    # BUG-0002 (QA baseline): lanzar VANOVA con --remote-debugging-port
+    # mientras otra instancia corre en background no debe perder el flag.
+    # La instancia existente debe relanzarse con el flag de depuración.
+    def test_bug0002_remote_debugging_flag_is_relayed(self):
+        source = MAIN_JS.read_text(encoding="utf-8")
+        # El handler de segunda instancia debe detectar el flag de depuración.
+        self.assertIn("--remote-debugging-port=", source)
+        self.assertIn("app.relaunch", source)
+        # Debe relanzarse con el flag, nunca abrir un segundo perfil.
+        self.assertIn("app.quit()", source)
+        # El focus normal de segunda instancia debe seguir existiendo.
+        self.assertIn("focusPrimaryWindow()", source)
+        self.assertNotIn("remote-debugging-port", source.split("second-instance")[0])
+
 
 if __name__ == "__main__":
     unittest.main()

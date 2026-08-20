@@ -8922,7 +8922,13 @@ async function loadAppData(opts){
     // Data mode stored for views — status pill handled by MAIOSSystemStatus
     store._dataModeLabel = isRealDataMode(store.dataMode) ? (store.dataMode==='real'?'REAL DATA':'LOCAL SCAN') : store.dataMode==='mock' ? 'DEV SAMPLE' : 'No data';
     // subscribe to realtime (throttled: max 1 toast every 15 s to avoid spam)
-    if (isRealDataMode(store.dataMode) || store.connected) {
+    // BUG-003 FIX: guard the subscription so loadAppData() never opens a second
+    // WebSocket. Each ds.subscribe() call creates an independent connection with
+    // its own reconnect loop; calling it on every loadAppData() (which is invoked
+    // from many places AND from the activity callback itself) spawned duplicate
+    // sockets and notification spam. Subscribe exactly once per page load.
+    if ((isRealDataMode(store.dataMode) || store.connected) && !window.__MAIOS_WS_SUBSCRIBED__) {
+      window.__MAIOS_WS_SUBSCRIBED__ = true;
       var _lastActivityToast = 0;
       var ACTIVITY_TOAST_COOLDOWN_MS = 15000;
       ds.subscribe(function(evt){

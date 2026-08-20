@@ -395,13 +395,15 @@ def make_finding(
     # relativo a la fecha de referencia de los datos; sin ventana, se usa la
     # fecha del periodo textual si existe (p. ej. 'YYYY-MM') o el día actual
     # como último recurso.
-    window_start = ""
-    cur = period.get("current") if isinstance(period, dict) else None
-    if isinstance(cur, (list, tuple)) and cur:
-        window_start = str(cur[0])[:10]
-    elif isinstance(cur, str):
-        window_start = cur[:10]
-    signature = f"{finding_type}:{entity}:{window_start or period.get('to') or _now()[:10]}"
+    # BUG-001 FIX: la firma debe ser ESTABLE con la identidad del finding, NO
+    # con la ventana temporal. Antes incluía window_start (derivado de la fecha
+    # de referencia de los datos); cuando llegaban datos nuevos, ref se
+    # desplazaba → todas las firmas cambiaban → los findings viejos ya no
+    # coincidían por firma y se recreaban como nuevos (duplicación 6→12).
+    # La ventana temporal es metadata (period), no identidad: un finding del
+    # mismo tipo sobre la misma entidad es el MISMO finding siempre, aunque la
+    # magnitud cambie. La firma = type:entity.
+    signature = f"{finding_type}:{entity}"
     return {
         "id": f"find_{uuid.uuid4().hex[:10]}",
         "signature": signature,
@@ -1841,6 +1843,10 @@ def update_finding_status(finding_id: str, new_status: str) -> dict[str, Any]:
         if isinstance(f, dict) and f.get("id") == finding_id:
             f["status"] = new_status
             f["updatedAt"] = _now()
+            # BUG-004 FIX: rellenar acknowledgedAt cuando el finding se marca
+            # como acknowledged (antes solo se actualizaba updatedAt genérico).
+            if new_status == "acknowledged" and not f.get("acknowledgedAt"):
+                f["acknowledgedAt"] = _now()
             changed = True
     if not changed:
         return {"ok": False, "error": "Hallazgo no encontrado"}

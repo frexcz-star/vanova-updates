@@ -745,8 +745,48 @@ class LifecycleTests(unittest.TestCase):
         with patch.object(de.config_store, "load", return_value=data), patch.object(de.config_store, "save", side_effect=lambda d: data.update(d)):
             res = de.update_finding_status(f1["id"], "acknowledged")
         self.assertTrue(res["ok"])
+        # BUG-004: acknowledgedAt debe rellenarse al marcar como acknowledged
+        self.assertIn("acknowledgedAt", f1, "acknowledgedAt debe rellenarse al marcar acknowledged")
+        self.assertTrue(f1["acknowledgedAt"])
         bad = de.update_finding_status(f1["id"], "noexiste")
         self.assertFalse(bad["ok"])
+
+    def test_bug001_signature_stable_when_reference_date_shifts(self):
+        """BUG-001 (CRITICAL): la firma de un finding debe ser ESTABLE cuando
+        llegan datos nuevos y la fecha de referencia (ref) se desplaza.
+
+        Antes la firma incluía window_start (derivado de ref); al desplazarse
+        ref, todas las firmas cambiaban → los findings viejos ya no coincidían
+        por firma y se recreaban como nuevos (duplicación 6→12). La firma debe
+        depender solo de type:entity, no de la ventana temporal."""
+        # Dataset 1: datos hasta el día 30
+        data1 = _rich_data()
+        r1 = self._run_persisted({}, data1)
+        sigs1 = {f["signature"] for f in r1["findings"]}
+        self.assertGreater(len(sigs1), 0)
+
+        # Dataset 2: MISMO dataset (re-análisis) → firmas idénticas
+        data2 = _rich_data()
+        r2 = self._run_persisted({}, data2)
+        sigs2 = {f["signature"] for f in r2["findings"]}
+        self.assertEqual(sigs1, sigs2, "Re-análisis con mismos datos no debe cambiar firmas")
+
+        # Dataset 3: datos NUEVOS (ref se desplaza hacia delante) → las firmas
+        # de los findings que persisten deben seguir siendo las mismas.
+        data3 = _rich_data()
+        # Añadir una venta con fecha POSTERIOR a hoy para desplazar ref hacia
+        # delante (la fecha de referencia = la venta más reciente del dataset).
+        future = (TODAY + timedelta(days=45)).isoformat()
+        data3["organizedSales"] = data3["organizedSales"] + [_sale("O-NEW", future, ("A", 1, 10.0))]
+        r3 = self._run_persisted({}, data3)
+        sigs3 = {f["signature"] for f in r3["findings"]}
+        # Los findings que siguen presentes deben conservar su firma (no
+        # recrearse como nuevos). Al menos los de tipo estable deben coincidir.
+        self.assertGreaterEqual(
+            len(sigs1 & sigs3),
+            min(len(sigs1), len(sigs3)),
+            "Al desplazarse la fecha de referencia, los findings persistentes deben conservar su firma (no duplicarse)",
+        )
 
 
 if __name__ == "__main__":
