@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 # Cloud API semver — tracks VANOVA release line (not a separate product).
-CLOUD_API_VERSION = "3.0.7"
+CLOUD_API_VERSION = "3.0.8"
 
 
 def _repo_root() -> Path:
