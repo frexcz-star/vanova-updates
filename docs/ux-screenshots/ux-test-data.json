@@ -1,0 +1,141 @@
+{
+  "report": {
+    "generatedAt": "2026-08-13T22:03:23.046Z",
+    "sections": [
+      {
+        "key": "home",
+        "label": "Inicio",
+        "screenshot": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\home.png",
+        "notes": [
+          "Título: Good afternoon, Pablo",
+          "Bloques/cards visibles: ~5",
+          "Widget tareas en inicio: sí"
+        ],
+        "issues": [],
+        "scoreHints": {}
+      },
+      {
+        "key": "insights",
+        "label": "Insights",
+        "screenshot": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\insights.png",
+        "notes": [
+          "Título: Insights de IA"
+        ],
+        "issues": [],
+        "scoreHints": {}
+      },
+      {
+        "key": "tasks",
+        "label": "Tareas",
+        "screenshot": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\tasks.png",
+        "notes": [
+          "Título: Tareas"
+        ],
+        "issues": [],
+        "scoreHints": {}
+      },
+      {
+        "key": "hermes",
+        "label": "Hermes",
+        "screenshot": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\hermes.png",
+        "notes": [
+          "Título: Hermes — Interfaz de Comando IA",
+          "Panel operativo: presente",
+          "Chat log: presente",
+          "Input pregunta: sí",
+          "Botón adjuntar: sí",
+          "\"Cargando contexto\" NO bloquea la vista",
+          "Banner estado: Chat listo Hermes listo — conexión local (2459.4 ms)",
+          "Sesiones: Hermes terminal\nActúa como el CEO Copilot de MOOVING PAPER (empresa de papel\n2 m"
+        ],
+        "issues": [],
+        "scoreHints": {}
+      },
+      {
+        "key": "integrations",
+        "label": "Integraciones",
+        "screenshot": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\integrations.png",
+        "notes": [
+          "Título: Integraciones",
+          "Tarjetas integración: ~11",
+          "Drawer Shopify: se abre"
+        ],
+        "issues": [],
+        "scoreHints": {},
+        "screenshotDrawer": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\integrations-drawer.png"
+      },
+      {
+        "key": "products",
+        "label": "Productos",
+        "screenshot": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\products.png",
+        "notes": [
+          "Título: Products",
+          "Banner Shopify/warning: no detectado"
+        ],
+        "issues": [],
+        "scoreHints": {}
+      },
+      {
+        "key": "diagnostics",
+        "label": "Diagnóstico",
+        "screenshot": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\diagnostics.png",
+        "notes": [
+          "Título: Diagnóstico",
+          "Componentes diagnóstico: ~1",
+          "Etiqueta Connector/Conector: no"
+        ],
+        "issues": [],
+        "scoreHints": {}
+      },
+      {
+        "key": "settings",
+        "label": "Ajustes",
+        "screenshot": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\settings.png",
+        "notes": [
+          "Título: Ajustes",
+          "Versión detectada: 1.0.2",
+          "Update center: presente"
+        ],
+        "issues": [],
+        "scoreHints": {}
+      }
+    ],
+    "nav": {
+      "items": [
+        "Inicio",
+        "Insights",
+        "Actividad",
+        "Tareas",
+        "Agentes",
+        "Hermes",
+        "Aprobaciones",
+        "Integraciones",
+        "Archivos",
+        "Productos",
+        "Fuentes",
+        "Automatizaciones",
+        "Decisiones",
+        "Diagnóstico",
+        "Ajustes"
+      ],
+      "screenshot": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\00-sidebar.png"
+    },
+    "theme": {
+      "before": "light",
+      "after": "dark",
+      "screenshotDark": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\settings-dark-theme.png"
+    },
+    "mobile": {},
+    "login": {
+      "screenshot": "C:\\Users\\Admin\\maios\\docs\\ux-screenshots\\00-login-or-home.png",
+      "blocked": false
+    },
+    "error": "TimeoutError: locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('.nav-item').filter({ hasText: 'Inicio' }).first()\n    - locator resolved to <button title=\"Inicio\" class=\"nav-item\" data-view=\"home\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is not stable\n    - retrying click action\n    - waiting 20ms\n    - waiting for element to be visible, enabled and stable\n    - element is not stable\n  2 × retrying click action\n      - waiting 100ms\n      - waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - element is outside of the viewport\n  54 × retrying click action\n       - waiting 500ms\n       - waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - element is outside of the viewport\n  - retrying click action\n    - waiting 500ms\n"
+  },
+  "findings": [
+    {
+      "severity": "critico",
+      "msg": "Error automatización: locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('.nav-item').filter({ hasText: 'Inicio' }).first()\n    - locator resolved to <button title=\"Inicio\" class=\"nav-item\" data-view=\"home\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is not stable\n    - retrying click action\n    - waiting 20ms\n    - waiting for element to be visible, enabled and stable\n    - element is not stable\n  2 × retrying click action\n      - waiting 100ms\n      - waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - element is outside of the viewport\n  54 × retrying click action\n       - waiting 500ms\n       - waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - element is outside of the viewport\n  - retrying click action\n    - waiting 500ms\n"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Starting VANOVA</title>
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --text: #f5f5f6;
+    --text-2: #a1a1aa;
+    --accent: #dc2626;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 20%, rgba(220, 38, 38, 0.08), transparent),
+      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(185, 28, 28, 0.05), transparent);
+    pointer-events: none;
+  }
+  .wrap { text-align: center; position: relative; z-index: 1; }
+  .brand { font-size: 28px; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 24px; }
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.08);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  p { color: var(--text-2); font-size: 14px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">VANOVA</div>
+    <div class="spinner"></div>
+    <h1 id="load-title">Starting VANOVA</h1>
+    <p id="load-sub">Connecting to your dashboard</p>
+    <p id="load-step" style="margin-top:16px;font-size:12px;color:var(--text-2);opacity:.8"></p>
+  </div>
+  <script>
+    const steps = ['Checking services…', 'Starting Cloud…', 'Loading dashboard…'];
+    let i = 0;
+    const el = document.getElementById('load-step');
+    setInterval(() => { if (el) { el.textContent = steps[i % steps.length]; i++; } }, 1800);
+  </script>
+</body>
+</html>

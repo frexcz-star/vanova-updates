@@ -1,0 +1,885 @@
+/* ============================================================
+   VANOVA Themes — paletas completas de la interfaz.
+   Cada tema redefine las mismas variables CSS que usa
+   web/dashboard.html, de modo que toda la UI cambia de color
+   automáticamente sin tocar el HTML.
+   ============================================================ */
+
+/* ---------- Base: rounded UI (todos los temas) ---------- */
+:root,
+[data-theme] {
+  --radius-xs: 10px;
+  --radius-sm: 14px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-xl: 34px;
+  --radius-pill: 999px;
+}
+
+/* Elementos redondeados por defecto en toda la app.
+   Con !important para ganar al CSS del dashboard (que se define después);
+   los elementos circulares se re-exceptúan más abajo y ganan por orden. */
+.btn,
+.card,
+.dash-card,
+.modal,
+.drawer,
+.dropdown,
+.menu,
+.tooltip,
+.toast-item,
+.chip,
+.badge,
+.nav-item,
+.nav-group-head,
+.cmd-item,
+.filter-btn,
+.qa-btn,
+.task-card,
+.decision,
+.act-item,
+.star-card,
+.agent-card,
+.timeline-item,
+.int-card,
+.ext-card,
+.priority,
+.schedule-card,
+.task-modal-box,
+.notif-card {
+  border-radius: var(--radius-md) !important;
+}
+.sidebar,
+.login-card,
+.setup-card,
+.page-head,
+.section-head {
+  border-radius: var(--radius-lg) !important;
+}
+.btn-sm,
+.btn-xs,
+.chip,
+.badge,
+.filter-btn {
+  border-radius: var(--radius-pill) !important;
+}
+input[type=text],
+input[type=email],
+input[type=password],
+input[type=url],
+input[type=number],
+input:not([type]),
+select,
+textarea {
+  border-radius: var(--radius-sm) !important;
+}
+
+/* Mantener circulares los elementos que deben serlo (ganan por orden) */
+.accent-swatch,
+.side-logo,
+.side-logo-m,
+.int-ico,
+.ext-ico,
+.a-dot,
+.status-dot,
+.sdot,
+.dot,
+.vn-theme-swatch span,
+.status-ind,
+.avatar,
+.qa-ico,
+.sl-logo,
+.notif-dot,
+.checkmark,
+.dot-live {
+  border-radius: 50% !important;
+}
+
+/* Transiciones suaves solo en las superficies de tema */
+body {
+  transition: background-color var(--duration-normal) ease, color var(--duration-normal) ease;
+}
+body .card,
+body .dash-card,
+body .sidebar,
+body .int-card,
+body .ext-card,
+body .page {
+  transition: background-color var(--duration-normal) ease,
+    border-color var(--duration-normal) ease,
+    box-shadow var(--duration-normal) ease;
+}
+
+/* ============================================================
+   TEMA: Ember (día) — brasa cálida
+   ============================================================ */
+html[data-theme="ember"] {
+  --bg: #fdf6f0;
+  --surface: #fffaf5;
+  --surface-2: #f9ece2;
+  --surface-3: #f3ddd0;
+  --border: rgba(150, 60, 20, .10);
+  --border-strong: rgba(150, 60, 20, .16);
+  --text: #2b1810;
+  --text-2: #6b4a38;
+  --text-3: #9a7561;
+  --accent: #d4562a;
+  --accent-2: #b8441d;
+  --accent-soft: rgba(212, 86, 42, .12);
+  --accent-glow: rgba(212, 86, 42, .20);
+  --success: #2d8a5e;
+  --success-soft: rgba(45, 138, 94, .12);
+  --warning: #c47a2e;
+  --warning-soft: rgba(196, 122, 46, .12);
+  --danger: #c43c2a;
+  --danger-soft: rgba(196, 60, 42, .12);
+  --info: #b06030;
+  --info-soft: rgba(176, 96, 48, .12);
+  --pastel-yellow: #fdf3e2;
+  --pastel-pink: #fde8e2;
+  --pastel-green: #e9f4ec;
+  --pastel-blue: #eef1f8;
+  --pastel-lavender: #f5eef8;
+  --pastel-cream: #fdf9f4;
+  --pastel-peach: #fdeee2;
+  --surface-glass: rgba(255, 250, 245, .82);
+  --surface-solid: #fffaf5;
+  --shadow-sm: 0 1px 2px rgba(90, 40, 15, .06);
+  --shadow-md: 0 4px 20px rgba(120, 50, 20, .10);
+  --shadow-lg: 0 12px 40px rgba(120, 50, 20, .14);
+  --glow-a: rgba(212, 86, 42, .16);
+  --glow-b: rgba(240, 150, 60, .10);
+  --glow-c: rgba(212, 86, 42, .06);
+  --grad-brand: linear-gradient(135deg, #e05c2e 0%, #f08a3c 55%, #f4b860 100%);
+  --grad-btns: linear-gradient(135deg, #d4562a 0%, #f08a3c 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Ember (noche) — brasa oscura
+   ============================================================ */
+html[data-theme="ember-night"] {
+  --bg: #150c08;
+  --surface: #1f120b;
+  --surface-2: #2a1a10;
+  --surface-3: #362315;
+  --border: rgba(240, 120, 60, .14);
+  --border-strong: rgba(240, 120, 60, .22);
+  --text: #fbeae0;
+  --text-2: #c9a48c;
+  --text-3: #8f6a54;
+  --accent: #f0743c;
+  --accent-2: #d85c28;
+  --accent-soft: rgba(240, 116, 60, .16);
+  --accent-glow: rgba(240, 116, 60, .26);
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, .14);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, .14);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, .14);
+  --info: #fb923c;
+  --info-soft: rgba(251, 146, 60, .14);
+  --pastel-yellow: rgba(253, 243, 226, .07);
+  --pastel-pink: rgba(253, 232, 226, .07);
+  --pastel-green: rgba(233, 244, 236, .07);
+  --pastel-blue: rgba(238, 241, 248, .07);
+  --pastel-lavender: rgba(245, 238, 248, .07);
+  --pastel-cream: rgba(253, 249, 244, .05);
+  --pastel-peach: rgba(253, 238, 226, .07);
+  --surface-glass: rgba(31, 18, 11, .74);
+  --surface-solid: #1f120b;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, .45);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, .55);
+  --glow-a: rgba(240, 116, 60, .18);
+  --glow-b: rgba(240, 138, 60, .12);
+  --glow-c: rgba(240, 116, 60, .07);
+  --grad-brand: linear-gradient(135deg, #f0743c 0%, #f4b860 55%, #fde68a 100%);
+  --grad-btns: linear-gradient(135deg, #d85c28 0%, #f4b860 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Ocean — azules profundos
+   ============================================================ */
+html[data-theme="ocean"] {
+  --bg: #eef4fa;
+  --surface: #ffffff;
+  --surface-2: #e8f0f8;
+  --surface-3: #dde8f4;
+  --border: rgba(30, 80, 140, .10);
+  --border-strong: rgba(30, 80, 140, .16);
+  --text: #0e2238;
+  --text-2: #3f5f7e;
+  --text-3: #6f8aa6;
+  --accent: #1d6fb8;
+  --accent-2: #155a99;
+  --accent-soft: rgba(29, 111, 184, .12);
+  --accent-glow: rgba(29, 111, 184, .20);
+  --success: #1f8a70;
+  --success-soft: rgba(31, 138, 112, .12);
+  --warning: #b07a1d;
+  --warning-soft: rgba(176, 122, 29, .12);
+  --danger: #c43c4a;
+  --danger-soft: rgba(196, 60, 74, .12);
+  --info: #1d6fb8;
+  --info-soft: rgba(29, 111, 184, .12);
+  --pastel-yellow: #fbf6e3;
+  --pastel-pink: #fbe9ee;
+  --pastel-green: #e7f4ee;
+  --pastel-blue: #e6f0fb;
+  --pastel-lavender: #eef0fb;
+  --pastel-cream: #fafaf7;
+  --pastel-peach: #fbeede;
+  --surface-glass: rgba(255, 255, 255, .82);
+  --surface-solid: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(20, 60, 110, .06);
+  --shadow-md: 0 4px 20px rgba(20, 60, 110, .10);
+  --shadow-lg: 0 12px 40px rgba(20, 60, 110, .14);
+  --glow-a: rgba(29, 111, 184, .14);
+  --glow-b: rgba(56, 189, 248, .10);
+  --glow-c: rgba(31, 138, 112, .07);
+  --grad-brand: linear-gradient(135deg, #1d6fb8 0%, #38bdf8 60%, #34d399 100%);
+  --grad-btns: linear-gradient(135deg, #1d6fb8 0%, #38bdf8 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Ocean (noche)
+   ============================================================ */
+html[data-theme="ocean-night"] {
+  --bg: #0a1522;
+  --surface: #101f31;
+  --surface-2: #172a40;
+  --surface-3: #1f3550;
+  --border: rgba(96, 165, 250, .12);
+  --border-strong: rgba(96, 165, 250, .20);
+  --text: #e8f1fb;
+  --text-2: #9ab6d4;
+  --text-3: #5f7fa3;
+  --accent: #3b82f6;
+  --accent-2: #2563eb;
+  --accent-soft: rgba(59, 130, 246, .16);
+  --accent-glow: rgba(59, 130, 246, .26);
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, .14);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, .14);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, .14);
+  --info: #38bdf8;
+  --info-soft: rgba(56, 189, 248, .14);
+  --pastel-yellow: rgba(251, 246, 227, .07);
+  --pastel-pink: rgba(251, 233, 238, .07);
+  --pastel-green: rgba(231, 244, 238, .07);
+  --pastel-blue: rgba(230, 240, 251, .07);
+  --pastel-lavender: rgba(238, 240, 251, .07);
+  --pastel-cream: rgba(250, 250, 247, .05);
+  --pastel-peach: rgba(251, 238, 222, .07);
+  --surface-glass: rgba(16, 31, 49, .74);
+  --surface-solid: #101f31;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .35);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, .4);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, .5);
+  --glow-a: rgba(59, 130, 246, .18);
+  --glow-b: rgba(56, 189, 248, .12);
+  --glow-c: rgba(52, 211, 153, .07);
+  --grad-brand: linear-gradient(135deg, #3b82f6 0%, #38bdf8 60%, #34d399 100%);
+  --grad-btns: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Forest — verdes
+   ============================================================ */
+html[data-theme="forest"] {
+  --bg: #f0f6f1;
+  --surface: #ffffff;
+  --surface-2: #e7f1e9;
+  --surface-3: #d9e8dd;
+  --border: rgba(30, 100, 60, .10);
+  --border-strong: rgba(30, 100, 60, .16);
+  --text: #122418;
+  --text-2: #46604e;
+  --text-3: #75917d;
+  --accent: #2d8a5e;
+  --accent-2: #22704a;
+  --accent-soft: rgba(45, 138, 94, .12);
+  --accent-glow: rgba(45, 138, 94, .20);
+  --success: #1f8a4e;
+  --success-soft: rgba(31, 138, 78, .12);
+  --warning: #b08a1d;
+  --warning-soft: rgba(176, 138, 29, .12);
+  --danger: #c43c4a;
+  --danger-soft: rgba(196, 60, 74, .12);
+  --info: #3a8a6e;
+  --info-soft: rgba(58, 138, 110, .12);
+  --pastel-yellow: #fbf7e3;
+  --pastel-pink: #fbecee;
+  --pastel-green: #e6f4ea;
+  --pastel-blue: #e9f2f4;
+  --pastel-lavender: #eef2ef;
+  --pastel-cream: #fafbf7;
+  --pastel-peach: #faf0e2;
+  --surface-glass: rgba(255, 255, 255, .82);
+  --surface-solid: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(20, 80, 50, .06);
+  --shadow-md: 0 4px 20px rgba(20, 80, 50, .10);
+  --shadow-lg: 0 12px 40px rgba(20, 80, 50, .14);
+  --glow-a: rgba(45, 138, 94, .14);
+  --glow-b: rgba(52, 211, 153, .10);
+  --glow-c: rgba(45, 138, 94, .06);
+  --grad-brand: linear-gradient(135deg, #2d8a5e 0%, #34d399 60%, #a3e635 100%);
+  --grad-btns: linear-gradient(135deg, #22704a 0%, #34d399 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Forest (noche)
+   ============================================================ */
+html[data-theme="forest-night"] {
+  --bg: #0c1610;
+  --surface: #122119;
+  --surface-2: #1a2e22;
+  --surface-3: #223a2c;
+  --border: rgba(74, 222, 128, .12);
+  --border-strong: rgba(74, 222, 128, .20);
+  --text: #e6f5ea;
+  --text-2: #9cc7a9;
+  --text-3: #5f8a6e;
+  --accent: #34d399;
+  --accent-2: #22a97e;
+  --accent-soft: rgba(52, 211, 153, .16);
+  --accent-glow: rgba(52, 211, 153, .26);
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, .14);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, .14);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, .14);
+  --info: #34d399;
+  --info-soft: rgba(52, 211, 153, .14);
+  --pastel-yellow: rgba(251, 247, 227, .07);
+  --pastel-pink: rgba(251, 236, 238, .07);
+  --pastel-green: rgba(230, 244, 234, .07);
+  --pastel-blue: rgba(233, 242, 244, .07);
+  --pastel-lavender: rgba(238, 242, 239, .07);
+  --pastel-cream: rgba(250, 251, 247, .05);
+  --pastel-peach: rgba(250, 240, 226, .07);
+  --surface-glass: rgba(18, 33, 25, .74);
+  --surface-solid: #122119;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .35);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, .4);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, .5);
+  --glow-a: rgba(52, 211, 153, .18);
+  --glow-b: rgba(74, 222, 128, .12);
+  --glow-c: rgba(52, 211, 153, .07);
+  --grad-brand: linear-gradient(135deg, #22a97e 0%, #34d399 60%, #a3e635 100%);
+  --grad-btns: linear-gradient(135deg, #1f8a4e 0%, #34d399 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Midnight — negro/violeta profundo
+   ============================================================ */
+html[data-theme="midnight"] {
+  --bg: #0b0a12;
+  --surface: #131120;
+  --surface-2: #1c1930;
+  --surface-3: #262142;
+  --border: rgba(148, 130, 255, .14);
+  --border-strong: rgba(148, 130, 255, .24);
+  --text: #f1eefb;
+  --text-2: #a59dd4;
+  --text-3: #6b6394;
+  --accent: #8b7cf6;
+  --accent-2: #6f5ce8;
+  --accent-soft: rgba(139, 124, 246, .18);
+  --accent-glow: rgba(139, 124, 246, .30);
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, .14);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, .14);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, .14);
+  --info: #a78bfa;
+  --info-soft: rgba(167, 139, 250, .14);
+  --pastel-yellow: rgba(254, 249, 231, .07);
+  --pastel-pink: rgba(252, 232, 240, .07);
+  --pastel-green: rgba(232, 245, 238, .07);
+  --pastel-blue: rgba(232, 240, 252, .07);
+  --pastel-lavender: rgba(240, 236, 252, .08);
+  --pastel-cream: rgba(250, 248, 245, .05);
+  --pastel-peach: rgba(253, 240, 235, .07);
+  --surface-glass: rgba(19, 17, 32, .76);
+  --surface-solid: #131120;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, .5);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, .6);
+  --glow-a: rgba(139, 124, 246, .22);
+  --glow-b: rgba(167, 139, 250, .14);
+  --glow-c: rgba(139, 124, 246, .08);
+  --grad-brand: linear-gradient(135deg, #8b7cf6 0%, #a78bfa 50%, #38bdf8 100%);
+  --grad-btns: linear-gradient(135deg, #6f5ce8 0%, #a78bfa 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Slate — gris azulado minimal
+   ============================================================ */
+html[data-theme="slate"] {
+  --bg: #f1f3f6;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --surface-3: #e2e7ee;
+  --border: rgba(30, 45, 70, .09);
+  --border-strong: rgba(30, 45, 70, .14);
+  --text: #17202e;
+  --text-2: #4a5a70;
+  --text-3: #7a8ba3;
+  --accent: #4a6b8a;
+  --accent-2: #3a5570;
+  --accent-soft: rgba(74, 107, 138, .12);
+  --accent-glow: rgba(74, 107, 138, .18);
+  --success: #2d8a6e;
+  --success-soft: rgba(45, 138, 110, .12);
+  --warning: #a88a2e;
+  --warning-soft: rgba(168, 138, 46, .12);
+  --danger: #c44a4a;
+  --danger-soft: rgba(196, 74, 74, .12);
+  --info: #4a6b8a;
+  --info-soft: rgba(74, 107, 138, .12);
+  --pastel-yellow: #faf7e9;
+  --pastel-pink: #fbeaf0;
+  --pastel-green: #e9f3ef;
+  --pastel-blue: #e9f0f7;
+  --pastel-lavender: #eff0f7;
+  --pastel-cream: #f8f8f6;
+  --pastel-peach: #f8efe6;
+  --surface-glass: rgba(255, 255, 255, .84);
+  --surface-solid: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(25, 40, 60, .05);
+  --shadow-md: 0 4px 20px rgba(25, 40, 60, .08);
+  --shadow-lg: 0 12px 40px rgba(25, 40, 60, .12);
+  --glow-a: rgba(74, 107, 138, .12);
+  --glow-b: rgba(74, 107, 138, .08);
+  --glow-c: rgba(74, 107, 138, .05);
+  --grad-brand: linear-gradient(135deg, #4a6b8a 0%, #7a8ba3 60%, #a8b8c8 100%);
+  --grad-btns: linear-gradient(135deg, #3a5570 0%, #6a8aa8 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Rose — rosas
+   ============================================================ */
+html[data-theme="rose"] {
+  --bg: #faf1f4;
+  --surface: #ffffff;
+  --surface-2: #f9ecf1;
+  --surface-3: #f3dfe7;
+  --border: rgba(160, 50, 100, .10);
+  --border-strong: rgba(160, 50, 100, .16);
+  --text: #33101f;
+  --text-2: #7a4a5e;
+  --text-3: #a87d8e;
+  --accent: #d4557e;
+  --accent-2: #b83e67;
+  --accent-soft: rgba(212, 85, 126, .12);
+  --accent-glow: rgba(212, 85, 126, .20);
+  --success: #2d8a6e;
+  --success-soft: rgba(45, 138, 110, .12);
+  --warning: #b0803a;
+  --warning-soft: rgba(176, 128, 58, .12);
+  --danger: #c43c5e;
+  --danger-soft: rgba(196, 60, 94, .12);
+  --info: #b8557e;
+  --info-soft: rgba(184, 85, 126, .12);
+  --pastel-yellow: #fdf7e8;
+  --pastel-pink: #fce8f0;
+  --pastel-green: #e9f4ee;
+  --pastel-blue: #eef0f8;
+  --pastel-lavender: #f5ecf5;
+  --pastel-cream: #fbf8f6;
+  --pastel-peach: #fdeee7;
+  --surface-glass: rgba(255, 255, 255, .84);
+  --surface-solid: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(140, 40, 80, .06);
+  --shadow-md: 0 4px 20px rgba(140, 40, 80, .10);
+  --shadow-lg: 0 12px 40px rgba(140, 40, 80, .14);
+  --glow-a: rgba(212, 85, 126, .14);
+  --glow-b: rgba(244, 114, 182, .10);
+  --glow-c: rgba(212, 85, 126, .06);
+  --grad-brand: linear-gradient(135deg, #d4557e 0%, #f472b6 60%, #fbbf24 100%);
+  --grad-btns: linear-gradient(135deg, #b83e67 0%, #f472b6 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Amber — ámbar dorado
+   ============================================================ */
+html[data-theme="amber"] {
+  --bg: #faf5ea;
+  --surface: #fffdf8;
+  --surface-2: #f7efdd;
+  --surface-3: #efe2c6;
+  --border: rgba(150, 100, 20, .10);
+  --border-strong: rgba(150, 100, 20, .16);
+  --text: #2e2110;
+  --text-2: #6e5738;
+  --text-3: #9d8564;
+  --accent: #c47a1d;
+  --accent-2: #a56415;
+  --accent-soft: rgba(196, 122, 29, .12);
+  --accent-glow: rgba(196, 122, 29, .20);
+  --success: #2d8a5e;
+  --success-soft: rgba(45, 138, 94, .12);
+  --warning: #b8860b;
+  --warning-soft: rgba(184, 134, 11, .14);
+  --danger: #c44a3a;
+  --danger-soft: rgba(196, 74, 58, .12);
+  --info: #c47a1d;
+  --info-soft: rgba(196, 122, 29, .12);
+  --pastel-yellow: #fdf5dd;
+  --pastel-pink: #fdeee4;
+  --pastel-green: #eef4e6;
+  --pastel-blue: #f0f2e9;
+  --pastel-lavender: #f5f1e7;
+  --pastel-cream: #fdfaf4;
+  --pastel-peach: #fdf0dc;
+  --surface-glass: rgba(255, 253, 248, .84);
+  --surface-solid: #fffdf8;
+  --shadow-sm: 0 1px 2px rgba(130, 80, 15, .06);
+  --shadow-md: 0 4px 20px rgba(130, 80, 15, .10);
+  --shadow-lg: 0 12px 40px rgba(130, 80, 15, .14);
+  --glow-a: rgba(196, 122, 29, .14);
+  --glow-b: rgba(251, 191, 36, .10);
+  --glow-c: rgba(196, 122, 29, .06);
+  --grad-brand: linear-gradient(135deg, #c47a1d 0%, #fbbf24 60%, #fde68a 100%);
+  --grad-btns: linear-gradient(135deg, #a56415 0%, #fbbf24 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Mint — menta fresca
+   ============================================================ */
+html[data-theme="mint"] {
+  --bg: #eef7f5;
+  --surface: #ffffff;
+  --surface-2: #e4f4f0;
+  --surface-3: #d3ece6;
+  --border: rgba(20, 120, 100, .10);
+  --border-strong: rgba(20, 120, 100, .16);
+  --text: #0e2a26;
+  --text-2: #3f6a63;
+  --text-3: #6f9a93;
+  --accent: #1f9d8a;
+  --accent-2: #17816f;
+  --accent-soft: rgba(31, 157, 138, .12);
+  --accent-glow: rgba(31, 157, 138, .20);
+  --success: #1f8a5e;
+  --success-soft: rgba(31, 138, 94, .12);
+  --warning: #a08a1d;
+  --warning-soft: rgba(160, 138, 29, .12);
+  --danger: #c44a4a;
+  --danger-soft: rgba(196, 74, 74, .12);
+  --info: #1f9d8a;
+  --info-soft: rgba(31, 157, 138, .12);
+  --pastel-yellow: #f7f8e8;
+  --pastel-pink: #f6edf0;
+  --pastel-green: #e4f5ee;
+  --pastel-blue: #e8f3f3;
+  --pastel-lavender: #eef2f1;
+  --pastel-cream: #f8faf7;
+  --pastel-peach: #f4f2e6;
+  --surface-glass: rgba(255, 255, 255, .84);
+  --surface-solid: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(15, 95, 80, .06);
+  --shadow-md: 0 4px 20px rgba(15, 95, 80, .10);
+  --shadow-lg: 0 12px 40px rgba(15, 95, 80, .14);
+  --glow-a: rgba(31, 157, 138, .14);
+  --glow-b: rgba(45, 212, 191, .10);
+  --glow-c: rgba(31, 157, 138, .06);
+  --grad-brand: linear-gradient(135deg, #1f9d8a 0%, #2dd4bf 60%, #a7f3d0 100%);
+  --grad-btns: linear-gradient(135deg, #17816f 0%, #2dd4bf 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Aurora — verde/azul degradado
+   ============================================================ */
+html[data-theme="aurora"] {
+  --bg: #eef3f6;
+  --surface: #ffffff;
+  --surface-2: #e6f0f2;
+  --surface-3: #d6e8ec;
+  --border: rgba(20, 100, 130, .10);
+  --border-strong: rgba(20, 100, 130, .16);
+  --text: #0e2833;
+  --text-2: #3f6470;
+  --text-3: #6f93a0;
+  --accent: #1d9bb8;
+  --accent-2: #157e99;
+  --accent-soft: rgba(29, 155, 184, .12);
+  --accent-glow: rgba(29, 155, 184, .20);
+  --success: #1f9d6e;
+  --success-soft: rgba(31, 157, 110, .12);
+  --warning: #a08a1d;
+  --warning-soft: rgba(160, 138, 29, .12);
+  --danger: #c44a4a;
+  --danger-soft: rgba(196, 74, 74, .12);
+  --info: #1d9bb8;
+  --info-soft: rgba(29, 155, 184, .12);
+  --pastel-yellow: #f2f8e8;
+  --pastel-pink: #f4ecf0;
+  --pastel-green: #e4f5ee;
+  --pastel-blue: #e3f1f6;
+  --pastel-lavender: #eaeef4;
+  --pastel-cream: #f7f9f7;
+  --pastel-peach: #f2f0e4;
+  --surface-glass: rgba(255, 255, 255, .84);
+  --surface-solid: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(15, 85, 110, .06);
+  --shadow-md: 0 4px 20px rgba(15, 85, 110, .10);
+  --shadow-lg: 0 12px 40px rgba(15, 85, 110, .14);
+  --glow-a: rgba(29, 155, 184, .14);
+  --glow-b: rgba(56, 189, 248, .12);
+  --glow-c: rgba(52, 211, 153, .10);
+  --grad-brand: linear-gradient(135deg, #1d9bb8 0%, #38bdf8 40%, #34d399 80%, #a3e635 100%);
+  --grad-btns: linear-gradient(135deg, #157e99 0%, #34d399 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Graphite — negro mate
+   ============================================================ */
+html[data-theme="graphite"] {
+  --bg: #101114;
+  --surface: #17181c;
+  --surface-2: #1f2126;
+  --surface-3: #292b31;
+  --border: rgba(160, 170, 190, .12);
+  --border-strong: rgba(160, 170, 190, .20);
+  --text: #eceef2;
+  --text-2: #9ba1ad;
+  --text-3: #636a76;
+  --accent: #9aa4b8;
+  --accent-2: #7e88a0;
+  --accent-soft: rgba(154, 164, 184, .16);
+  --accent-glow: rgba(154, 164, 184, .24);
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, .14);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, .14);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, .14);
+  --info: #9aa4b8;
+  --info-soft: rgba(154, 164, 184, .14);
+  --pastel-yellow: rgba(248, 248, 244, .07);
+  --pastel-pink: rgba(248, 244, 246, .07);
+  --pastel-green: rgba(244, 248, 246, .07);
+  --pastel-blue: rgba(244, 246, 248, .07);
+  --pastel-lavender: rgba(246, 244, 248, .07);
+  --pastel-cream: rgba(248, 248, 246, .05);
+  --pastel-peach: rgba(248, 246, 244, .07);
+  --surface-glass: rgba(23, 24, 28, .76);
+  --surface-solid: #17181c;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, .45);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, .55);
+  --glow-a: rgba(154, 164, 184, .14);
+  --glow-b: rgba(154, 164, 184, .10);
+  --glow-c: rgba(154, 164, 184, .06);
+  --grad-brand: linear-gradient(135deg, #6b7280 0%, #9aa4b8 60%, #cbd5e1 100%);
+  --grad-btns: linear-gradient(135deg, #4b5563 0%, #9aa4b8 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Sunset — naranja/rosa atardecer
+   ============================================================ */
+html[data-theme="sunset"] {
+  --bg: #faf0ee;
+  --surface: #fffaf9;
+  --surface-2: #f9ece9;
+  --surface-3: #f3ddd9;
+  --border: rgba(190, 70, 60, .10);
+  --border-strong: rgba(190, 70, 60, .16);
+  --text: #33130f;
+  --text-2: #7a4a3f;
+  --text-3: #a87d72;
+  --accent: #e05c3c;
+  --accent-2: #c24a2c;
+  --accent-soft: rgba(224, 92, 60, .12);
+  --accent-glow: rgba(224, 92, 60, .20);
+  --success: #2d8a5e;
+  --success-soft: rgba(45, 138, 94, .12);
+  --warning: #c4702e;
+  --warning-soft: rgba(196, 112, 46, .12);
+  --danger: #c43c3c;
+  --danger-soft: rgba(196, 60, 60, .12);
+  --info: #e07050;
+  --info-soft: rgba(224, 112, 80, .12);
+  --pastel-yellow: #fdf3e2;
+  --pastel-pink: #fde8e6;
+  --pastel-green: #e9f4ec;
+  --pastel-blue: #f3eef4;
+  --pastel-lavender: #f6ecf0;
+  --pastel-cream: #fdf9f6;
+  --pastel-peach: #fdebe0;
+  --surface-glass: rgba(255, 250, 249, .84);
+  --surface-solid: #fffaf9;
+  --shadow-sm: 0 1px 2px rgba(150, 50, 40, .06);
+  --shadow-md: 0 4px 20px rgba(150, 50, 40, .10);
+  --shadow-lg: 0 12px 40px rgba(150, 50, 40, .14);
+  --glow-a: rgba(224, 92, 60, .14);
+  --glow-b: rgba(244, 114, 182, .10);
+  --glow-c: rgba(224, 92, 60, .06);
+  --grad-brand: linear-gradient(135deg, #e05c3c 0%, #f472b6 60%, #fbbf24 100%);
+  --grad-btns: linear-gradient(135deg, #c24a2c 0%, #f472b6 100%);
+  --grad-warm: linear-gradient(135deg, #f472b6 0%, #fbbf24 100%);
+}
+
+/* ============================================================
+   TEMA: Mono — escala de grises pura
+   ============================================================ */
+html[data-theme="mono"] {
+  --bg: #f3f3f2;
+  --surface: #ffffff;
+  --surface-2: #efefed;
+  --surface-3: #e4e4e1;
+  --border: rgba(0, 0, 0, .09);
+  --border-strong: rgba(0, 0, 0, .14);
+  --text: #1a1a1a;
+  --text-2: #555555;
+  --text-3: #888888;
+  --accent: #3a3a3a;
+  --accent-2: #262626;
+  --accent-soft: rgba(0, 0, 0, .08);
+  --accent-glow: rgba(0, 0, 0, .12);
+  --success: #2d6a4f;
+  --success-soft: rgba(45, 106, 79, .10);
+  --warning: #8a7420;
+  --warning-soft: rgba(138, 116, 32, .10);
+  --danger: #8f2f2f;
+  --danger-soft: rgba(143, 47, 47, .10);
+  --info: #444444;
+  --info-soft: rgba(68, 68, 68, .10);
+  --pastel-yellow: #f7f6f0;
+  --pastel-pink: #f6f0f2;
+  --pastel-green: #f0f4f1;
+  --pastel-blue: #f1f3f5;
+  --pastel-lavender: #f4f2f5;
+  --pastel-cream: #faf9f6;
+  --pastel-peach: #f6f2ee;
+  --surface-glass: rgba(255, 255, 255, .84);
+  --surface-solid: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .05);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, .08);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, .12);
+  --glow-a: rgba(0, 0, 0, .10);
+  --glow-b: rgba(0, 0, 0, .06);
+  --glow-c: rgba(0, 0, 0, .04);
+  --grad-brand: linear-gradient(135deg, #4a4a4a 0%, #888888 60%, #bbbbbb 100%);
+  --grad-btns: linear-gradient(135deg, #262626 0%, #6a6a6a 100%);
+  --grad-warm: linear-gradient(135deg, #9a9a9a 0%, #c8c8c8 100%);
+}
+
+/* ============================================================
+   TEMA: Mono (noche) — gris oscuro
+   ============================================================ */
+html[data-theme="mono-night"] {
+  --bg: #0e0e0e;
+  --surface: #161616;
+  --surface-2: #1f1f1f;
+  --surface-3: #2a2a2a;
+  --border: rgba(255, 255, 255, .10);
+  --border-strong: rgba(255, 255, 255, .16);
+  --text: #f0f0f0;
+  --text-2: #a0a0a0;
+  --text-3: #666666;
+  --accent: #c8c8c8;
+  --accent-2: #a8a8a8;
+  --accent-soft: rgba(255, 255, 255, .10);
+  --accent-glow: rgba(255, 255, 255, .16);
+  --success: #9ae6b4;
+  --success-soft: rgba(154, 230, 180, .12);
+  --warning: #f0d060;
+  --warning-soft: rgba(240, 208, 96, .12);
+  --danger: #f0a0a0;
+  --danger-soft: rgba(240, 160, 160, .12);
+  --info: #c8c8c8;
+  --info-soft: rgba(200, 200, 200, .12);
+  --pastel-yellow: rgba(247, 246, 240, .07);
+  --pastel-pink: rgba(246, 240, 242, .07);
+  --pastel-green: rgba(240, 244, 241, .07);
+  --pastel-blue: rgba(241, 243, 245, .07);
+  --pastel-lavender: rgba(244, 242, 245, .07);
+  --pastel-cream: rgba(250, 249, 246, .05);
+  --pastel-peach: rgba(246, 242, 238, .07);
+  --surface-glass: rgba(22, 22, 22, .76);
+  --surface-solid: #161616;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, .45);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, .55);
+  --glow-a: rgba(255, 255, 255, .08);
+  --glow-b: rgba(255, 255, 255, .06);
+  --glow-c: rgba(255, 255, 255, .04);
+  --grad-brand: linear-gradient(135deg, #5a5a5a 0%, #9a9a9a 60%, #d0d0d0 100%);
+  --grad-btns: linear-gradient(135deg, #3a3a3a 0%, #8a8a8a 100%);
+  --grad-warm: linear-gradient(135deg, #8a8a8a 0%, #c0c0c0 100%);
+}
+
+/* ============================================================
+   Theme list (rendered in Ajustes → Apariencia)
+   ============================================================ */
+.vn-theme-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+.vn-theme-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color var(--duration-normal) ease, background var(--duration-normal) ease;
+}
+.vn-theme-item:hover {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+.vn-theme-item.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.vn-theme-swatch {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.vn-theme-swatch span {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .25);
+}
+.vn-theme-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  line-height: 1.3;
+}
+.vn-theme-auto-note {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+}

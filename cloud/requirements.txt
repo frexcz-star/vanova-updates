@@ -1,0 +1,9 @@
+# VANOVA Cloud — Python dependencies
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-jose[cryptography]>=3.3
+bcrypt>=4.0
+python-dotenv>=1.0
+httpx>=0.27
+pydantic>=2.5
+python-multipart>=0.0.9

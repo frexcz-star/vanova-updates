@@ -1,0 +1,157 @@
+{
+    "name":  "vanova-desktop",
+    "version":  "3.0.7",
+    "description":  "VANOVA — AI Operating System for Business",
+    "main":  "main.js",
+    "author":  "VANOVA",
+    "license":  "UNLICENSED",
+    "private":  true,
+    "scripts":  {
+                    "desktop:dev":  "electron .",
+                    "desktop:build":  "electron-builder --win --x64",
+                    "desktop:installer":  "electron-builder --win nsis --x64",
+                    "release":  "npm run desktop:installer \u0026\u0026 node ../scripts/generate-checksums.js"
+                },
+    "build":  {
+                  "appId":  "com.vanova.os",
+                  "productName":  "VANOVA",
+                  "copyright":  "Copyright © 2026 VANOVA",
+                  "directories":  {
+                                      "output":  "../release",
+                                      "buildResources":  "assets"
+                                  },
+                  "files":  [
+                                "main.js",
+                                "preload.js",
+                                "ui/**/*",
+                                "assets/**/*"
+                            ],
+                  "extraResources":  [
+                                         {
+                                             "from":  "../cloud",
+                                             "to":  "vanova/cloud",
+                                             "filter":  [
+                                                            "**/*",
+                                                            "!**/__pycache__/**",
+                                                            "!**/.env",
+                                                            "!**/.env.local",
+                                                            "!**/.env.production",
+                                                            "!**/.env.development",
+                                                            "!*.db",
+                                                            "!**/*.db",
+                                                            "!*.sqlite",
+                                                            "!**/*.sqlite",
+                                                            "!*.sqlite3",
+                                                            "!**/*.sqlite3",
+                                                            "!audit.jsonl",
+                                                            "!**/audit.jsonl",
+                                                            "!**/logs/**",
+                                                            "!**/data/**",
+                                                            "!**/secrets/**"
+                                                        ]
+                                         },
+                                         {
+                                             "from":  "../connector",
+                                             "to":  "vanova/connector",
+                                             "filter":  [
+                                                            "**/*",
+                                                            "!**/__pycache__/**",
+                                                            "!**/.env",
+                                                            "!**/.env.local",
+                                                            "!**/.env.production",
+                                                            "!**/.env.development",
+                                                            "!**/logs/**",
+                                                            "!**/data/**",
+                                                            "!**/secrets/**"
+                                                        ]
+                                         },
+                                         {
+                                             "from":  "../shared",
+                                             "to":  "vanova/shared",
+                                             "filter":  [
+                                                            "**/*"
+                                                        ]
+                                         },
+                                         {
+                                             "from":  "../web",
+                                             "to":  "vanova/web",
+                                             "filter":  [
+                                                            "**/*"
+                                                        ]
+                                         },
+                                         {
+                                             "from":  "../desktop/runtime",
+                                             "to":  "vanova/desktop/runtime",
+                                             "filter":  [
+                                                            "**/*",
+                                                            "!**/__pycache__/**",
+                                                            "!**/.env",
+                                                            "!**/.env.local",
+                                                            "!**/.env.production",
+                                                            "!**/.env.development",
+                                                            "!**/logs/**",
+                                                            "!**/data/**",
+                                                            "!**/secrets/**"
+                                                        ]
+                                         },
+                                         {
+                                             "from":  "../version.json",
+                                             "to":  "vanova/version.json"
+                                         },
+                                         {
+                                             "from":  "../install_all.py",
+                                             "to":  "vanova/install_all.py"
+                                         },
+                                         {
+                                             "from":  "python-bundle",
+                                             "to":  "vanova/python-bundle",
+                                             "filter":  [
+                                                            "**/*",
+                                                            "!**/__pycache__/**"
+                                                        ]
+                                         },
+                                         {
+                                             "from":  "updater",
+                                             "to":  "vanova/desktop/updater",
+                                             "filter":  [
+                                                            "**/*"
+                                                        ]
+                                         }
+                                     ],
+                  "win":  {
+                              "target":  [
+                                             {
+                                                 "target":  "nsis",
+                                                 "arch":  [
+                                                              "x64"
+                                                          ]
+                                             }
+                                         ],
+                              "icon":  "assets/icon.ico",
+                              "artifactName":  "VANOVA-Setup.${ext}"
+                          },
+                  "nsis":  {
+                               "oneClick":  false,
+                               "allowToChangeInstallationDirectory":  true,
+                               "installerIcon":  "assets/icon.ico",
+                               "uninstallerIcon":  "assets/icon.ico",
+                               "installerHeaderIcon":  "assets/icon.ico",
+                               "createDesktopShortcut":  true,
+                               "createStartMenuShortcut":  true,
+                               "shortcutName":  "VANOVA",
+                               "installerLanguages":  [
+                                                          "en-US",
+                                                          "es-ES"
+                                                      ],
+                               "language":  "1033",
+                               "artifactName":  "VANOVA-Setup.${ext}",
+                               "deleteAppDataOnUninstall":  false,
+                               "include":  "installer.nsh"
+                           },
+                  "publish":  null
+              },
+    "devDependencies":  {
+                            "electron":  "^33.2.0",
+                            "electron-builder":  "^25.1.8"
+                        }
+}

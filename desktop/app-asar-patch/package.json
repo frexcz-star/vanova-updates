@@ -1,0 +1,9 @@
+{
+  "name": "maios-desktop",
+  "version": "0.9.7",
+  "description": "MAIOS — AI Operating System for Business",
+  "main": "main.js",
+  "author": "MOOVING PAPER",
+  "license": "UNLICENSED",
+  "private": true
+}

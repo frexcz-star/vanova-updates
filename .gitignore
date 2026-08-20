@@ -1,0 +1,48 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+audit.jsonl
+logs/
+data/
+secrets/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+desktop/node_modules/
+
+# Build / packaging (heavy, not source)
+release/
+dist/
+build/
+win-unpacked/
+desktop/python-bundle/
+*.exe
+*.asar
+*.msi
+*.zip
+
+# Frozen benchmark / private data — never publish
+benchmark-data/
+benchmark-phase-a/
+benchmark-phase-b/
+benchmark-results/
+benchmark-sandbox/
+benchmark-secret/
+audit-sandbox/
+smoke-beta3/
+smoke-beta3-launch/
+synthetic-data/
+VANOVA/
+.cursor/
+.codex/
+.pytest_cache/

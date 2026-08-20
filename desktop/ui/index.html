@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' http://127.0.0.1:8765 http://127.0.0.1:8000 https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline';">
+<title>VANOVA Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="setup.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">VANOVA</div>
+    <nav class="steps-nav" id="stepsNav"></nav>
+  </aside>
+  <main class="content">
+    <div class="panel glass" id="panel">
+      <!-- Steps injected by setup.js -->
+    </div>
+  </main>
+</div>
+<script src="setup.js"></script>
+</body>
+</html>

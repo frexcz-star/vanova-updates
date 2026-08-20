@@ -1,0 +1,1 @@
+{"agentId":"sales-analyst","type":"manual","permission":"read_orders","message":"Analiza las tendencias de ventas de los 50 pedidos y pronostica el ingreso esperado del proximo mes. Usa solo datos reales disponibles."}

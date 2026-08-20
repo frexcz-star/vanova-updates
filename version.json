@@ -1,0 +1,7 @@
+{
+    "version":  "3.0.7",
+    "productName":  "VANOVA",
+    "publisher":  "VANOVA",
+    "updateManifestUrl":  "https://github.com/frexcz-star/vanova-updates/releases/latest/download/latest.json",
+    "minSupportedVersion":  "0.9.0"
+}
