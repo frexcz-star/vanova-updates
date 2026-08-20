@@ -718,6 +718,37 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(active2[0]["id"], active1[0]["id"])
         self.assertGreaterEqual(active2[0]["timesSeen"], active1[0]["timesSeen"] + 1)
 
+    def test_bug001_intra_run_dedupe_no_duplicate_signatures(self):
+        """BUG-001-INTRA (hallazgo de Mathew): con la firma estable (type:entity),
+        dos detectores distintos pueden emitir la misma firma en un MISMO run
+        (p.ej. detect_products emite product_declining desde la ventana 60d y
+        desde la 30d para el mismo SKU). El dedupe contra stored no basta: hay
+        que colapsar los fresh duplicados entre sí. run_detection no debe
+        devolver dos findings con la misma firma en un mismo run."""
+        # Dataset que dispara product_declining desde AMBAS ventanas para el
+        # mismo SKU "A". ref = la venta más reciente (día 5).
+        # - Ventas a día 80 → caen en prev60d [ref-90, ref-60] (detector 60d)
+        # - Ventas a día 50 → caen en prev30d [ref-60, ref-30] (detector 30d)
+        # - Pocas ventas a día 5 → caen en current30d [ref-30, ref]
+        products = [_prod("A", 9.0, 10.0), _prod("B", 1.0, 10.0)]
+        sales = []
+        for i in range(10):
+            sales.append(_sale(f"P60-{i}", _d(80), ("A", 1, 10.0)))  # prev60d
+        for i in range(10):
+            sales.append(_sale(f"P30-{i}", _d(50), ("A", 1, 10.0)))  # prev30d
+        for i in range(2):
+            sales.append(_sale(f"CUR-{i}", _d(5), ("A", 1, 10.0)))   # current30d
+        data = {"organizedProducts": products, "organizedSales": sales}
+        r = self._run_persisted({}, data)
+        findings = r["findings"]
+        sigs = [f["signature"] for f in findings]
+        # No debe haber firmas duplicadas dentro de un mismo run
+        self.assertEqual(
+            len(sigs),
+            len(set(sigs)),
+            f"run_detection no debe devolver firmas duplicadas en un mismo run: {sigs}",
+        )
+
     def test_acknowledged_status_preserved_then_resolved(self):
         data = _rich_data()
         r1 = self._run_persisted({}, data)

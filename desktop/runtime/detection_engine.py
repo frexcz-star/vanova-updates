@@ -1576,6 +1576,21 @@ def run_detection(data: dict[str, Any] | None = None, *, persist: bool = True) -
     stored = _load_stored(data)
     now = _now()
     merged: list[dict[str, Any]] = []
+    # BUG-001-INTRA (hallazgo de Mathew): dedupe INTRA-RUN. Con la firma
+    # estable (type:entity), dos detectores distintos pueden emitir la misma
+    # firma en un mismo run (p.ej. detect_products emite product_declining
+    # desde la ventana 60d y desde la 30d para el mismo SKU). El dedupe contra
+    # stored no basta: hay que colapsar los fresh duplicados entre sí,
+    # quedándose con el de mayor severidad (y más reciente en caso de empate).
+    fresh_by_sig: dict[str, dict[str, Any]] = {}
+    for f in fresh:
+        sig = f.get("signature")
+        if not sig:
+            continue
+        prev_fresh = fresh_by_sig.get(sig)
+        if prev_fresh is None or _severity_rank(f.get("severity")) > _severity_rank(prev_fresh.get("severity")):
+            fresh_by_sig[sig] = f
+    fresh = list(fresh_by_sig.values())
     fresh_sigs = {f["signature"] for f in fresh}
     for f in fresh:
         prev = stored.get(f["signature"])
