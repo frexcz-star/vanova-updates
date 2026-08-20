@@ -411,8 +411,6 @@ class Connector:
         stored = None
         try:
             cfg_path = Path(os.getenv("LOCALAPPDATA", "")) / "VANOVA" / "maios.json"
-            if not cfg_path.exists():
-                cfg_path = Path(os.getenv("LOCALAPPDATA", "")) / "VANOVA" / "maios.json"
             if cfg_path.exists():
                 import json
                 stored = json.loads(cfg_path.read_text(encoding="utf-8-sig")).get("dashboardSnapshot")

@@ -44,6 +44,30 @@ def save(data: dict[str, Any]) -> None:
         _write_atomic_unlocked(current)
 
 
+def update(mutator: Any) -> dict[str, Any]:
+    """BUG-006 FIX: read-modify-write ATÓMICO bajo un solo lock.
+
+    El API server usa ThreadingHTTPServer — cada request corre en su propio
+    hilo. El patrón `load()` → modificar → `save()` NO está serializado: aunque
+    load() y save() toman _config_lock individualmente, el RMW completo no, así
+    que dos requests concurrentes pueden hacer lost-update (el que guarda
+    primero se pierde si el otro leyó antes).
+
+    ``mutator`` recibe el config actual (dict) y devuelve el dict a persistir
+    (o None para no escribir). Todo el ciclo load→modify→save ocurre bajo un
+    único _config_lock, garantizando atomicidad entre hilos.
+
+    Devuelve el config persistido (el resultado de mutator).
+    """
+    with _config_lock:
+        current = _read_config_body()
+        result = mutator(current)
+        if result is not None:
+            _write_atomic_unlocked(result)
+            return result
+        return current
+
+
 def _read_config_body() -> dict[str, Any]:
     global _config_corrupt
     if not CONFIG_FILE.exists():

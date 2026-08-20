@@ -161,6 +161,52 @@ class ConfigStoreSetupTests(unittest.TestCase):
         on_disk = json.loads(self.config_file.read_text(encoding="utf-8"))
         self.assertNotIn("customUserKey", on_disk)
 
+    def test_bug006_update_is_atomic_read_modify_write(self):
+        """BUG-006 (MEDIUM, Hermes): config_store.update() debe ejecutar el
+        read-modify-write completo bajo un SOLO lock, para que dos requests
+        concurrentes (ThreadingHTTPServer) no hagan lost-update.
+
+        El patrón load() → modificar → save() sin serializar el ciclo completo
+        pierde la escritura del hilo que guardó primero si el otro leyó antes.
+        update() garantiza atomicidad: el mutator ve el estado más reciente y
+        persiste bajo el mismo lock."""
+        # Estado inicial con un agente
+        config_store.save({"agents": [{"id": "a1", "name": "Agent 1"}]})
+
+        # update() debe ver el estado persistido y poder mutarlo atómicamente
+        def _add_b(cfg):
+            agents = list(cfg.get("agents", []))
+            agents.append({"id": "b2", "name": "Agent 2"})
+            cfg["agents"] = agents
+            return cfg
+
+        result = config_store.update(_add_b)
+        self.assertEqual(len(result.get("agents", [])), 2)
+        self.assertEqual(result["agents"][1]["id"], "b2")
+
+        # El mutator que devuelve None no escribe (no-op)
+        before = config_store.load()
+        noop = config_store.update(lambda cfg: None)
+        self.assertEqual(noop, before)
+
+        # Persistido en disco
+        on_disk = json.loads(self.config_file.read_text(encoding="utf-8"))
+        self.assertEqual(len(on_disk.get("agents", [])), 2)
+
+    def test_bug006_add_agents_uses_atomic_update(self):
+        """BUG-006: add_agents debe usar config_store.update() (RMW atómico),
+        no load()→modificar→save() que puede perder escrituras concurrentes."""
+        from desktop.runtime import agent_architect
+
+        config_store.save({"agents": [{"id": "a1", "name": "Agent 1"}]})
+        added = agent_architect.add_agents([{"id": "b2", "name": "Agent 2", "permissions": ["read"]}])
+        self.assertEqual([a["id"] for a in added], ["b2"])
+        # Ambos agentes persisten
+        on_disk = json.loads(self.config_file.read_text(encoding="utf-8"))
+        ids = {a["id"] for a in on_disk.get("agents", [])}
+        self.assertIn("a1", ids)
+        self.assertIn("b2", ids)
+
 
 if __name__ == "__main__":
     unittest.main()

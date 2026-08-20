@@ -38,18 +38,33 @@ def create_agents(agent_defs: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def add_agents(agent_defs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Merge agents into the existing set without removing any (idempotent by id)."""
-    existing = config_store.load().get("agents", [])
-    by_id = {str(a.get("id")): a for a in existing}
+    """Merge agents into the existing set without removing any (idempotent by id).
+
+    BUG-006 FIX: usa config_store.update() (RMW atómico bajo un solo lock).
+    Antes hacía load() → modificar → save() sin serializar el ciclo completo;
+    con ThreadingHTTPServer dos requests concurrentes podían hacer lost-update
+    (el agente guardado primero se perdía si el otro leyó antes).
+    """
     added: list[dict[str, Any]] = []
-    for a in agent_defs:
-        normalized = _normalize_agent(a)
-        if normalized["id"] in by_id:
-            continue
-        by_id[normalized["id"]] = normalized
-        added.append(normalized)
-    config_store.save({"agents": list(by_id.values())})
-    log.info("Added %d agent(s), total %d", len(added), len(by_id))
+    total: int = 0
+
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        nonlocal added, total
+        existing = cfg.get("agents", [])
+        by_id = {str(a.get("id")): a for a in existing}
+        added = []
+        for a in agent_defs:
+            normalized = _normalize_agent(a)
+            if normalized["id"] in by_id:
+                continue
+            by_id[normalized["id"]] = normalized
+            added.append(normalized)
+        total = len(by_id)
+        cfg["agents"] = list(by_id.values())
+        return cfg
+
+    config_store.update(_mutate)
+    log.info("Added %d agent(s), total %d", len(added), total)
     return added
 
 
