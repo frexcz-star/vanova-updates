@@ -773,7 +773,11 @@ class LifecycleTests(unittest.TestCase):
         r1 = self._run_persisted({}, data)
         f1 = [f for f in r1["findings"] if f["type"] == "high_revenue_low_margin"][0]
         data["businessFindings"] = [f1]
-        with patch.object(de.config_store, "load", return_value=data), patch.object(de.config_store, "save", side_effect=lambda d: data.update(d)):
+        # BUG-008: update_finding_status usa config_store.update() (RMW atómico).
+        # El side_effect aplica el mutator al dict `data` (como haría el update real).
+        with patch.object(de.config_store, "load", return_value=data), patch.object(
+            de.config_store, "update", side_effect=lambda mutator: mutator(data)
+        ):
             res = de.update_finding_status(f1["id"], "acknowledged")
         self.assertTrue(res["ok"])
         # BUG-004: acknowledgedAt debe rellenarse al marcar como acknowledged
@@ -781,6 +785,26 @@ class LifecycleTests(unittest.TestCase):
         self.assertTrue(f1["acknowledgedAt"])
         bad = de.update_finding_status(f1["id"], "noexiste")
         self.assertFalse(bad["ok"])
+
+    def test_bug008_update_finding_status_uses_atomic_rmw(self):
+        """BUG-008 (MEDIUM, Hermes): update_finding_status debe usar
+        config_store.update() (RMW atómico bajo un solo lock), no
+        load()→modificar→save() que puede perder escrituras concurrentes
+        (scheduler en background + API server ThreadingHTTPServer)."""
+        data = _rich_data()
+        r1 = self._run_persisted({}, data)
+        f1 = [f for f in r1["findings"] if f["type"] == "high_revenue_low_margin"][0]
+        data["businessFindings"] = [f1]
+        # update() debe ser invocado (no save() directo)
+        with patch.object(de.config_store, "load", return_value=data), patch.object(
+            de.config_store, "update", side_effect=lambda mutator: mutator(data)
+        ) as mock_update, patch.object(de.config_store, "save") as mock_save:
+            res = de.update_finding_status(f1["id"], "acknowledged")
+        self.assertTrue(res["ok"])
+        mock_update.assert_called_once()
+        # El estado se persiste vía update() (RMW atómico), no vía save() directo
+        self.assertEqual(f1["status"], "acknowledged")
+        self.assertIn("acknowledgedAt", f1)
 
     def test_bug001_signature_stable_when_reference_date_shifts(self):
         """BUG-001 (CRITICAL): la firma de un finding debe ser ESTABLE cuando

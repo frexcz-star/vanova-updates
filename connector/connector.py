@@ -41,12 +41,12 @@ sys.path.insert(0, str(BASE_DIR.parent))
 from shared.version_info import current_version  # single source of VANOVA version
 
 load_dotenv(BASE_DIR / ".env", override=True)
+# BUG-009 FIX: _user_connector_env y _legacy_connector_env eran la MISMA ruta
+# (LOCALAPPDATA/VANOVA/config/connector.env), así que el elif era código muerto.
+# Se unifica en una sola ruta de config del usuario.
 _user_connector_env = Path(os.environ.get("LOCALAPPDATA", "")) / "VANOVA" / "config" / "connector.env"
-_legacy_connector_env = Path(os.environ.get("LOCALAPPDATA", "")) / "VANOVA" / "config" / "connector.env"
 if _user_connector_env.exists():
     load_dotenv(_user_connector_env, override=True)
-elif _legacy_connector_env.exists():
-    load_dotenv(_legacy_connector_env, override=True)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [VANOVA Connector] %(levelname)s %(message)s")
 log = logging.getLogger("maios-connector")

@@ -1849,21 +1849,32 @@ def update_finding_status(finding_id: str, new_status: str) -> dict[str, Any]:
     new_status = (new_status or "").strip().lower()
     if new_status not in FINDING_STATUSES:
         return {"ok": False, "error": f"Estado inválido ({new_status}); usa {', '.join(FINDING_STATUSES)}"}
-    data = config_store.load()
-    stored = data.get("businessFindings") or []
-    if not isinstance(stored, list):
-        stored = []
-    changed = False
-    for f in stored:
-        if isinstance(f, dict) and f.get("id") == finding_id:
-            f["status"] = new_status
-            f["updatedAt"] = _now()
-            # BUG-004 FIX: rellenar acknowledgedAt cuando el finding se marca
-            # como acknowledged (antes solo se actualizaba updatedAt genérico).
-            if new_status == "acknowledged" and not f.get("acknowledgedAt"):
-                f["acknowledgedAt"] = _now()
-            changed = True
-    if not changed:
-        return {"ok": False, "error": "Hallazgo no encontrado"}
-    config_store.save({"businessFindings": stored})
-    return {"ok": True, "status": new_status}
+    # BUG-008 FIX: RMW atómico bajo un solo lock. Antes hacía load() → modificar
+    # → save() sin serializar el ciclo completo; con ThreadingHTTPServer (API
+    # server) y el scheduler en background escribiendo businessFindings a la vez,
+    # dos hilos podían hacer lost-update (el estado del finding se perdía).
+    outcome: dict[str, Any] = {"ok": False, "error": "Hallazgo no encontrado"}
+
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        nonlocal outcome
+        stored = cfg.get("businessFindings") or []
+        if not isinstance(stored, list):
+            stored = []
+        changed = False
+        for f in stored:
+            if isinstance(f, dict) and f.get("id") == finding_id:
+                f["status"] = new_status
+                f["updatedAt"] = _now()
+                # BUG-004 FIX: rellenar acknowledgedAt cuando el finding se marca
+                # como acknowledged (antes solo se actualizaba updatedAt genérico).
+                if new_status == "acknowledged" and not f.get("acknowledgedAt"):
+                    f["acknowledgedAt"] = _now()
+                changed = True
+        if not changed:
+            return cfg  # no-op: no escribir, devolver estado sin cambios
+        cfg["businessFindings"] = stored
+        outcome = {"ok": True, "status": new_status}
+        return cfg
+
+    config_store.update(_mutate)
+    return outcome
