@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 import subprocess
 import sys
 import time
@@ -15,6 +16,19 @@ from .paths import app_root, config_dir, logs_dir, python_executable, venv_dir
 from . import install_secrets, port_utils
 
 log = get_logger("maios.process", "process-manager")
+
+# Contraseñas por defecto/débiles que el cloud rechaza en producción
+# (KNOWN_WEAK_PASSWORDS en cloud/main.py). Si el cloud.env desplegado trae una
+# de estas, el cloud bloquea el arranque ("cloud start failed"). El fix de raíz
+# (BUG-031) las regenera automáticamente en el primer arranque.
+KNOWN_WEAK_PASSWORDS = frozenset({"mooving2026", "password", "admin", "123456", "ceo"})
+
+
+def _is_weak_password(password: str | None) -> bool:
+    """True si la contraseña es débil o por defecto y bloquearía el cloud."""
+    if not password:
+        return True
+    return password.strip().lower() in KNOWN_WEAK_PASSWORDS
 
 _cloud_proc: subprocess.Popen | None = None
 _connector_proc: subprocess.Popen | None = None
@@ -617,6 +631,17 @@ def _ensure_env_files() -> None:
     else:
         existing = _load_env_file(cloud_env)
         updated = False
+        # BUG-031 FIX (raíz): si la contraseña desplegada es débil o por
+        # defecto (la que traía el instalador, p.ej. mooving2026), regenerarla
+        # automáticamente en vez de dejar que el cloud bloquee el arranque en
+        # producción ("cloud start failed").
+        if _is_weak_password(existing.get("MAIOS_DEMO_PASSWORD")):
+            existing["MAIOS_DEMO_PASSWORD"] = secrets.token_urlsafe(16)
+            updated = True
+            log.warning(
+                "cloud.env contiene una contraseña débil/por defecto — regenerada automáticamente. "
+                "Recupera la nueva contraseña si necesitas login manual."
+            )
         for key, value in desired_paths.items():
             current = existing.get(key, "")
             if current != value and (not current or not Path(current).exists() or key != "MAIOS_AUDIT_LOG"):

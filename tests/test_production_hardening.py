@@ -102,5 +102,43 @@ class DefaultPasswordTests(unittest.TestCase):
                 cm.bootstrap()
 
 
+class Bug031WeakPasswordAutoRegenTests(unittest.TestCase):
+    """BUG-031: el fix de raíz — si el cloud.env desplegado trae una contraseña
+    débil/por defecto (la del instalador, p.ej. mooving2026), _ensure_env_files
+    debe regenerarla automáticamente para que el cloud no bloquee el arranque
+    ("cloud start failed"). El test falla sin el fix (la contraseña débil se
+    mantendría)."""
+
+    def test_ensure_env_files_regenertes_weak_password(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch as _patch
+
+        from desktop.runtime import process_manager
+
+        tmp = tempfile.TemporaryDirectory()
+        env_file = Path(tmp.name) / "cloud.env"
+        # cloud.env desplegado con la contraseña débil por defecto del instalador
+        env_file.write_text("MAIOS_DEMO_PASSWORD=mooving2026\nMAIOS_ENV=production\n", encoding="utf-8")
+
+        cfg_dir = Path(tmp.name)
+        with _patch.object(process_manager, "config_dir", return_value=cfg_dir), \
+             _patch.object(process_manager, "logs_dir", return_value=cfg_dir), \
+             _patch.object(process_manager, "app_root", return_value=cfg_dir), \
+             _patch.object(process_manager.install_secrets, "ensure_install_secrets", return_value={}), \
+             _patch("desktop.runtime.process_manager.install_secrets", side_effect=lambda: None):
+            process_manager._ensure_env_files()
+
+        new_content = env_file.read_text(encoding="utf-8")
+        new_pw = next(
+            (line.split("=", 1)[1].strip() for line in new_content.splitlines()
+             if line.strip().startswith("MAIOS_DEMO_PASSWORD=")),
+            "",
+        )
+        self.assertTrue(new_pw)
+        self.assertNotEqual(new_pw.lower(), "mooving2026")
+        self.assertNotIn(new_pw.lower(), process_manager.KNOWN_WEAK_PASSWORDS)
+
+
 if __name__ == "__main__":
     unittest.main()
