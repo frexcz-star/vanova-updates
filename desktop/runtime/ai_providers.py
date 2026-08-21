@@ -68,18 +68,33 @@ def save_provider_config(
         "fallback": model,
     }
     config_store.secure_store_credentials(provider_id, api_key)
-    providers = config_store.load().get("aiProviders", {})
-    providers["primary"] = {
+    # BUG-015 FIX: RMW atómico bajo un solo lock. Antes hacía load() → modificar
+    # → save() sin serializar el ciclo completo (lost-update si dos requests
+    # concurrentes configuran providers distintos).
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        providers = dict(cfg.get("aiProviders") or {})
+        providers["primary"] = {
+            "providerId": provider_id,
+            "providerName": PROVIDERS.get(provider_id, {}).get("name", provider_id),
+            "model": model,
+            "roles": roles,
+            "configured": True,
+        }
+        cfg["aiProviders"] = providers
+        return cfg
+
+    config_store.update(_mutate)
+    _write_env_provider(provider_id, api_key, model)
+    log.info("AI provider configured: %s", provider_id)
+    # Reload para devolver el estado persistido
+    primary = config_store.load().get("aiProviders", {}).get("primary") or {
         "providerId": provider_id,
         "providerName": PROVIDERS.get(provider_id, {}).get("name", provider_id),
         "model": model,
         "roles": roles,
         "configured": True,
     }
-    config_store.save({"aiProviders": providers})
-    _write_env_provider(provider_id, api_key, model)
-    log.info("AI provider configured: %s", provider_id)
-    return providers["primary"]
+    return primary
 
 
 def _write_env_provider(provider_id: str, api_key: str, model: str) -> None:

@@ -45,9 +45,14 @@ class BusinessScannerTests(unittest.TestCase):
 
     def test_imported_files_roundtrip(self):
         stored = {"scanFiles": []}
+        # BUG-017: add/remove_imported_file usan config_store.update() (RMW
+        # atómico). El side_effect aplica el mutator al dict stored, igual que
+        # haría update() real.
         with patch("desktop.runtime.config_store.load", return_value=stored), patch(
-            "desktop.runtime.config_store.save", side_effect=lambda data: stored.update(data)
-        ), patch("desktop.runtime.file_organizer.organize_files"):
+            "desktop.runtime.config_store.update", side_effect=lambda mutator: mutator(stored)
+        ), patch("desktop.runtime.config_store.save", side_effect=lambda data: stored.update(data)), patch(
+            "desktop.runtime.file_organizer.organize_files"
+        ):
             added = add_imported_file({"name": "catalogo.xlsx", "ext": "xlsx", "size": 2048, "path": "catalogo.xlsx"})
             self.assertTrue(added["ok"])
             self.assertEqual(added["file"]["name"], "catalogo.xlsx")

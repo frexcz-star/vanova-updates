@@ -152,12 +152,17 @@ class CandidateApprovalTests(unittest.TestCase):
                 "size": 100, "status": "pending", "folderScore": 0, "fileScore": 1, "contentScore": 0}
         stored: dict = {"fileCandidates": [dict(cand)], "scanFiles": []}
 
+        def _update(mutator):
+            return mutator(stored)
+
         def _save(data):
             stored.update(data)
 
         with patch("desktop.runtime.config_store.load", return_value=stored), patch(
-            "desktop.runtime.config_store.save", side_effect=_save
-        ), patch("desktop.runtime.file_inventory._organize_after_import") as mock_org:
+            "desktop.runtime.config_store.update", side_effect=_update
+        ), patch("desktop.runtime.config_store.save", side_effect=_save), patch(
+            "desktop.runtime.file_inventory._organize_after_import"
+        ) as mock_org:
             self.assertEqual(list_candidates()["count"], 1)
             r = decide_candidate(cand["path"], approve=True)
             self.assertTrue(r["ok"])
@@ -171,8 +176,8 @@ class CandidateApprovalTests(unittest.TestCase):
                  "status": "pending", "folderScore": 0, "fileScore": 1, "contentScore": 0}
         stored2: dict = {"fileCandidates": [dict(cand2)], "scanFiles": []}
         with patch("desktop.runtime.config_store.load", return_value=stored2), patch(
-            "desktop.runtime.config_store.save", side_effect=lambda data: stored2.update(data)
-        ):
+            "desktop.runtime.config_store.update", side_effect=lambda mutator: mutator(stored2)
+        ), patch("desktop.runtime.config_store.save", side_effect=lambda data: stored2.update(data)):
             r2 = decide_candidate(cand2["path"], approve=False)
             self.assertTrue(r2["ok"])
             self.assertEqual(stored2["fileCandidates"][0]["status"], "rejected")

@@ -133,6 +133,28 @@ class BuildCatalogTests(OpportunityCatalogBase):
         res = oc.build_catalog(findings, top=3)
         self.assertEqual(len(res), 3)
 
+    def test_bug018_aov_upside_calculated_when_orders_present(self):
+        """BUG-018: _upside_for_aov debe cuantificar cuando hay gap de AOV y
+        pedidos del periodo (antes era código muerto)."""
+        # AOV baja de 100 a 60 (gap 40) con 50 pedidos -> 40*50 = 2000 EUR
+        f = _finding("aov_change", "opportunity",
+                     metrics={"currentAov": 60.0, "previousAov": 100.0, "changePct": -40.0, "currentOrders": 50},
+                     sig="aov_change:global")
+        res = oc.build_catalog([f])
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]["upsideEuro"], 2000.0)
+        self.assertEqual(res[0]["impactKind"], "calculated")
+
+    def test_bug018_aov_no_orders_not_quantifiable(self):
+        """BUG-018: sin pedidos del periodo -> no cuantifica (UNKNOWN != 0)."""
+        f = _finding("aov_change", "opportunity",
+                     metrics={"currentAov": 60.0, "previousAov": 100.0, "changePct": -40.0, "currentOrders": 0},
+                     sig="aov_change:global")
+        res = oc.build_catalog([f])
+        self.assertEqual(len(res), 1)
+        self.assertIsNone(res[0]["upsideEuro"])
+        self.assertEqual(res[0]["impactKind"], "not_quantifiable")
+
 
 if __name__ == "__main__":
     unittest.main()

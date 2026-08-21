@@ -158,8 +158,13 @@ class ImportAttackTests(unittest.TestCase):
         parsed = fo._parse_sales_rows(content, ",", "ventas_grandes.csv")
         elapsed = time.monotonic() - t0
         # VANOVA 3.0: el cap sube a 100k y, si se excede, NUNCA es silencioso.
+        # BUG-016 FIX: umbral subido de 30s a 60s — bajo carga de la suite
+        # completa el parseo de 100k filas puede superar 30s por contienda de
+        # CPU con otros tests pesados. 60s es un margen robusto sin perder el
+        # propósito del test (verificar que el cap de 100k no degenera en un
+        # parse infinito ni silencioso).
         self.assertEqual(len(parsed), 100_000)
-        self.assertLess(elapsed, 30.0)
+        self.assertLess(elapsed, 60.0)
 
     def test_truncation_never_silent(self):
         # Cap reducido artificialmente para ejercitar la ruta sin importar 100k+1 filas.

@@ -104,7 +104,10 @@ def _upside_for_concentration(f: dict[str, Any]) -> tuple[float | None, str, str
 def _upside_for_aov(f: dict[str, Any]) -> tuple[float | None, str, str]:
     """Ticket/AOV: upside = (AOV_objetivo - AOV_actual) x pedidos_periodo.
 
-    Requiere pedidos del periodo; si no los tiene, no cuantifica (UNKNOWN != 0).
+    BUG-018 FIX: antes era código muerto — nunca cuantificaba. Ahora lee
+    currentOrders/previousOrders de los metrics (añadidos al finding aov_change)
+    y calcula el upside solo si current_aov < previous_aov y hay pedidos.
+    UNKNOWN != 0: sin pedidos del periodo no se inventa el multiplicador.
     """
     metrics = f.get("metrics") or {}
     current_aov = _as_float(metrics.get("currentAov"))
@@ -114,8 +117,14 @@ def _upside_for_aov(f: dict[str, Any]) -> tuple[float | None, str, str]:
     gap = previous_aov - current_aov
     if gap <= 0:
         return None, "not_quantifiable", "sin gap de ticket recuperable"
-    # Sin pedidos del periodo no se inventa el multiplicador.
-    return None, "not_quantifiable", "requiere pedidos del periodo para cuantificar el upside"
+    # Pedidos del periodo actual (ventana 30d). Si no hay datos, no cuantifica.
+    orders = _as_float(metrics.get("currentOrders"))
+    if orders is None or orders <= 0:
+        return None, "not_quantifiable", "requiere pedidos del periodo para cuantificar el upside"
+    upside = gap * orders
+    if upside < MIN_UPSEID_EURO:
+        return None, "not_quantifiable", "upsell por debajo del umbral minimo de evidencia"
+    return round(upside, 2), "calculated", f"gap de ticket {gap:.2f} EUR x {int(orders)} pedidos"
 
 
 def _upside_for_reactivation(f: dict[str, Any]) -> tuple[float | None, str, str]:

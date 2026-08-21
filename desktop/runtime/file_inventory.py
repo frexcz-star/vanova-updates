@@ -46,10 +46,19 @@ def add_imported_file(entry: dict[str, Any]) -> dict[str, Any]:
     preview = entry.get("contentPreview")
     if isinstance(preview, str) and preview.strip():
         record["contentPreview"] = preview[:65536]
-    data = config_store.load()
-    files = [f for f in (data.get("scanFiles") or []) if f.get("path") != path]
-    files.append(record)
-    config_store.save({"scanFiles": files})
+    # BUG-017 FIX: RMW atómico bajo un solo lock. Antes hacía load() → añadir →
+    # save() sin serializar; con ThreadingHTTPServer dos imports concurrentes
+    # podían hacer lost-update (el archivo añadido primero se perdía).
+    files: list[dict[str, Any]] = []
+
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        nonlocal files
+        files = [f for f in (cfg.get("scanFiles") or []) if f.get("path") != path]
+        files.append(record)
+        cfg["scanFiles"] = files
+        return cfg
+
+    config_store.update(_mutate)
     _organize_after_import(files)
     return {"ok": True, "count": len(files), "file": record}
 
@@ -68,9 +77,16 @@ def remove_imported_file(path: str) -> dict[str, Any]:
     if path_err:
         return {"ok": False, "error": path_err}
     path = safe_path or ""
-    data = config_store.load()
-    files = [f for f in (data.get("scanFiles") or []) if f.get("path") != path]
-    config_store.save({"scanFiles": files})
+    # BUG-017 FIX: RMW atómico bajo un solo lock (mismo patrón que add_imported_file).
+    files: list[dict[str, Any]] = []
+
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        nonlocal files
+        files = [f for f in (cfg.get("scanFiles") or []) if f.get("path") != path]
+        cfg["scanFiles"] = files
+        return cfg
+
+    config_store.update(_mutate)
     _organize_after_import(files)
     return {"ok": True, "count": len(files)}
 
@@ -101,22 +117,34 @@ def decide_candidate(path: str, approve: bool) -> dict[str, Any]:
     if legacy_reason:
         return {"ok": False, "error": f"Archivo excluido: {legacy_reason}."}
     decision = "approved" if approve else "rejected"
-    updated: list[dict[str, Any]] = []
-    for c in candidates:
-        if isinstance(c, dict) and c.get("path") == path:
-            c["status"] = decision
-            c["decision"] = decision
-            c["decidedAt"] = _now()
-        updated.append(c)
-    config_store.save({"fileCandidates": updated})
+    # BUG-017 FIX: RMW atómico bajo un solo lock sobre fileCandidates.
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        updated: list[dict[str, Any]] = []
+        for c in (cfg.get("fileCandidates") or []):
+            if isinstance(c, dict) and c.get("path") == path:
+                c["status"] = decision
+                c["decision"] = decision
+                c["decidedAt"] = _now()
+            updated.append(c)
+        cfg["fileCandidates"] = updated
+        return cfg
+
+    config_store.update(_mutate)
     if approve:
-        files = [f for f in (data.get("scanFiles") or []) if isinstance(f, dict) and f.get("path") != path]
-        record = dict(record)
-        record["status"] = "approved"
-        record["source"] = "approved"
-        record["category"] = None
-        files.append(record)
-        config_store.save({"scanFiles": files})
+        files: list[dict[str, Any]] = []
+
+        def _mutate_scan(cfg: dict[str, Any]) -> dict[str, Any]:
+            nonlocal files
+            files = [f for f in (cfg.get("scanFiles") or []) if isinstance(f, dict) and f.get("path") != path]
+            approved = dict(record)
+            approved["status"] = "approved"
+            approved["source"] = "approved"
+            approved["category"] = None
+            files.append(approved)
+            cfg["scanFiles"] = files
+            return cfg
+
+        config_store.update(_mutate_scan)
         threading.Thread(
             target=_organize_after_import,
             args=(files,),

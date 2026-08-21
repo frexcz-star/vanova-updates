@@ -407,7 +407,18 @@ def sync_maios_from_hermes() -> dict[str, Any] | None:
         _sync_last_at = now
         _sync_last_key = sync_key
         return existing
-    config_store.save({"aiProviders": {"primary": entry}})
+    # BUG-015 FIX: RMW atómico bajo un solo lock Y sin perder otros providers.
+    # Antes hacía save({"aiProviders": {"primary": entry}}) que REEMPLAZABA todo
+    # el dict aiProviders, borrando otros providers configurados (p.ej. un
+    # provider manual que no es "primary"). Ahora solo actualiza la clave
+    # "primary" preservando el resto.
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        providers = dict(cfg.get("aiProviders") or {})
+        providers["primary"] = entry
+        cfg["aiProviders"] = providers
+        return cfg
+
+    config_store.update(_mutate)
     _sync_connector_env(pid, model)
     _sync_last_at = now
     _sync_last_key = sync_key
