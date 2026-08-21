@@ -75,9 +75,11 @@ def _upside_for_cross_sell(f: dict[str, Any], products: list[dict[str, Any]]) ->
     a_sku = pair.split("+")[0] if "+" in pair else ""
     b_sku = pair.split("+")[1] if "+" in pair and len(pair.split("+")) > 1 else ""
     margins: list[float] = []
+    a_l = a_sku.lower()
+    b_l = b_sku.lower()
     for p in products:
-        sku = str(p.get("sku") or "")
-        if sku in (a_sku, b_sku):
+        sku = str(p.get("sku") or "").lower()
+        if sku in (a_l, b_l):
             resolved = product_identity.resolve_cost(p)
             sale = _as_float(resolved.get("salePrice"))
             cost = _as_float(resolved.get("cost"))

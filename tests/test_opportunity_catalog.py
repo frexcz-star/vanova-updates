@@ -97,6 +97,22 @@ class BuildCatalogTests(OpportunityCatalogBase):
         self.assertAlmostEqual(res[0]["upsideEuro"], 45.0, places=1)
         self.assertEqual(res[0]["impactKind"], "calculated")
 
+    def test_cross_sell_sku_case_insensitive_margin(self):
+        """BUG: los SKUs del par cross-sell llegan en minusculas (box-501) pero
+        el catalogo en mayusculas (BOX-501). El margen no se encontraba ->
+        upside nunca cuantificaba. Fix: normalizar a lowercase en el match."""
+        f = _finding("cross_sell", "opportunity", metrics={"pair": "box-501+box-502", "ordersTogether": 60}, sig="cross_sell:box")
+        # productos con rrp=100/cost=40 -> margen 60%; 60*0.6=36 -> calculado
+        prods = [
+            {"sku": "BOX-501", "rrp": 100.0, "cost": 40.0, "costSource": "imported"},
+            {"sku": "BOX-502", "rrp": 100.0, "cost": 40.0, "costSource": "imported"},
+        ]
+        res = oc.build_catalog([f], products=prods)
+        self.assertEqual(len(res), 1)
+        self.assertIsNotNone(res[0]["upsideEuro"], "upside debe cuantificarse con SKU case-insensitive")
+        self.assertGreater(res[0]["upsideEuro"], 25.0)
+        self.assertEqual(res[0]["impactKind"], "calculated")
+
     def test_unknown_not_zero_no_cost(self):
         # Sin coste en el finding: upside None, nunca 0
         f = _finding("low_revenue_high_margin", "opportunity",
