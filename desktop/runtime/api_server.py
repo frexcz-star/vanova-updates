@@ -237,6 +237,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/insight-actions": lambda: _require("insight_actions").load_all(),
                 "/api/data-health": lambda: _require("data_governance").data_health(),
                 "/api/insights": lambda: _require("insight_store").list_insights(),
+                "/api/opportunities": lambda: _require("opportunity_catalog").catalog(),
                 "/api/recommendations": lambda: _require("recommendation_store").list_recommendations(),
                 "/api/important": lambda: {"items": _require("important_store").list_important()},
                 "/api/integrations/providers": lambda: {"providers": _provider_manifest()},

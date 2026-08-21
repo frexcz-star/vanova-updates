@@ -536,6 +536,15 @@
       }
     },
 
+    /** STRATI — Detector de Oportunidades de Crecimiento (vista Oportunidades). */
+    async getOpportunities() {
+      try {
+        return await runtimeApi("/api/opportunities", { timeoutMs: 8000 });
+      } catch (e) {
+        return null;
+      }
+    },
+
     /** PRODUCT LEAP — Recomendaciones seguidas (ciclo recomendar→actuar→medir). */
     async getRecommendations() {
       try {
