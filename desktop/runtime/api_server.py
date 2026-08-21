@@ -421,6 +421,18 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(result, 404 if result.get("error") == "Agente no encontrado" else 400)
                 return self._json(result)
 
+            if path == "/api/agents/custom":
+                # SISTEMA DE AGENTES MVP — el empresario crea su agente sin código.
+                result = _require("agent_architect").create_custom_agent(
+                    name=body.get("name", ""),
+                    role=body.get("role", ""),
+                    description=body.get("description", ""),
+                    responsibilities=body.get("responsibilities"),
+                )
+                if not result.get("ok"):
+                    return self._json(result, 400)
+                return self._json(result)
+
             if path == "/api/install/run":
                 return self._json(_start_install_background())
 

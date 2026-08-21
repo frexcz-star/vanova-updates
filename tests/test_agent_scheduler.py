@@ -119,6 +119,37 @@ class AgentCatalogTests(unittest.TestCase):
         self.assertEqual(payload["schedule"], "Daily 08:00")
         self.assertIn("Sales Analyst", payload["message"])
 
+    def test_create_custom_agent_requires_name(self):
+        from desktop.runtime.agent_architect import create_custom_agent
+
+        r = create_custom_agent(name="   ")
+        self.assertFalse(r["ok"])
+        self.assertIn("nombre", r["error"].lower())
+
+    def test_create_custom_agent_assigns_role_permissions(self):
+        from desktop.runtime import config_store
+        from desktop.runtime.agent_architect import create_custom_agent
+
+        r = create_custom_agent(name="Agente de Ventas", role="sales")
+        self.assertTrue(r["ok"], r)
+        agent = r["agent"]
+        self.assertEqual(agent["name"], "Agente de Ventas")
+        self.assertTrue(agent["id"].startswith("custom-"))
+        # Rol ventas → permisos de lectura de ventas/productos/analítica.
+        self.assertIn("read_orders", agent["permissions"])
+        self.assertIn("read_products", agent["permissions"])
+        # Persistido.
+        ids = {a["id"] for a in config_store.load().get("agents", [])}
+        self.assertIn(agent["id"], ids)
+
+    def test_create_custom_agent_is_idempotent(self):
+        from desktop.runtime.agent_architect import create_custom_agent
+
+        r1 = create_custom_agent(name="Stock", role="inventory")
+        r2 = create_custom_agent(name="Stock", role="inventory")
+        self.assertTrue(r1["ok"])
+        self.assertFalse(r2["ok"], "duplicado por nombre debe rechazarse")
+
 
 class DelegatedTaskTests(unittest.TestCase):
     """Human-delegated tasks: now / once / recurring + delete + tick firing."""

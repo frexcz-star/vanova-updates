@@ -30,6 +30,53 @@ def _normalize_agent(a: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# SISTEMA DE AGENTES MVP — el empresario crea su propio agente sin código
+# (p.ej. "agente de ventas", "agente de contabilidad", "agente de stock").
+_CUSTOM_ROLE_PERMISSIONS: dict[str, list[str]] = {
+    "sales": ["read_orders", "read_products", "read_analytics"],
+    "accounting": ["read_invoices", "read_finance", "read_treasury"],
+    "inventory": ["read_inventory", "read_products"],
+    "marketing": ["read_analytics", "read_orders"],
+    "support": ["read_customers", "read_orders"],
+    "ceo": ["read_all"],
+    "general": ["read_products", "read_orders"],
+}
+
+
+def create_custom_agent(*, name: str, role: str = "", description: str = "", responsibilities: list[str] | None = None) -> dict[str, Any]:
+    """Crea un agente personalizado (MVP) desde la UI, sin código.
+
+    El empresario da un nombre y un rol (ventas/contabilidad/stock/...); el
+    sistema traduce el rol a permisos seguros y guarda el agente idempotente.
+    El agente se ejecuta igual que el resto (task_queue → Hermes CLI).
+    """
+    import re
+
+    name = (name or "").strip()
+    if not name:
+        return {"ok": False, "error": "El nombre del agente es obligatorio"}
+    role = (role or "general").strip().lower()
+    base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "agente"
+    slug = f"custom-{base[:32]}"
+
+    agent_def = {
+        "id": slug,
+        "name": name,
+        "description": description or f"Agente personalizado de {name} creado desde VANOVA.",
+        "responsibilities": responsibilities or [f"Ejecutar la rutina de {name}"],
+        "tools": [],
+        "integrations": [],
+        "triggers": ["manual"],
+        "schedules": [],
+        "permissions": _CUSTOM_ROLE_PERMISSIONS.get(role, _CUSTOM_ROLE_PERMISSIONS["general"]),
+        "enabled": True,
+    }
+    added = add_agents([agent_def])
+    if not added:
+        return {"ok": False, "error": "El agente ya existe o no se pudo crear"}
+    return {"ok": True, "agent": added[0]}
+
+
 def create_agents(agent_defs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     created = [_normalize_agent(a) for a in agent_defs]
     config_store.save({"agents": created})

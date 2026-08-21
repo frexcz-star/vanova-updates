@@ -2023,6 +2023,23 @@
       }
     },
 
+    /** SISTEMA DE AGENTES MVP — crear un agente personalizado desde la UI. */
+    async createCustomAgent(def) {
+      try {
+        const auth = await runtimeAuthHeaders();
+        const res = await fetch(RUNTIME + "/api/agents/custom", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, auth),
+          body: JSON.stringify(def || {}),
+          signal: AbortSignal.timeout(15000),
+        });
+        if (!res.ok) return null;
+        return res.json();
+      } catch (e) {
+        return null;
+      }
+    },
+
     /** Delegate a task to an agent: now | once | recurring. */
     async createTask(task) {
       try {

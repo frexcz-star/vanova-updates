@@ -151,6 +151,7 @@ MUTATION_POST_PATHS = frozenset(
         "/api/agents/create",
         "/api/agents/add",
         "/api/agents/run",
+        "/api/agents/custom",
         "/api/install/run",
         "/api/setup/complete",
         "/api/setup/scan",

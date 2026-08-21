@@ -3182,6 +3182,61 @@ function closeNewTaskModal(){
   if (m._esc) document.removeEventListener('keydown', m._esc);
   m.remove();
 }
+function openNewAgentModal(){
+  closeNewTaskModal();
+  const overlay = document.createElement('div');
+  overlay.id = 'new-agent-modal';
+  overlay.className = 'task-modal-overlay';
+  overlay.innerHTML = `<div class="task-modal-card">
+    <div class="task-modal-head">
+      <div><div class="task-modal-title">Crear agente</div><div class="task-modal-sub">Crea un agente de IA para tu negocio, sin escribir código</div></div>
+      <button class="btn btn-ghost" data-nt-close style="width:32px;height:32px;padding:0;flex-shrink:0">${ic('x')}</button>
+    </div>
+    <div class="task-modal-body">
+      <div>
+        <label class="nt-label">Nombre del agente</label>
+        <input id="na-name" class="nt-input" placeholder="Ej. Agente de ventas, Agente de contabilidad, Agente de stock" />
+      </div>
+      <div>
+        <label class="nt-label">Área / rol</label>
+        <select id="na-role" class="nt-select">
+          <option value="sales">Ventas</option>
+          <option value="accounting">Contabilidad</option>
+          <option value="inventory">Stock / Inventario</option>
+          <option value="marketing">Marketing</option>
+          <option value="support">Atención al cliente</option>
+          <option value="ceo">Dirección (CEO)</option>
+          <option value="general">General</option>
+        </select>
+      </div>
+      <div>
+        <label class="nt-label">Descripción (opcional)</label>
+        <textarea id="na-desc" class="nt-input" rows="3" placeholder="Qué debe vigilar o hacer este agente…"></textarea>
+      </div>
+      <div style="font-size:12px;color:var(--text-3)">El agente se ejecuta con datos reales de tu negocio y permiso de solo lectura según su área. Hermes lo coordina por detrás.</div>
+    </div>
+    <div class="task-modal-foot">
+      <button class="btn btn-ghost" data-nt-close>Cancelar</button>
+      <button class="btn btn-primary" id="na-create">${ic('plus')} Crear agente</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelectorAll('[data-nt-close]').forEach(function(b){ b.onclick = closeNewTaskModal; });
+  document.getElementById('na-create').onclick = async function(){
+    const name = (document.getElementById('na-name').value||'').trim();
+    const role = document.getElementById('na-role').value;
+    const desc = (document.getElementById('na-desc').value||'').trim();
+    if(!name){ toast('Escribe un nombre para el agente', true); return; }
+    const btn = document.getElementById('na-create');
+    btn.disabled = true; btn.textContent = 'Creando…';
+    const r = window.DataServices ? await window.DataServices.createCustomAgent({ name, role, description: desc }) : null;
+    closeNewTaskModal();
+    if(r && r.ok){ toast('Agente creado.'); AGENT_CATALOG = await (window.DataServices && window.DataServices.loadAgentCatalog ? window.DataServices.loadAgentCatalog() : Promise.resolve(AGENT_CATALOG)); await loadAppData(); render(); }
+    else { toast((r && r.error) || 'No se pudo crear el agente', true); render(); }
+  };
+}
+function closeNewAgentDialog(){ closeNewTaskModal(); }
+
 function openNewTaskModal(){
   closeNewTaskModal();
   const overlay = document.createElement('div');
@@ -3409,7 +3464,9 @@ function viewAgents(){
       </div>`
     : '';
   return `<div class="page">
-    <div class="page-head"><div class="page-title">Agentes de IA</div><div class="page-sub">${AGENTS.length} agente(s) activo(s) coordinados por Hermes. Ejecútalos cuando quieras o deja que sigan su programación automática.</div></div>
+    <div class="page-head"><div class="page-title">Agentes de IA</div><div class="page-sub">${AGENTS.length} agente(s) activo(s) coordinados por Hermes. Ejecútalos cuando quieras o deja que sigan su programación automática.</div>
+      <button class="btn btn-primary btn-sm" data-act="new-agent" style="margin-left:auto">${ic('plus')} Crear agente</button>
+    </div>
     ${srcBanner}
     <div class="grid g-3">
       ${AGENTS.map(a=>`
@@ -7166,6 +7223,8 @@ function onAppClick(e){
       });
       return;
     }
+    const newAgentBtn = e.target.closest('[data-act="new-agent"]');
+    if (newAgentBtn) { openNewAgentModal(); return; }
     const ntOpen = e.target.closest('[data-act="new-task"]');
     if (ntOpen) { openNewTaskModal(); return; }
     const schedDel = e.target.closest('[data-schedule-delete]');
