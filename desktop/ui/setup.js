@@ -135,7 +135,7 @@ function channels() {
 
 function goals() {
   const opts = [{ id: 'marketing', label: 'Marketing' }, { id: 'sales', label: 'Sales' }, { id: 'content', label: 'Content' }, { id: 'inventory', label: 'Inventory' }, { id: 'customer support', label: 'Customer Support' }];
-  return `<h1>Your priorities</h1><p class="subtitle">What would you like MAIOS to help with?</p><div class="check-group" id="goalsGroup">${opts.map(g => `<label class="check-item ${state.profile.goals.includes(g.id) ? 'selected' : ''}"><input type="checkbox" value="${g.id}" ${state.profile.goals.includes(g.id) ? 'checked' : ''}> ${g.label}</label>`).join('')}</div><div class="actions"><button class="btn btn-ghost" data-action="prev">Back</button><button class="btn btn-primary" data-action="next">Continue</button></div>`;
+  return `<h1>Your priorities</h1><p class="subtitle">What would you like VANOVA to help with?</p><div class="check-group" id="goalsGroup">${opts.map(g => `<label class="check-item ${state.profile.goals.includes(g.id) ? 'selected' : ''}"><input type="checkbox" value="${g.id}" ${state.profile.goals.includes(g.id) ? 'checked' : ''}> ${g.label}</label>`).join('')}</div><div class="actions"><button class="btn btn-ghost" data-action="prev">Back</button><button class="btn btn-primary" data-action="next">Continue</button></div>`;
 }
 
 function aiProvider() {
@@ -149,9 +149,9 @@ function aiProvider() {
 }
 
 function install() {
-  return `<h1>Setting up MAIOS</h1><p class="subtitle">We're preparing your environment.</p>
+  return `<h1>Setting up VANOVA</h1><p class="subtitle">We're preparing your environment.</p>
     <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="install-steps"><div class="install-step active" id="stepAnalyze">Analyzing your computer</div><div class="install-step" id="stepRuntime">Preparing MAIOS runtime</div><div class="install-step" id="stepServices">Setting up services</div><div class="install-step" id="stepHermes">Installing Hermes</div><div class="install-step" id="stepValidate">Validating installation</div></div>
+    <div class="install-steps"><div class="install-step active" id="stepAnalyze">Analyzing your computer</div><div class="install-step" id="stepRuntime">Preparing VANOVA runtime</div><div class="install-step" id="stepServices">Setting up services</div><div class="install-step" id="stepHermes">Installing Hermes</div><div class="install-step" id="stepValidate">Validating installation</div></div>
     <div class="actions"><span></span><button class="btn btn-primary hidden" data-action="next" id="installNext">Continue</button></div>`;
 }
 
@@ -159,7 +159,7 @@ async function runInstall() {
   const fill = document.getElementById('progressFill');
   const stepMap = [
     { id: 'stepAnalyze', keys: ['Analyzing', 'Starting'] },
-    { id: 'stepRuntime', keys: ['runtime', 'Preparing MAIOS', 'installation plan'] },
+    { id: 'stepRuntime', keys: ['runtime', 'Preparing VANOVA', 'installation plan'] },
     { id: 'stepServices', keys: ['services', 'Setting up'] },
     { id: 'stepHermes', keys: ['Hermes'] },
     { id: 'stepValidate', keys: ['Validating', 'warnings'] },
@@ -254,9 +254,9 @@ async function loadAgents() {
 }
 
 function ready() {
-  return `<h1>MAIOS is ready</h1><p class="subtitle">Your AI operating system is configured. Open the dashboard to get started.</p>
+  return `<h1>VANOVA is ready</h1><p class="subtitle">Your AI operating system is configured. Open the dashboard to get started.</p>
     <div class="analysis-grid"><div class="analysis-row"><span class="status-ok">✓</span> Company profile saved</div><div class="analysis-row"><span class="status-ok">✓</span> AI provider configured</div><div class="analysis-row"><span class="status-ok">✓</span> Services running</div></div>
-    <div class="actions"><span></span><button class="btn btn-primary" data-action="finish">Open MAIOS Dashboard</button></div>`;
+    <div class="actions"><span></span><button class="btn btn-primary" data-action="finish">Open VANOVA Dashboard</button></div>`;
 }
 
 function bindEvents() {
@@ -334,7 +334,7 @@ async function handleAction(action) {
       await openDashboardFallback();
       if (btn) {
         btn.disabled = false;
-        btn.textContent = 'Open MAIOS Dashboard';
+        btn.textContent = 'Open VANOVA Dashboard';
       }
     }
   }

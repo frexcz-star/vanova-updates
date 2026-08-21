@@ -68,14 +68,15 @@ function analyze() {
 }
 
 let analyzeAttempts = 0;
-const ANALYZE_MAX_ATTEMPTS = 30; // ~60s before showing an actionable error
+const ANALYZE_MAX_ATTEMPTS = 240; // ~10 min before showing an actionable error (cold first start can be slow)
+const ANALYZE_RETRY_MS = 2500;
 
 async function loadAnalysis() {
   const el = document.getElementById('analysisContent');
   if (!el) return;
   try {
     analyzeAttempts = 0;
-    state.analysis = await api('/api/system/analyze');
+    state.analysis = await api('/api/system/analyze', { timeout: 15000 });
     const a = state.analysis;
     el.innerHTML = `<div class="analysis-grid">
       <div class="analysis-section"><h3>System</h3><div class="analysis-row"><span class="${a.system.compatible ? 'status-ok' : 'status-fail'}">${a.system.compatible ? '✓' : '✕'}</span> ${a.system.osVersion} ${a.system.architecture}</div></div>
@@ -92,15 +93,31 @@ async function loadAnalysis() {
     document.getElementById('analyzeNext').disabled = false;
   } catch (e) {
     analyzeAttempts += 1;
+    const elapsed = Math.round((analyzeAttempts * ANALYZE_RETRY_MS) / 1000);
     if (analyzeAttempts >= ANALYZE_MAX_ATTEMPTS) {
       el.innerHTML =
         '<p class="subtitle">No se pudo conectar con los servicios de VANOVA.</p>' +
-        '<p class="subtitle" style="opacity:.65">Cierra VANOVA por completo y vuelve a abrirlo, o comprueba la instalación.</p>' +
+        '<p class="subtitle" style="opacity:.65">Si es la primera vez que abres VANOVA tras instalarlo, el arranque puede tardar un par de minutos (Windows está analizando los archivos nuevos). Si sigue sin conectar, cierra VANOVA por completo y vuelve a abrirlo.</p>' +
+        '<p class="subtitle" style="opacity:.5;font-size:12px">Detalle: ' + (e && e.message ? String(e.message) : 'sin conexión con el runtime local') + '</p>' +
         '<div class="actions" style="justify-content:flex-start;padding-top:8px"><button class="btn btn-primary" data-action="retry-analyze">Reintentar</button></div>';
       return;
     }
-    el.innerHTML = '<p class="subtitle">Connecting to VANOVA services...</p>';
-    setTimeout(loadAnalysis, 2000);
+    // Self-diagnostic: if the bundled Python is missing, say so instead of waiting forever.
+    if (analyzeAttempts === 20 && window.maios && window.maios.getRuntimeHealth) {
+      try {
+        const h = await window.maios.getRuntimeHealth();
+        if (h && h.pythonFound === false) {
+          el.innerHTML =
+            '<p class="subtitle">No se encontró el runtime de Python en la instalación.</p>' +
+            '<p class="subtitle" style="opacity:.65">El antivirus puede haber bloqueado o borrado archivos durante la instalación (python.exe no lleva firma). Añade la carpeta de VANOVA a las exclusiones del antivirus y reinstala el programa.</p>' +
+            '<p class="subtitle" style="opacity:.5;font-size:12px">Buscado en: ' + (h.searchedPaths || []).join(' ; ') + '</p>' +
+            '<div class="actions" style="justify-content:flex-start;padding-top:8px"><button class="btn btn-primary" data-action="retry-analyze">Reintentar</button></div>';
+          return;
+        }
+      } catch (_) {}
+    }
+    el.innerHTML = '<p class="subtitle">Conectando con los servicios de VANOVA… (' + elapsed + 's)</p>';
+    setTimeout(loadAnalysis, ANALYZE_RETRY_MS);
   }
 }
 
@@ -118,7 +135,7 @@ function channels() {
 
 function goals() {
   const opts = [{ id: 'marketing', label: 'Marketing' }, { id: 'sales', label: 'Sales' }, { id: 'content', label: 'Content' }, { id: 'inventory', label: 'Inventory' }, { id: 'customer support', label: 'Customer Support' }];
-  return `<h1>Your priorities</h1><p class="subtitle">What would you like MAIOS to help with?</p><div class="check-group" id="goalsGroup">${opts.map(g => `<label class="check-item ${state.profile.goals.includes(g.id) ? 'selected' : ''}"><input type="checkbox" value="${g.id}" ${state.profile.goals.includes(g.id) ? 'checked' : ''}> ${g.label}</label>`).join('')}</div><div class="actions"><button class="btn btn-ghost" data-action="prev">Back</button><button class="btn btn-primary" data-action="next">Continue</button></div>`;
+  return `<h1>Your priorities</h1><p class="subtitle">What would you like VANOVA to help with?</p><div class="check-group" id="goalsGroup">${opts.map(g => `<label class="check-item ${state.profile.goals.includes(g.id) ? 'selected' : ''}"><input type="checkbox" value="${g.id}" ${state.profile.goals.includes(g.id) ? 'checked' : ''}> ${g.label}</label>`).join('')}</div><div class="actions"><button class="btn btn-ghost" data-action="prev">Back</button><button class="btn btn-primary" data-action="next">Continue</button></div>`;
 }
 
 function aiProvider() {
@@ -132,9 +149,9 @@ function aiProvider() {
 }
 
 function install() {
-  return `<h1>Setting up MAIOS</h1><p class="subtitle">We're preparing your environment.</p>
+  return `<h1>Setting up VANOVA</h1><p class="subtitle">We're preparing your environment.</p>
     <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="install-steps"><div class="install-step active" id="stepAnalyze">Analyzing your computer</div><div class="install-step" id="stepRuntime">Preparing MAIOS runtime</div><div class="install-step" id="stepServices">Setting up services</div><div class="install-step" id="stepHermes">Installing Hermes</div><div class="install-step" id="stepValidate">Validating installation</div></div>
+    <div class="install-steps"><div class="install-step active" id="stepAnalyze">Analyzing your computer</div><div class="install-step" id="stepRuntime">Preparing VANOVA runtime</div><div class="install-step" id="stepServices">Setting up services</div><div class="install-step" id="stepHermes">Installing Hermes</div><div class="install-step" id="stepValidate">Validating installation</div></div>
     <div class="actions"><span></span><button class="btn btn-primary hidden" data-action="next" id="installNext">Continue</button></div>`;
 }
 
@@ -142,7 +159,7 @@ async function runInstall() {
   const fill = document.getElementById('progressFill');
   const stepMap = [
     { id: 'stepAnalyze', keys: ['Analyzing', 'Starting'] },
-    { id: 'stepRuntime', keys: ['runtime', 'Preparing MAIOS', 'installation plan'] },
+    { id: 'stepRuntime', keys: ['runtime', 'Preparing VANOVA', 'installation plan'] },
     { id: 'stepServices', keys: ['services', 'Setting up'] },
     { id: 'stepHermes', keys: ['Hermes'] },
     { id: 'stepValidate', keys: ['Validating', 'warnings'] },
@@ -237,9 +254,9 @@ async function loadAgents() {
 }
 
 function ready() {
-  return `<h1>MAIOS is ready</h1><p class="subtitle">Your AI operating system is configured. Open the dashboard to get started.</p>
+  return `<h1>VANOVA is ready</h1><p class="subtitle">Your AI operating system is configured. Open the dashboard to get started.</p>
     <div class="analysis-grid"><div class="analysis-row"><span class="status-ok">✓</span> Company profile saved</div><div class="analysis-row"><span class="status-ok">✓</span> AI provider configured</div><div class="analysis-row"><span class="status-ok">✓</span> Services running</div></div>
-    <div class="actions"><span></span><button class="btn btn-primary" data-action="finish">Open MAIOS Dashboard</button></div>`;
+    <div class="actions"><span></span><button class="btn btn-primary" data-action="finish">Open VANOVA Dashboard</button></div>`;
 }
 
 function bindEvents() {
@@ -317,7 +334,7 @@ async function handleAction(action) {
       await openDashboardFallback();
       if (btn) {
         btn.disabled = false;
-        btn.textContent = 'Open MAIOS Dashboard';
+        btn.textContent = 'Open VANOVA Dashboard';
       }
     }
   }
