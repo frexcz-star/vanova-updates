@@ -254,6 +254,16 @@ class ProactiveTickTests(unittest.TestCase):
             agent_scheduler._tick()
         self.assertFalse(config_store.load().get("businessFindings"), "sin start() no debe analizar ni guardar")
 
+    def test_proactive_tick_uses_atomic_update(self):
+        """BUG-021: el análisis proactivo debe persistir con config_store.update()
+        (RMW atómico), no load→save directo que pierde escrituras concurrentes."""
+        from desktop.runtime import agent_scheduler, config_store
+        self._cfg_with_sales()
+        with patch.object(config_store, "update", wraps=config_store.update) as mock_update, \
+             patch.object(config_store, "save", wraps=config_store.save) as mock_save:
+            agent_scheduler._tick()
+        mock_update.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

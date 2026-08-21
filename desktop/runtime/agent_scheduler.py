@@ -272,50 +272,47 @@ def _tick() -> None:
         last_pro = _parse_last_run(last_runs.get(proactive_key))
         PROACTIVE_INTERVAL_HOURS = 6
         if _started and (last_pro is None or (now - last_pro) >= timedelta(hours=PROACTIVE_INTERVAL_HOURS)):
-            data = config_store.load()
-            if data.get("organizedSales") or data.get("organizedProducts"):
-                from . import detection_engine, insight_store, prioritization
+            # BUG-021 FIX: antes el análisis proactivo hacía load() → modificar
+            # → save() SIN lock, perdiendo escrituras concurrentes del API
+            # server (ThreadingHTTPServer). Se detecta con una snapshot del
+            # config y se persiste de forma ATÓMICA con config_store.update()
+            # (un solo lock). OJO: la detección NO corre dentro del mutator
+            # porque run_detection() llama internamente a config_store.load(),
+            # y _config_lock es no-reentrante → deadlock.
+            cfg_snapshot = config_store.load()
+            if not (cfg_snapshot.get("organizedSales") or cfg_snapshot.get("organizedProducts")):
+                return
+            from . import detection_engine, insight_store, prioritization
 
-                res = detection_engine.run_detection(data, persist=False)
-                findings = (res or {}).get("findings") or []
-                if findings:
-                    data["businessFindings"] = findings
-                    data["detectionRunAt"] = (res or {}).get("ranAt")
-                    insight_store.sync_from_findings(findings, data=data, active_signatures=(res or {}).get("freshSignatures"))
-                    prioritization.persist(prioritization.build_priorities(findings), data=data)
-                    # PRODUCT LEAP — medicion automatica: cada analisis recurrente
-                    # re-mide las recomendaciones realizadas/resueltas con los
-                    # datos actuales (sin esperar al usuario).
-                    try:
-                        from . import recommendation_store
+            res = detection_engine.run_detection(cfg_snapshot, persist=False)
+            findings = (res or {}).get("findings") or []
+            if not findings:
+                return
 
-                        # ESTABILIZACIÓN: el análisis recurrente también debe
-                        # CREAR recomendaciones para findings nuevos (antes solo
-                        # se creaban en la importación, así que un hallazgo
-                        # detectado a las 6h nunca llegaba al ciclo
-                        # recomendar→actuar→medir). ID estable por firma: el
-                        # dedup evita duplicados en re-análisis.
-                        for p in prioritization.build_priorities(findings, top=5):
-                            fnd = next((x for x in findings if x.get("id") == p.get("findingId")), None)
-                            if fnd:
-                                recommendation_store.record_finding(fnd, data=data)
-                        recommendation_store.sync_resolutions(findings, active_signatures=(res or {}).get("freshSignatures"), data=data)
-                        recommendation_store.measure_all(data=data)
-                    except Exception:  # noqa: BLE001
-                        pass
-                    config_store.save({
-                        "businessFindings": findings,
-                        "detectionRunAt": (res or {}).get("ranAt"),
-                        "insights": data.get("insights") or [],
-                        "priorities": data.get("priorities") or [],
-                        "recommendations": data.get("recommendations") or [],
-                    })
-                last_runs[proactive_key] = now.isoformat()
-                changed = True
-                log.info(
-                    "Proactive analysis tick: %s",
-                    str((res or {}).get("counts") or {}),
-                )
+            def _persist(cfg: dict[str, Any]) -> dict[str, Any]:
+                cfg["businessFindings"] = findings
+                cfg["detectionRunAt"] = (res or {}).get("ranAt")
+                insight_store.sync_from_findings(findings, data=cfg, active_signatures=(res or {}).get("freshSignatures"))
+                prioritization.persist(prioritization.build_priorities(findings), data=cfg)
+                try:
+                    from . import recommendation_store
+
+                    for p in prioritization.build_priorities(findings, top=5):
+                        fnd = next((x for x in findings if x.get("id") == p.get("findingId")), None)
+                        if fnd:
+                            recommendation_store.record_finding(fnd, data=cfg)
+                    recommendation_store.sync_resolutions(findings, active_signatures=(res or {}).get("freshSignatures"), data=cfg)
+                    recommendation_store.measure_all(data=cfg)
+                except Exception:  # noqa: BLE001
+                    pass
+                return cfg
+
+            config_store.update(_persist)
+            # El timestamp del run proactivo se guarda en el state file (no en
+            # el config) vía last_runs, como el resto de ticks del scheduler.
+            last_runs[proactive_key] = now.isoformat()
+            changed = True
+            log.info("Proactive analysis tick (atomic)")
     except Exception as exc:  # noqa: BLE001 — el tick nunca debe caer por esto
         log.warning("Proactive analysis tick error: %s", exc)
 
