@@ -9,9 +9,9 @@ from .company_profile import CompanyProfile
 AGENT_CATALOG: list[dict[str, Any]] = [
     {
         "id": "marketing-agent",
-        "name": "Marketing Agent",
-        "description": "Plans campaigns, monitors performance, and suggests optimizations.",
-        "responsibilities": ["Campaign planning", "Channel analysis", "ROI tracking"],
+        "name": "Agente de Marketing",
+        "description": "Planea campañas, vigila el rendimiento y sugiere mejoras para vender más.",
+        "responsibilities": ["Planificación de campañas", "Análisis de canales", "Seguimiento del retorno"],
         "tools": ["analytics", "content_calendar"],
         "integrations": ["instagram", "shopify"],
         "triggers": ["schedule", "manual"],
@@ -22,9 +22,9 @@ AGENT_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "sales-analyst",
-        "name": "Sales Analyst",
-        "description": "Analyzes sales trends, identifies opportunities, and forecasts revenue.",
-        "responsibilities": ["Sales reporting", "Trend analysis", "Forecasting"],
+        "name": "Analista de Ventas",
+        "description": "Detecta oportunidades y tendencias de venta, y anticipa los ingresos.",
+        "responsibilities": ["Informe de ventas", "Análisis de tendencias", "Previsión de ingresos"],
         "tools": ["shopify_admin", "reports"],
         "integrations": ["shopify"],
         "triggers": ["schedule", "event"],
@@ -35,9 +35,9 @@ AGENT_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "content-agent",
-        "name": "Content Agent",
-        "description": "Generates content ideas, drafts posts, and prepares media briefs.",
-        "responsibilities": ["Content ideation", "Draft creation", "Publishing prep"],
+        "name": "Agente de Contenido",
+        "description": "Genera ideas de contenido, redacta publicaciones y prepara los materiales.",
+        "responsibilities": ["Ideas de contenido", "Redacción de borradores", "Preparación de publicaciones"],
         "tools": ["llm", "creatomate"],
         "integrations": ["instagram"],
         "triggers": ["schedule", "manual"],
@@ -48,9 +48,9 @@ AGENT_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "inventory-agent",
-        "name": "Inventory Agent",
-        "description": "Monitors stock levels, alerts on low inventory, and suggests reorders.",
-        "responsibilities": ["Stock monitoring", "Reorder alerts", "Demand forecasting"],
+        "name": "Agente de Stock",
+        "description": "Vigila el inventario, avisa de roturas de stock y sugiere reposiciones.",
+        "responsibilities": ["Control de stock", "Avisos de reposición", "Previsión de demanda"],
         "tools": ["shopify_admin", "erp"],
         "integrations": ["shopify"],
         "triggers": ["schedule", "event"],
@@ -61,9 +61,9 @@ AGENT_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "support-agent",
-        "name": "Customer Support Agent",
-        "description": "Drafts responses, categorizes tickets, and escalates complex issues.",
-        "responsibilities": ["Ticket triage", "Response drafting", "Escalation"],
+        "name": "Agente de Atención al Cliente",
+        "description": "Redacta respuestas, clasifica consultas y escala los casos complejos.",
+        "responsibilities": ["Clasificación de consultas", "Redacción de respuestas", "Escalado de casos"],
         "tools": ["email", "crm"],
         "integrations": ["shopify", "email"],
         "triggers": ["event", "manual"],
@@ -74,9 +74,9 @@ AGENT_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "ceo-copilot",
-        "name": "CEO Copilot",
-        "description": "Executive summary, KPI monitoring, and strategic recommendations.",
-        "responsibilities": ["Executive briefing", "KPI monitoring", "Decision support"],
+        "name": "Copiloto de Dirección",
+        "description": "Resumen ejecutivo, seguimiento de indicadores clave y recomendaciones estratégicas.",
+        "responsibilities": ["Informe ejecutivo", "Seguimiento de indicadores", "Apoyo a la decisión"],
         "tools": ["analytics", "reports"],
         "integrations": ["shopify", "instagram"],
         "triggers": ["schedule", "manual"],
@@ -102,14 +102,14 @@ def recommend(profile: CompanyProfile) -> list[dict[str, Any]]:
         if channel_match:
             score += 2
             matched = channels & set(agent.get("matchChannels", []))
-            reasons.append(f"You use {', '.join(m.title() for m in matched)}.")
+            reasons.append(f"Usas {', '.join(m.title() for m in matched)}.")
         if goal_match:
             score += 2
             matched = goals & set(agent.get("matchGoals", []))
-            reasons.append(f"Aligned with your {', '.join(m.title() for m in matched)} goals.")
+            reasons.append(f"Alineado con tus objetivos de {', '.join(m.title() for m in matched)}.")
         if agent["id"] == "ceo-copilot" and profile.identity.get("name"):
             score += 1
-            reasons.append("Provides executive overview for your business.")
+            reasons.append("Te da una visión general de tu negocio.")
 
         if score >= 2:
             recommendations.append({
@@ -124,7 +124,7 @@ def recommend(profile: CompanyProfile) -> list[dict[str, Any]]:
                 **{k: v for k, v in agent.items() if not k.startswith("match")},
                 "recommended": False,
                 "score": score,
-                "reason": "Optional for now.",
+                "reason": "Opcional por ahora.",
                 "selected": False,
             })
 
@@ -136,7 +136,7 @@ def recommend(profile: CompanyProfile) -> list[dict[str, Any]]:
                 **{k: v for k, v in agent.items() if not k.startswith("match")},
                 "recommended": True,
                 "score": 1,
-                "reason": "Recommended as a starting point.",
+                "reason": "Recomendado como punto de partida.",
                 "selected": True,
             })
     return recommendations

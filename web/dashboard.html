@@ -1467,29 +1467,29 @@ let AGENTS = [
   // Default agent registry. Status/last/runs/perf/current are HONEST defaults
   // (Unknown / — / 0) until real backend data arrives via loadAppData(); the
   // backend map overrides them. Never fabricate runs, timestamps or health.
-  {id:'trend', name:'Trend Hunter', short:'TH', color:'#0ea5e9', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
-   desc:'Detecta tendencias emergentes en papelería y licencias.', data:[], runs:0, perf:'—'},
-  {id:'licensing', name:'Licensing Intelligence', short:'LI', color:'#8b5cf6', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'approval',
-   desc:'Analiza rendimiento y riesgo de cada licencia.', data:[], runs:0, perf:'—'},
-  {id:'product', name:'Product Designer AI', short:'PD', color:'#f43f5e', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
+  {id:'trend', name:'Cazador de Tendencias', short:'TH', color:'#0ea5e9', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
+   desc:'Detecta las tendencias emergentes de tu sector.', data:[], runs:0, perf:'—'},
+  {id:'licensing', name:'Inteligencia de Licencias', short:'LI', color:'#8b5cf6', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'approval',
+   desc:'Analiza el rendimiento y el riesgo de cada licencia.', data:[], runs:0, perf:'—'},
+  {id:'product', name:'Diseñador de Producto IA', short:'PD', color:'#f43f5e', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
    desc:'Propone diseños y conceptos de producto.', data:[], runs:0, perf:'—'},
-  {id:'pricing', name:'Pricing AI', short:'PR', color:'#f59e0b', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'approval',
+  {id:'pricing', name:'IA de Precios', short:'PR', color:'#f59e0b', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'approval',
    desc:'Recomienda precios y promociones óptimas.', data:[], runs:0, perf:'—'},
-  {id:'sales', name:'Sales Copilot', short:'SC', color:'#22c55e', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
-   desc:'Asiste en ventas y detección de oportunidades.', data:[], runs:0, perf:'—'},
-  {id:'forecast', name:'Forecast AI', short:'FC', color:'#3b82f6', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
-   desc:'Predice demanda y detecta roturas de stock.', data:[], runs:0, perf:'—'},
-  {id:'factory', name:'Factory Optimizer', short:'FO', color:'#14b8a6', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
-   desc:'Maximiza eficiencia de la fábrica.', data:[], runs:0, perf:'—'},
-  {id:'procurement', name:'Procurement AI', short:'PU', color:'#a855f7', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'approval',
-   desc:'Gestiona compras y riesgo de proveedores.', data:[], runs:0, perf:'—'},
-  {id:'marketing', name:'Marketing Studio AI', short:'MK', color:'#ec4899', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'approval',
+  {id:'sales', name:'Copiloto de Ventas', short:'SC', color:'#22c55e', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
+   desc:'Ayuda en las ventas y a detectar oportunidades.', data:[], runs:0, perf:'—'},
+  {id:'forecast', name:'IA de Previsión', short:'FC', color:'#3b82f6', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
+   desc:'Predice la demanda y detecta roturas de stock.', data:[], runs:0, perf:'—'},
+  {id:'factory', name:'Optimizador de Producción', short:'FO', color:'#14b8a6', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
+   desc:'Maximiza la eficiencia de la línea de producción.', data:[], runs:0, perf:'—'},
+  {id:'procurement', name:'IA de Compras', short:'PU', color:'#a855f7', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'approval',
+   desc:'Gestiona las compras y el riesgo de proveedores.', data:[], runs:0, perf:'—'},
+  {id:'marketing', name:'Estudio de Marketing IA', short:'MK', color:'#ec4899', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'approval',
    desc:'Crea campañas y contenido de marketing.', data:[], runs:0, perf:'—'},
-  {id:'customer', name:'Customer Success AI', short:'CS', color:'#6366f1', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
-   desc:'Previene abandono y mejora la retención.', data:[], runs:0, perf:'—'},
-  {id:'finance', name:'Financial Intelligence', short:'FI', color:'#10b981', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'approval',
+  {id:'customer', name:'IA de Fidelización', short:'CS', color:'#6366f1', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'auto',
+   desc:'Previene la pérdida de clientes y mejora la retención.', data:[], runs:0, perf:'—'},
+  {id:'finance', name:'Inteligencia Financiera', short:'FI', color:'#10b981', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'approval',
    desc:'Análisis financiero y detección de anomalías.', data:[], runs:0, perf:'—'},
-  {id:'ceo', name:'CEO Copilot', short:'CC', color:'#dc2626', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'human',
+  {id:'ceo', name:'Copiloto de Dirección', short:'CC', color:'#dc2626', status:'Unknown', last:'—', insights:0, tasks:0, current:'—', autonomy:'human',
    desc:'Síntesis ejecutiva para la dirección.', data:[], runs:0, perf:'—'}
 ];
 let AGENT_CATALOG = [];
@@ -2585,7 +2585,7 @@ function agentStatusLabel(status, reason){
   // Surface the reason ('Listo') when present, and never show 'Inactivo' for
   // an agent that is waiting normally.
   const labels = {
-    running:'En ejecución', queued:'En cola', error:'Error', offline:'Offline',
+    running:'En ejecución', queued:'En cola', error:'Error', offline:'Sin conexión',
     idle: (reason && reason !== 'Listo') ? reason : 'Activo',
     waiting:'En espera', active:'Activo',
     needs_attention:'Atención', unknown:'Estado desconocido'
@@ -2641,7 +2641,7 @@ function ceoBanner(){
   return `<div class="brief-head">
     <div>
       <h2>${companyName()} — Daily Executive Brief</h2>
-      <div class="d">${today} · Generado por CEO Copilot</div>
+      <div class="d">${today} · Generado por Copiloto de Dirección</div>
     </div>
     <div><button class="btn btn-primary" data-go="ceobrief">${ic('award')} Ver informe</button></div>
   </div>`;
@@ -6340,7 +6340,7 @@ function viewLogistics(){return noData('Logistics','Logística y envíos.','ERP'
 function viewStudio(){return noData('Marketing Studio','Estudio de marketing.','Instagram','marketing');}
 function viewCampaigns(){return noData('Campaigns','Campañas activas.','Instagram','marketing');}
 function viewContent(){return noData('Content','Contenido generado.','Instagram','marketing');}
-function viewTrends(){return noData('Trends','Tendencias detectadas.','Trend Hunter','trend');}
+function viewTrends(){return noData('Tendencias','Tendencias detectadas.','Cazador de Tendencias','trend');}
 // FASE 13 (P10) — «Fuentes de datos»: conectores reales + capabilities + próximos.
 function viewSources(){
   const s = state.sources;
