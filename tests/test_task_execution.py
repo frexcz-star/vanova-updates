@@ -67,6 +67,22 @@ class TaskExecutionTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 task_queue._execute_task({"agentId": "a1", "payload": {}})
 
+    def test_execute_task_passes_agent_bot_profile(self):
+        """FASE B (BUG-030): una tarea de un agente con bot Hermes debe ejecutarse
+        bajo el perfil del bot (hermesBot) para que la conversación quede
+        persistida en su perfil, no one-shot en el perfil por defecto."""
+        calls = []
+        with patch("desktop.runtime.hermes_service.status", return_value={"healthy": True}), \
+             patch("desktop.runtime.hermes_chat.execute_sync",
+                   side_effect=lambda *a, **kw: calls.append(kw) or {"status": "completed", "summary": "Done"}), \
+             patch("desktop.runtime.config_store.load",
+                   return_value={"agents": [{"id": "a1", "name": "Ventas", "hermesBot": "vanova-ventas"}]}), \
+             patch("desktop.runtime.task_store.touch_heartbeat", return_value=None), \
+             patch("desktop.runtime.agent_data_tools.render_context_block", return_value=""):
+            result = task_queue._execute_task({"agentId": "a1", "payload": {}})
+        self.assertEqual(result, "Done")
+        self.assertEqual(calls[0].get("profile"), "vanova-ventas")
+
 
 if __name__ == "__main__":
     unittest.main()

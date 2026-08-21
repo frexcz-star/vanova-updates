@@ -1198,9 +1198,15 @@ def _run_hermes_cli(
     message: str,
     session_id: str = "",
     progress_cb=None,
+    profile: str = "",
 ) -> dict[str, Any]:
     """Run Hermes chat streaming (no --quiet) so intermediate steps and partial
-    text can be surfaced in real time via ``progress_cb``."""
+    text can be surfaced in real time via ``progress_cb``.
+
+    When ``profile`` is given (bot-mode / FASE B), the query runs under that
+    Hermes profile so the exchange is persisted as a conversation in the
+    agent's own profile (``hermes -p <profile> chat …``).
+    """
     import time as _time
 
     if not hermes_service._find_hermes() and not shutil.which("hermes"):  # noqa: SLF001
@@ -1220,7 +1226,12 @@ def _run_hermes_cli(
     context = _build_chat_context(message)
     # NOTE: no --quiet — without it the CLI streams steps (┊ tool lines) and the
     # answer box line by line, which is what powers the live progress UI.
-    cmd = _find_hermes_cli() + ["chat", "-q", action_hint + context + "\n\n" + message]
+    cli = _find_hermes_cli()
+    if profile:
+        # FASE B: ejecutar bajo el perfil Hermes del bot del agente para que la
+        # conversación quede persistida en su propio perfil (no en el default).
+        cli = cli + ["-p", profile]
+    cmd = cli + ["chat", "-q", action_hint + context + "\n\n" + message]
     if session_id:
         cmd += ["--resume", session_id]
     if pass_model and model:
@@ -1407,7 +1418,7 @@ def _run_hermes_cli(
     }
 
 
-def _run_chat_with_slot(message: str, session_id: str = "", progress_cb=None) -> dict[str, Any]:
+def _run_chat_with_slot(message: str, session_id: str = "", progress_cb=None, profile: str = "") -> dict[str, Any]:
     """Run one CLI session at a time so Hermes cannot overload the runtime."""
     if not _chat_semaphore.acquire(timeout=CHAT_QUEUE_WAIT_SECONDS):
         return {
@@ -1415,16 +1426,22 @@ def _run_chat_with_slot(message: str, session_id: str = "", progress_cb=None) ->
             "summary": "Hermes ya está procesando otra consulta. Espera unos segundos y vuelve a intentarlo.",
         }
     try:
-        return _run_hermes_cli(message, session_id=session_id, progress_cb=progress_cb)
+        return _run_hermes_cli(message, session_id=session_id, progress_cb=progress_cb, profile=profile)
     finally:
         _chat_semaphore.release()
 
 
-def execute_sync(message: str, session_id: str = "") -> dict[str, Any]:
-    """Run Hermes synchronously for agent task execution (Phase 10)."""
+def execute_sync(message: str, session_id: str = "", profile: str = "") -> dict[str, Any]:
+    """Run Hermes synchronously for agent task execution (Phase 10).
+
+    ``profile`` (optional) runs the query under that Hermes profile (bot-mode).
+    Task execution passes the agent's bot profile (FASE B) so the exchange is
+    persisted as a conversation in the agent's own Hermes profile instead of
+    the default one.
+    """
     if not message or not message.strip():
         return {"status": "error", "summary": "Mensaje vacío"}
-    return _run_chat_with_slot(message.strip(), session_id=session_id)
+    return _run_chat_with_slot(message.strip(), session_id=session_id, profile=profile)
 
 
 def _resolve_conversation(conversation_id: str, message: str, now: str) -> tuple[str, str]:

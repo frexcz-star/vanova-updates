@@ -478,7 +478,13 @@ def _execute_task(task: dict) -> str:
 
     if task.get("id"):
         task_store.touch_heartbeat(task["id"], progress=10)
-    result = hermes_chat.execute_sync(message)
+    # FASE B: ejecutar bajo el perfil Hermes del bot del agente (si existe) para
+    # que la conversación quede persistida en el perfil del agente, no one-shot
+    # en el perfil por defecto. Sin bot (hermesBot vacío) se ejecuta normal.
+    bot_profile = ""
+    if agent and agent.get("hermesBot"):
+        bot_profile = str(agent.get("hermesBot") or "").strip()
+    result = hermes_chat.execute_sync(message, profile=bot_profile)
     if task.get("id"):
         task_store.touch_heartbeat(task["id"], progress=50)
     if result.get("status") == "completed":
@@ -490,7 +496,7 @@ def _execute_task(task: dict) -> str:
                 f"{message}\n\n[ATENCIÓN: los datos que dices que faltan YA EXISTEN en VANOVA — "
                 f"úsalos para responder. No vuelvas a pedir que los suban.]\n{extra}"
             )
-            result2 = hermes_chat.execute_sync(retry_msg)
+            result2 = hermes_chat.execute_sync(retry_msg, profile=bot_profile)
             if result2.get("status") == "completed":
                 result = result2
     if task.get("id"):
