@@ -1177,6 +1177,9 @@ button:focus-visible,[data-act]:focus-visible{
 .task-modal-overlay{position:fixed;inset:0;z-index:220;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(5,6,12,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fadeIn .18s ease}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 #new-task-modal .task-modal-card{width:min(520px,100%);max-height:92vh;overflow:auto;border-radius:20px;border:1px solid var(--border-strong);background:linear-gradient(170deg,rgba(23,25,40,.97),rgba(13,14,21,.98));box-shadow:0 24px 70px rgba(0,0,0,.5),0 0 0 1px rgba(139,124,246,.12),0 0 60px rgba(139,124,246,.08);animation:modalPop .22s cubic-bezier(.22,.9,.3,1.2)}
+#import-guide-modal .task-modal-card{width:min(640px,100%);max-height:92vh;overflow:auto;border-radius:20px;border:1px solid var(--border-strong);background:linear-gradient(170deg,rgba(23,25,40,.97),rgba(13,14,21,.98));box-shadow:0 24px 70px rgba(0,0,0,.5);animation:modalPop .22s cubic-bezier(.22,.9,.3,1.2)}
+.ig-step{display:flex;gap:14px;align-items:flex-start;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.ig-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
 @keyframes modalPop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
 #new-task-modal .task-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:18px 20px 0}
 #new-task-modal .task-modal-title{font-size:17px;font-weight:700;color:var(--text)}
@@ -2459,6 +2462,21 @@ function homeQuickActionsHTML(){
   </div>`;
 }
 
+function homeOnboardingBanner(){
+  // Solo se muestra cuando NO hay datos reales de negocio conectados.
+  const hasData = isRealDataMode(store.dataMode) && (store.overview && Object.keys(store.overview).length);
+  const hasFiles = (store.files && store.files.length) || (store.businessFindings && store.businessFindings.length);
+  if (hasData || hasFiles) return '';
+  return `<div class="conn-banner conn-banner--warn" style="margin-bottom:16px">
+    <span class="status-dot warn"></span>
+    <div class="conn-banner-body">
+      <strong>Conecta tus datos y ve tu negocio en euros</strong>
+      <span>VANOVA analiza tus ventas reales (tienda online o un Excel) y te muestra qué oportunidades tienen más impacto. Te guiamos en 3 pasos.</span>
+    </div>
+    <button class="btn btn-primary btn-sm" data-act="import-guide" style="flex-shrink:0">${ic('plug')} Conectar datos</button>
+  </div>`;
+}
+
 function viewHome(){
   const opps = store.priorities.filter(p=>p.type==='opportunity'||p.type==='recommendation').length;
   const risks = store.priorities.filter(p=>p.type==='risk').length;
@@ -2478,6 +2496,8 @@ function viewHome(){
         ${store.dataMode==='mock' ? '<span class="mock-badge">'+ic('info')+' Demo</span>' : ''}
       </div>
     </div>
+
+    ${homeOnboardingBanner()}
 
     ${homeConfigurableMetricsHTML()}
 
@@ -3177,10 +3197,12 @@ function refreshTasksScheduled(){
   if (inner) inner.innerHTML = scheduledTasksHTML();
 }
 function closeNewTaskModal(){
-  const m = document.getElementById('new-task-modal');
-  if (!m) return;
-  if (m._esc) document.removeEventListener('keydown', m._esc);
-  m.remove();
+  // Cierra cualquier overlay modal activo (new-task, new-agent, import-guide).
+  const overlays = document.querySelectorAll('.task-modal-overlay');
+  overlays.forEach(function(m){
+    if (m._esc) document.removeEventListener('keydown', m._esc);
+    m.remove();
+  });
 }
 function openNewAgentModal(){
   closeNewTaskModal();
@@ -3236,6 +3258,81 @@ function openNewAgentModal(){
   };
 }
 function closeNewAgentDialog(){ closeNewTaskModal(); }
+
+function openImportGuide(){
+  closeNewTaskModal();
+  const overlay = document.createElement('div');
+  overlay.id = 'import-guide-modal';
+  overlay.className = 'task-modal-overlay';
+  const hasShopify = store.shopifySync && store.shopifySync.connected;
+  overlay.innerHTML = `<div class="task-modal-card" style="max-width:640px">
+    <div class="task-modal-head">
+      <div><div class="task-modal-title">Conecta tus datos</div><div class="task-modal-sub">En 3 pasos, VANOVA analiza tu negocio y te muestra el dinero en juego</div></div>
+      <button class="btn btn-ghost" data-nt-close style="width:32px;height:32px;padding:0;flex-shrink:0">${ic('x')}</button>
+    </div>
+    <div class="task-modal-body">
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="ig-step">
+          <div class="ig-num">1</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:14px">Añade tus datos de ventas</div>
+            <div style="font-size:12.5px;color:var(--text-2);margin-top:3px">Dos opciones:</div>
+            <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+              <button class="btn btn-primary" id="ig-shopify" ${hasShopify?'disabled':''}>${ic('link')} ${hasShopify?'Tienda conectada':'Conectar tienda Shopify'}</button>
+              <button class="btn btn-ghost" id="ig-files">${ic('file')} Subir Excel / CSV</button>
+            </div>
+            <div style="font-size:11.5px;color:var(--text-3);margin-top:8px">Puedes importar ventas, productos y clientes. Si ya conectaste tu tienda, pulsa directamente "Analizar".</div>
+          </div>
+        </div>
+        <div class="ig-step">
+          <div class="ig-num">2</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:14px">Analiza tu negocio</div>
+            <div style="font-size:12.5px;color:var(--text-2);margin-top:3px">El detector revisa ventas, productos, márgenes y clientes para encontrar oportunidades reales.</div>
+          </div>
+        </div>
+        <div class="ig-step">
+          <div class="ig-num">3</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:14px">Ve el dinero en juego</div>
+            <div style="font-size:12.5px;color:var(--text-2);margin-top:3px">Oportunidades con su impacto en euros y un plan "Qué hacer hoy". Si falta un dato (p.ej. el coste de un producto), te lo decimos con claridad — nunca inventamos cifras.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="task-modal-foot">
+      <button class="btn btn-ghost" data-nt-close>Cancelar</button>
+      <button class="btn btn-primary" id="ig-analyze">${ic('zap')} Analizar mi negocio</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelectorAll('[data-nt-close]').forEach(function(b){ b.onclick = closeNewTaskModal; });
+
+  document.getElementById('ig-shopify').onclick = async function(){
+    // Cierra el asistente y abre la vista de integraciones donde el empresario conecta Shopify.
+    closeNewTaskModal();
+    go('integrations');
+    toast('Conecta tu tienda Shopify en la pestaña Integraciones.');
+  };
+  document.getElementById('ig-files').onclick = function(){
+    const picker = document.getElementById('file-picker');
+    if (picker) picker.click();
+  };
+  document.getElementById('ig-analyze').onclick = async function(){
+    const btn = document.getElementById('ig-analyze');
+    btn.disabled = true; btn.textContent = 'Analizando…';
+    const ds = window.DataServices;
+    let ok = false;
+    if (ds && ds.analyzeBusiness){
+      try { const r = await ds.analyzeBusiness(); ok = !!r && !r.error; } catch(e){ ok = false; }
+    }
+    closeNewTaskModal();
+    toast(ok ? 'Análisis completado. Ve las oportunidades en Insights.' : 'Análisis iniciado. Revisa Insights.', ok);
+    await loadAppData(); render();
+    if (ok) go('insights');
+  };
+}
+function closeImportGuide(){ closeNewTaskModal(); }
 
 function openNewTaskModal(){
   closeNewTaskModal();
@@ -7225,6 +7322,8 @@ function onAppClick(e){
     }
     const newAgentBtn = e.target.closest('[data-act="new-agent"]');
     if (newAgentBtn) { openNewAgentModal(); return; }
+    const importGuideBtn = e.target.closest('[data-act="import-guide"]');
+    if (importGuideBtn) { openImportGuide(); return; }
     const ntOpen = e.target.closest('[data-act="new-task"]');
     if (ntOpen) { openNewTaskModal(); return; }
     const schedDel = e.target.closest('[data-schedule-delete]');

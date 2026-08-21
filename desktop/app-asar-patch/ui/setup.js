@@ -1,15 +1,15 @@
 const API = 'http://127.0.0.1:8765';
 
 const STEPS = [
-  { id: 'welcome', label: 'Welcome' },
-  { id: 'analyze', label: 'Environment' },
-  { id: 'company', label: 'Company' },
-  { id: 'channels', label: 'Channels' },
-  { id: 'goals', label: 'Goals' },
-  { id: 'ai', label: 'AI Provider' },
-  { id: 'install', label: 'Setup' },
-  { id: 'agents', label: 'Agents' },
-  { id: 'ready', label: 'Ready' },
+  { id: 'welcome', label: 'Bienvenida' },
+  { id: 'analyze', label: 'Entorno' },
+  { id: 'company', label: 'Empresa' },
+  { id: 'channels', label: 'Canales' },
+  { id: 'goals', label: 'Prioridades' },
+  { id: 'ai', label: 'Inteligencia' },
+  { id: 'install', label: 'Instalación' },
+  { id: 'agents', label: 'Agentes' },
+  { id: 'ready', label: 'Listo' },
 ];
 
 const state = {
@@ -60,11 +60,11 @@ function render() {
 }
 
 function welcome() {
-  return `<h1>Welcome to VANOVA</h1><p class="subtitle">Your AI operating system for business. We'll analyze your computer, understand your company, and configure everything automatically.</p><div class="actions"><span></span><button class="btn btn-primary" data-action="next">Get started</button></div>`;
+  return `<h1>Bienvenido a VANOVA</h1><p class="subtitle">Tu sistema de inteligencia artificial para el negocio. Analizaremos tu ordenador, entenderemos tu empresa y lo configuraremos todo automáticamente. No necesitas saber nada de tecnología.</p><div class="actions"><span></span><button class="btn btn-primary" data-action="next">Empezar</button></div>`;
 }
 
 function analyze() {
-  return `<h1>Environment Analysis</h1><p class="subtitle">Checking your computer for VANOVA compatibility.</p><div id="analysisContent"><p class="subtitle">Analyzing...</p></div><div class="actions"><button class="btn btn-ghost" data-action="prev">Back</button><button class="btn btn-primary" data-action="next" id="analyzeNext" disabled>Continue</button></div>`;
+  return `<h1>Revisión del equipo</h1><p class="subtitle">Comprobamos que tu ordenador es compatible con VANOVA.</p><div id="analysisContent"><p class="subtitle">Revisando...</p></div><div class="actions"><button class="btn btn-ghost" data-action="prev">Atrás</button><button class="btn btn-primary" data-action="next" id="analyzeNext" disabled>Continuar</button></div>`;
 }
 
 let analyzeAttempts = 0;
@@ -79,17 +79,17 @@ async function loadAnalysis() {
     state.analysis = await api('/api/system/analyze', { timeout: 15000 });
     const a = state.analysis;
     el.innerHTML = `<div class="analysis-grid">
-      <div class="analysis-section"><h3>System</h3><div class="analysis-row"><span class="${a.system.compatible ? 'status-ok' : 'status-fail'}">${a.system.compatible ? '✓' : '✕'}</span> ${a.system.osVersion} ${a.system.architecture}</div></div>
-      <div class="analysis-section"><h3>Hardware</h3><div class="analysis-row"><span class="status-ok">✓</span> ${a.hardware.ramGb} GB RAM</div><div class="analysis-row"><span class="status-ok">✓</span> ${a.hardware.diskFreeGb} GB available</div></div>
-      <div class="analysis-section"><h3>Connectivity</h3><div class="analysis-row"><span class="${a.network.online ? 'status-ok' : 'status-fail'}">${a.network.online ? '✓' : '✕'}</span> Internet access</div></div>
-      <div class="analysis-section"><h3>Dependencies</h3>${Object.values(a.dependencies).map(d => {
+      <div class="analysis-section"><h3>Sistema</h3><div class="analysis-row"><span class="${a.system.compatible ? 'status-ok' : 'status-fail'}">${a.system.compatible ? '✓' : '✕'}</span> ${a.system.osVersion} ${a.system.architecture}</div></div>
+      <div class="analysis-section"><h3>Equipo</h3><div class="analysis-row"><span class="status-ok">✓</span> ${a.hardware.ramGb} GB de memoria</div><div class="analysis-row"><span class="status-ok">✓</span> ${a.hardware.diskFreeGb} GB libres</div></div>
+      <div class="analysis-section"><h3>Conexión</h3><div class="analysis-row"><span class="${a.network.online ? 'status-ok' : 'status-fail'}">${a.network.online ? '✓' : '✕'}</span> Acceso a internet</div></div>
+      <div class="analysis-section"><h3>Componentes</h3>${Object.values(a.dependencies).map(d => {
         const optional = d.level === 'optional' || d.status === 'optional';
         const okish = d.ok || optional;
         const icon = okish ? 'status-ok' : (d.level === 'required' ? 'status-warn' : 'status-ok');
-        const suffix = optional && !d.path ? (d.message ? ` — ${d.message}` : ' — optional') : (d.level === 'required' && !d.ok ? ' — will be installed' : (d.message ? ` — ${d.message}` : ''));
+        const suffix = optional && !d.path ? (d.message ? ` — ${d.message}` : ' — opcional') : (d.level === 'required' && !d.ok ? ' — se instalará' : (d.message ? ` — ${d.message}` : ''));
         return `<div class="analysis-row"><span class="${icon}">${okish ? '✓' : '○'}</span> ${d.name}${suffix}</div>`;
       }).join('')}</div>
-    </div><div class="result-badge">${a.readyToInstall ? 'Ready to install' : 'Review recommendations'}</div>`;
+    </div><div class="result-badge">${a.readyToInstall ? 'Listo para instalar' : 'Revisa las recomendaciones'}</div>`;
     document.getElementById('analyzeNext').disabled = false;
   } catch (e) {
     analyzeAttempts += 1;
@@ -122,47 +122,47 @@ async function loadAnalysis() {
 }
 
 function company() {
-  return `<h1>Your company</h1><p class="subtitle">Let's configure VANOVA for your business.</p>
-    <div class="field"><label>What's your company called?</label><input type="text" id="companyName" value="${state.profile.identity.name}" placeholder="Mooving Paper"></div>
-    <div class="field"><label>What does your company do?</label><textarea id="companyDesc" placeholder="Distribution and sale of stationery products">${state.profile.description}</textarea></div>
-    <div class="actions"><button class="btn btn-ghost" data-action="prev">Back</button><button class="btn btn-primary" data-action="next">Continue</button></div>`;
+  return `<h1>Tu empresa</h1><p class="subtitle">Configuramos VANOVA para tu negocio.</p>
+    <div class="field"><label>¿Cómo se llama tu empresa?</label><input type="text" id="companyName" value="${state.profile.identity.name}" placeholder="Mooving Paper"></div>
+    <div class="field"><label>¿A qué se dedica?</label><textarea id="companyDesc" placeholder="Distribución y venta de productos de papelería">${state.profile.description}</textarea></div>
+    <div class="actions"><button class="btn btn-ghost" data-action="prev">Atrás</button><button class="btn btn-primary" data-action="next">Continuar</button></div>`;
 }
 
 function channels() {
-  const opts = ['Shopify', 'Instagram', 'Amazon', 'Email', 'TikTok', 'Other'];
-  return `<h1>Your channels</h1><p class="subtitle">Which channels do you use?</p><div class="check-group" id="channelsGroup">${opts.map(c => `<label class="check-item ${state.profile.channels.includes(c.toLowerCase()) ? 'selected' : ''}"><input type="checkbox" value="${c.toLowerCase()}" ${state.profile.channels.includes(c.toLowerCase()) ? 'checked' : ''}> ${c}</label>`).join('')}</div><div class="actions"><button class="btn btn-ghost" data-action="prev">Back</button><button class="btn btn-primary" data-action="next">Continue</button></div>`;
+  const opts = ['Shopify', 'Instagram', 'Amazon', 'Email', 'TikTok', 'Otro'];
+  return `<h1>Tus canales</h1><p class="subtitle">¿Por qué canales vendes?</p><div class="check-group" id="channelsGroup">${opts.map(c => `<label class="check-item ${state.profile.channels.includes(c.toLowerCase()) ? 'selected' : ''}"><input type="checkbox" value="${c.toLowerCase()}" ${state.profile.channels.includes(c.toLowerCase()) ? 'checked' : ''}> ${c}</label>`).join('')}</div><div class="actions"><button class="btn btn-ghost" data-action="prev">Atrás</button><button class="btn btn-primary" data-action="next">Continuar</button></div>`;
 }
 
 function goals() {
-  const opts = [{ id: 'marketing', label: 'Marketing' }, { id: 'sales', label: 'Sales' }, { id: 'content', label: 'Content' }, { id: 'inventory', label: 'Inventory' }, { id: 'customer support', label: 'Customer Support' }];
-  return `<h1>Your priorities</h1><p class="subtitle">What would you like VANOVA to help with?</p><div class="check-group" id="goalsGroup">${opts.map(g => `<label class="check-item ${state.profile.goals.includes(g.id) ? 'selected' : ''}"><input type="checkbox" value="${g.id}" ${state.profile.goals.includes(g.id) ? 'checked' : ''}> ${g.label}</label>`).join('')}</div><div class="actions"><button class="btn btn-ghost" data-action="prev">Back</button><button class="btn btn-primary" data-action="next">Continue</button></div>`;
+  const opts = [{ id: 'marketing', label: 'Marketing' }, { id: 'sales', label: 'Ventas' }, { id: 'content', label: 'Contenido' }, { id: 'inventory', label: 'Inventario' }, { id: 'customer support', label: 'Atención al cliente' }];
+  return `<h1>Tus prioridades</h1><p class="subtitle">¿En qué quieres que VANOVA te ayude?</p><div class="check-group" id="goalsGroup">${opts.map(g => `<label class="check-item ${state.profile.goals.includes(g.id) ? 'selected' : ''}"><input type="checkbox" value="${g.id}" ${state.profile.goals.includes(g.id) ? 'checked' : ''}> ${g.label}</label>`).join('')}</div><div class="actions"><button class="btn btn-ghost" data-action="prev">Atrás</button><button class="btn btn-primary" data-action="next">Continuar</button></div>`;
 }
 
 function aiProvider() {
-  const providers = [{ id: 'ollama', name: 'Ollama (local)' }, { id: 'nvidia', name: 'NVIDIA NIM' }, { id: 'google-gemini', name: 'Google Gemini' }, { id: 'openai', name: 'OpenAI' }, { id: 'anthropic', name: 'Anthropic' }, { id: 'openrouter', name: 'OpenRouter' }, { id: 'other', name: 'Other' }];
-  return `<h1>Configure your AI</h1><p class="subtitle">Connect your AI provider. Your key is stored securely on this device.</p>
-    <div class="field"><label>Provider</label><div class="radio-group" id="providerGroup">${providers.map(p => `<label class="radio-item ${state.ai.providerId === p.id ? 'selected' : ''}"><input type="radio" name="provider" value="${p.id}" ${state.ai.providerId === p.id ? 'checked' : ''}> ${p.name}</label>`).join('')}</div></div>
-    <div class="field"><label>API Key</label><input type="password" id="apiKey" placeholder="••••••••••••••••"></div>
-    <div class="field"><label>Model</label><input type="text" id="aiModel" value="${state.ai.model}"></div>
-    <button class="btn btn-ghost" id="testAi">Test connection</button><div id="testResult"></div>
-    <div class="actions"><button class="btn btn-ghost" data-action="prev">Back</button><button class="btn btn-primary" data-action="next">Continue</button></div>`;
+  const providers = [{ id: 'ollama', name: 'Ollama (local)' }, { id: 'nvidia', name: 'NVIDIA NIM' }, { id: 'google-gemini', name: 'Google Gemini' }, { id: 'openai', name: 'OpenAI' }, { id: 'anthropic', name: 'Anthropic' }, { id: 'openrouter', name: 'OpenRouter' }, { id: 'other', name: 'Otro' }];
+  return `<h1>Configura la inteligencia</h1><p class="subtitle">Conecta el proveedor de IA. Tu clave se guarda de forma segura en este equipo.</p>
+    <div class="field"><label>Proveedor</label><div class="radio-group" id="providerGroup">${providers.map(p => `<label class="radio-item ${state.ai.providerId === p.id ? 'selected' : ''}"><input type="radio" name="provider" value="${p.id}" ${state.ai.providerId === p.id ? 'checked' : ''}> ${p.name}</label>`).join('')}</div></div>
+    <div class="field"><label>Clave de API</label><input type="password" id="apiKey" placeholder="••••••••••••••••"></div>
+    <div class="field"><label>Modelo</label><input type="text" id="aiModel" value="${state.ai.model}"></div>
+    <button class="btn btn-ghost" id="testAi">Probar conexión</button><div id="testResult"></div>
+    <div class="actions"><button class="btn btn-ghost" data-action="prev">Atrás</button><button class="btn btn-primary" data-action="next">Continuar</button></div>`;
 }
 
 function install() {
-  return `<h1>Setting up VANOVA</h1><p class="subtitle">We're preparing your environment.</p>
+  return `<h1>Configurando VANOVA</h1><p class="subtitle">Estamos preparando tu entorno.</p>
     <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="install-steps"><div class="install-step active" id="stepAnalyze">Analyzing your computer</div><div class="install-step" id="stepRuntime">Preparing VANOVA runtime</div><div class="install-step" id="stepServices">Setting up services</div><div class="install-step" id="stepHermes">Installing Hermes</div><div class="install-step" id="stepValidate">Validating installation</div></div>
-    <div class="actions"><span></span><button class="btn btn-primary hidden" data-action="next" id="installNext">Continue</button></div>`;
+    <div class="install-steps"><div class="install-step active" id="stepAnalyze">Revisando tu equipo</div><div class="install-step" id="stepRuntime">Preparando VANOVA</div><div class="install-step" id="stepServices">Configurando servicios</div><div class="install-step" id="stepHermes">Instalando la inteligencia</div><div class="install-step" id="stepValidate">Validando instalación</div></div>
+    <div class="actions"><span></span><button class="btn btn-primary hidden" data-action="next" id="installNext">Continuar</button></div>`;
 }
 
 async function runInstall() {
   const fill = document.getElementById('progressFill');
   const stepMap = [
-    { id: 'stepAnalyze', keys: ['Analyzing', 'Starting'] },
-    { id: 'stepRuntime', keys: ['runtime', 'Preparing VANOVA', 'installation plan'] },
-    { id: 'stepServices', keys: ['services', 'Setting up'] },
-    { id: 'stepHermes', keys: ['Hermes'] },
-    { id: 'stepValidate', keys: ['Validating', 'warnings'] },
+    { id: 'stepAnalyze', keys: ['revisando', 'analyzing', 'starting'] },
+    { id: 'stepRuntime', keys: ['runtime', 'preparando', 'installation plan'] },
+    { id: 'stepServices', keys: ['services', 'configurando'] },
+    { id: 'stepHermes', keys: ['hermes', 'inteligencia'] },
+    { id: 'stepValidate', keys: ['validando', 'warnings'] },
   ];
   const timeoutMs = 180000;
   const start = Date.now();
@@ -224,7 +224,7 @@ async function runInstall() {
 }
 
 function agents() {
-  return `<h1>Recommended for your business</h1><p class="subtitle">Based on your company profile, we suggest these agents. Click an agent to include or exclude it.</p><div class="agent-list" id="agentList"><p class="subtitle">Loading...</p></div><div class="actions"><button class="btn btn-ghost" data-action="prev">Back</button><button class="btn btn-primary" data-action="next">Create selected agents</button></div>`;
+  return `<h1>Recomendados para tu negocio</h1><p class="subtitle">Según el perfil de tu empresa, te sugerimos estos agentes. Pulsa un agente para incluirlo o excluirlo.</p><div class="agent-list" id="agentList"><p class="subtitle">Cargando...</p></div><div class="actions"><button class="btn btn-ghost" data-action="prev">Atrás</button><button class="btn btn-primary" data-action="next">Crear agentes seleccionados</button></div>`;
 }
 
 async function loadAgents() {
@@ -250,13 +250,13 @@ async function loadAgents() {
         }
       });
     });
-  } catch (_) { el.innerHTML = '<p class="subtitle">Default agents will be created.</p>'; }
+  } catch (_) { el.innerHTML = '<p class="subtitle">Se crearán los agentes recomendados.</p>'; }
 }
 
 function ready() {
-  return `<h1>VANOVA is ready</h1><p class="subtitle">Your AI operating system is configured. Open the dashboard to get started.</p>
-    <div class="analysis-grid"><div class="analysis-row"><span class="status-ok">✓</span> Company profile saved</div><div class="analysis-row"><span class="status-ok">✓</span> AI provider configured</div><div class="analysis-row"><span class="status-ok">✓</span> Services running</div></div>
-    <div class="actions"><span></span><button class="btn btn-primary" data-action="finish">Open VANOVA Dashboard</button></div>`;
+  return `<h1>VANOVA está listo</h1><p class="subtitle">Tu sistema de inteligencia artificial está configurado. Abre el panel para empezar.</p>
+    <div class="analysis-grid"><div class="analysis-row"><span class="status-ok">✓</span> Perfil de empresa guardado</div><div class="analysis-row"><span class="status-ok">✓</span> Proveedor de IA configurado</div><div class="analysis-row"><span class="status-ok">✓</span> Servicios en marcha</div></div>
+    <div class="actions"><span></span><button class="btn btn-primary" data-action="finish">Abrir VANOVA</button></div>`;
 }
 
 function bindEvents() {
@@ -305,7 +305,7 @@ async function handleAction(action) {
     const panel = document.getElementById('panel');
     if (btn) {
       btn.disabled = true;
-      btn.textContent = 'Opening dashboard...';
+      btn.textContent = 'Abriendo el panel...';
     }
     try {
       await api('/api/agents/create', {
@@ -314,27 +314,27 @@ async function handleAction(action) {
       }).catch(() => {});
       await api('/api/setup/scan', { method: 'POST', body: '{}' }).catch(() => {});
       const complete = await api('/api/setup/complete', { method: 'POST', body: '{}' });
-      if (!complete.ok) throw new Error('Setup could not be finalized');
+      if (!complete.ok) throw new Error('No se pudo finalizar la configuración');
 
       let opened = false;
       if (window.maios?.openDashboard) {
         const result = await window.maios.openDashboard();
         opened = !!result?.ok;
-        if (!opened) throw new Error(result?.error || 'Could not open the dashboard window');
+        if (!opened) throw new Error(result?.error || 'No se pudo abrir el panel');
       } else {
         opened = await openDashboardFallback();
       }
-      if (!opened) throw new Error('Could not open the dashboard');
+      if (!opened) throw new Error('No se pudo abrir el panel');
     } catch (err) {
-      const msg = err?.message || 'Could not open the dashboard';
+      const msg = err?.message || 'No se pudo abrir el panel';
       const errEl = document.createElement('div');
       errEl.className = 'test-result fail';
-      errEl.textContent = msg + ' Opening in your browser instead...';
+      errEl.textContent = msg + ' Abriendo en tu navegador en su lugar...';
       panel?.querySelector('.actions')?.before(errEl);
       await openDashboardFallback();
       if (btn) {
         btn.disabled = false;
-        btn.textContent = 'Open VANOVA Dashboard';
+        btn.textContent = 'Abrir VANOVA';
       }
     }
   }
