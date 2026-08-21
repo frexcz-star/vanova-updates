@@ -545,6 +545,19 @@
       }
     },
 
+    /** SPEC §4.1 — CTA "Marcar como hecha" de una oportunidad (action-loop). */
+    async markOpportunityDone(opportunity) {
+      try {
+        return await runtimeApi("/api/opportunities/done", {
+          method: "POST",
+          body: JSON.stringify({ opportunity }),
+          timeoutMs: 8000,
+        });
+      } catch (e) {
+        return null;
+      }
+    },
+
     /** PRODUCT LEAP — Recomendaciones seguidas (ciclo recomendar→actuar→medir). */
     async getRecommendations() {
       try {

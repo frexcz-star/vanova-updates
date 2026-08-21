@@ -823,6 +823,17 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"ok": False, "error": "recomendación no encontrada"}, 404)
                 return self._json({"ok": True, "recommendation": updated})
 
+            if path == "/api/opportunities/done":
+                # SPEC §4.1 — CTA "Marcar como hecha" de una oportunidad: la
+                # conecta con el action-loop (recomendación → medición).
+                opp = body.get("opportunity")
+                if not isinstance(opp, dict):
+                    return self._json({"ok": False, "error": "oportunidad requerida"}, 400)
+                result = _require("opportunity_catalog").mark_done(opp)
+                if not result.get("ok"):
+                    return self._json(result, 400)
+                return self._json(result)
+
             if path == "/api/actions/prepare":
                 # PRODUCT LEAP — Action Center: acciones PREPARADAS (solo
                 # lectura + audit). Nunca modifica sistemas externos.

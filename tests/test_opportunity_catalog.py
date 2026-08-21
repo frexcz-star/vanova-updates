@@ -155,6 +155,21 @@ class BuildCatalogTests(OpportunityCatalogBase):
         self.assertIsNone(res[0]["upsideEuro"])
         self.assertEqual(res[0]["impactKind"], "not_quantifiable")
 
+    def test_bug017_mark_done_connects_to_action_loop(self):
+        """BUG-017 (spec §4.1): CTA 'Marcar como hecha' debe registrar la
+        oportunidad como recomendación por firma y marcarla hecha -> action-loop."""
+        from unittest.mock import patch as _patch
+        from desktop.runtime import recommendation_store
+        fake_rec = {"id": "rec:abc", "status": "measured", "signature": "cross_sell:ab"}
+        with _patch.object(recommendation_store, "record_finding", return_value={"id": "rec:abc"}) as mock_rec, \
+             _patch.object(recommendation_store, "mark_done", return_value=fake_rec) as mock_done:
+            opp = {"signature": "cross_sell:ab", "type": "cross_sell", "title": "Cross-sell A+B"}
+            r = oc.mark_done(opp)
+        self.assertTrue(r["ok"])
+        mock_rec.assert_called_once()
+        mock_done.assert_called_once_with("rec:abc", data=None)
+        self.assertEqual(r["recommendation"]["status"], "measured")
+
 
 if __name__ == "__main__":
     unittest.main()

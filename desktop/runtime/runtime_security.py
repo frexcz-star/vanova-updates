@@ -210,6 +210,7 @@ MUTATION_POST_PATHS = frozenset(
         "/api/data/review/rearm",
         "/api/recommendations/status",
         "/api/actions/prepare",
+        "/api/opportunities/done",
         "/api/data/integrity",
         "/api/notifications/send",
     }

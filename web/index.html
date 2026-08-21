@@ -2684,6 +2684,7 @@ function opportunityCard(o){
     ? o.upsideEuro.toLocaleString('es-ES', { style:'currency', currency:'EUR', maximumFractionDigits:2 })
     : null;
   const evidence = (o.evidence || []).map(function(e){ return '<li>' + escapeHtml(e) + '</li>'; }).join('');
+  const oppId = escapeHtml(o.opportunityId || o.signature || o.type || '');
   return `<div class="dash-card opp" style="margin-bottom:12px;max-width:820px;border-left:3px solid var(--accent)">
     <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
       <div style="flex:1;min-width:260px">
@@ -2697,6 +2698,7 @@ function opportunityCard(o){
         ${hasEuro ? `<div style="font-size:22px;font-weight:800;color:var(--accent,#dc2626);line-height:1.2">${euroStr}</div>`
                    : `<div style="font-size:13px;font-weight:600;color:var(--text-3)">Impacto no cuantificable</div>`}
         ${hasEuro && o.impactDetail ? `<div style="font-size:11px;color:var(--text-3);margin-top:4px">${escapeHtml(o.impactDetail)}</div>` : ''}
+        <button class="btn btn-primary btn-sm" style="margin-top:10px" data-opp-done="${oppId}" data-opp='${escapeHtml(JSON.stringify(o))}'>${ic('check')} Marcar como hecha</button>
       </div>
     </div>
   </div>`;
@@ -7232,6 +7234,24 @@ function onAppClick(e){
       const tid = taskImpBtn.dataset.taskImportant;
       const label = taskImpBtn.dataset.taskImportantLabel || 'Tarea';
       markImportant('task', tid, label, taskImpBtn.dataset.taskImportantBody || '', taskImpBtn.dataset.taskImportantAgent || '');
+      return;
+    }
+    const oppDoneBtn = e.target.closest('[data-opp-done]');
+    if (oppDoneBtn && window.DataServices) {
+      let opp = null;
+      try { opp = JSON.parse(oppDoneBtn.dataset.opp || 'null'); } catch(err){ opp = null; }
+      if (!opp) { toast('No se pudo procesar la oportunidad', true); return; }
+      oppDoneBtn.disabled = true;
+      DataServices.markOpportunityDone(opp).then(async (r)=>{
+        if (r && r.ok) {
+          toast('Oportunidad marcada como hecha. Se medirá el resultado.');
+          await loadAppData();
+          render();
+        } else {
+          toast((r && r.error) || 'No se pudo marcar la oportunidad', true);
+          render();
+        }
+      });
       return;
     }
     const insightActionBtn = e.target.closest('[data-insight-action]');

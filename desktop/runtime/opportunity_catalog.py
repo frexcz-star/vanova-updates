@@ -265,3 +265,30 @@ def catalog(data: dict[str, Any] | None = None) -> list[dict[str, Any]]:
 
 def persist_opportunities(opportunities: list[dict[str, Any]], *, data: dict[str, Any] | None = None) -> None:
     _save(opportunities, data=data)
+
+
+def mark_done(opportunity: dict[str, Any], *, data: dict[str, Any] | None = None) -> dict[str, Any]:
+    """SPEC §4.1 — CTA "Marcar como hecha": conecta la oportunidad con el
+    action-loop (recomendación → medición). Registra la oportunidad como
+    recomendación por su firma estable (type:entity, dedupe BUG-001) y la
+    marca como hecha, lo que dispara la re-medición del resultado."""
+    from . import recommendation_store
+
+    sig = str(opportunity.get("signature") or "")
+    if not sig:
+        return {"ok": False, "error": "oportunidad sin firma estable"}
+    # Reconstruir un finding mínimo para record_finding (idempotente por firma).
+    finding = {
+        "signature": sig,
+        "type": str(opportunity.get("type") or ""),
+        "finding_type": str(opportunity.get("type") or ""),
+        "title": str(opportunity.get("title") or "Oportunidad de crecimiento"),
+        "recommendedAction": str(opportunity.get("recommendedAction") or ""),
+        "id": str(opportunity.get("opportunityId") or ""),
+        "metrics": opportunity.get("metrics") or {},
+    }
+    rec = recommendation_store.record_finding(finding, data=data)
+    if not rec:
+        return {"ok": False, "error": "no se pudo registrar la recomendación"}
+    updated = recommendation_store.mark_done(rec["id"], data=data)
+    return {"ok": True, "recommendation": updated}
