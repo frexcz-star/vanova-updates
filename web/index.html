@@ -2995,6 +2995,16 @@ async function openCostImportDrawer(){
   if (!tpl || !tpl.ok) { toast('No se pudo preparar la plantilla de costes', true); return; }
   const items = (tpl.rows || []).slice(0, 60);
   const body = `<div style="font-size:13px;color:var(--text-2);margin-bottom:10px">${escapeHtml(tpl.description)}</div>
+    <div class="dash-card" style="margin-bottom:14px;padding:12px;border-left:3px solid var(--accent)">
+      <div style="font-weight:600;font-size:13.5px;margin-bottom:4px">${ic('tag')} Atajo: usa un margen global</div>
+      <div style="font-size:12.5px;color:var(--text-2);margin-bottom:10px">Si no quieres rellenar SKU a SKU, indica el margen que aplicas a tus productos y VANOVA estimará el coste de los que no tienen uno. El margen lo declaras tú — nunca lo inventa el sistema.</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input class="input" id="global-margin-input" type="number" min="1" max="99" step="0.5" placeholder="Ej: 60" style="width:110px" />
+        <span style="font-size:13px;color:var(--text-2)">% de margen sobre el precio de venta</span>
+        <button class="btn btn-primary btn-sm" data-global-margin-apply style="flex-shrink:0">${ic('check')} Aplicar margen global</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--text-3);margin-top:8px">Honesto: los € con margen global se marcan como "estimados con tu margen declarado", no como costes reales de proveedor.</div>
+    </div>
     <div style="max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-sm)">
       <table class="table" style="min-width:520px">
         <thead><tr><th>SKU</th><th>Producto</th><th>Precio</th><th>Coste nuevo (€)</th></tr></thead>
@@ -3012,6 +3022,29 @@ async function openCostImportDrawer(){
   openDrawer('Aplicar costes', 'Rellena el coste real de adquisición y previsualiza. Nada se escribe hasta que confirmes.', body, foot);
   const cancel = document.querySelector('[data-cost-cancel]');
   if (cancel) cancel.addEventListener('click', closeDrawer);
+  const gmBtn = document.querySelector('[data-global-margin-apply]');
+  if (gmBtn) gmBtn.addEventListener('click', async ()=>{
+    const inp = document.getElementById('global-margin-input');
+    const v = parseFloat(String(inp && inp.value || '').replace(',', '.'));
+    if (!inp || isNaN(v) || v <= 0 || v >= 100){ toast('Indica un margen global entre 1 y 99%', true); return; }
+    toast('Guardando margen global…');
+    // Guardar el margen global declarado en companyProfile.preferences
+    try {
+      const auth = window.maios?.getRuntimeAuthHeaders ? await window.maios.getRuntimeAuthHeaders() : {};
+      const comp = { preferences: { globalMarginPct: v } };
+      const res = await fetch(runtime + '/api/company/profile', { method:'POST', headers:Object.assign({'Content-Type':'application/json'}, auth), body: JSON.stringify(comp) });
+      if (!res.ok) throw new Error('HTTP '+res.status);
+    } catch(e){
+      toast('No se pudo guardar el margen global: ' + (e.message||String(e)), true);
+      return;
+    }
+    closeDrawer();
+    toast('Margen global '+v+'% guardado. Re-analizando…');
+    if (ds && ds.analyzeBusiness){ try{ await ds.analyzeBusiness(); }catch(e){} }
+    await loadAppData();
+    render();
+    toast('Margen global aplicado. Revisa el dinero en juego en la Home.');
+  });
   const prev = document.querySelector('[data-cost-preview]');
   if (prev) prev.addEventListener('click', async ()=>{
     const rows = recCostRows();

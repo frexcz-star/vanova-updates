@@ -49,7 +49,7 @@ def _f(value: Any) -> float | None:
 # ---------------------------------------------------------------------------
 
 
-def resolve_cost(product: dict[str, Any]) -> dict[str, Any]:
+def resolve_cost(product: dict[str, Any], global_margin_pct: float | None = None) -> dict[str, Any]:
     """Devuelve el coste REAL de un producto del catálogo, nunca el PVD
     disfrazado de coste. Regla: si no existe evidencia de coste de adquisición
     (coste == precio de venta), costStatus=missing y cost=None.
@@ -58,6 +58,10 @@ def resolve_cost(product: dict[str, Any]) -> dict[str, Any]:
     - `cost` explícito sin fuente → imported (evidencia en el dato)
     - netPrice ≠ rrp (hay margen real en el dato) → imported
     - netPrice == rrp (sin evidencia) → missing (NUNCA se usa como coste)
+    - Si no hay coste real pero el usuario DECLARÓ un margen global (su propio
+      margen de negocio), se ESTIMA un coste `= rrp × (1 − margen/100)` y se
+      marca `estimated` (nunca verified/imported real). Honesto: deriva de un
+      dato declarado por el usuario, nunca inventado por el sistema.
     """
     sale = _f(product.get("rrp"))
     explicit = _f(product.get("cost"))
@@ -84,9 +88,31 @@ def resolve_cost(product: dict[str, Any]) -> dict[str, Any]:
             "salePrice": sale,
         }
     if net is None:
+        # Margen global declarado: estimar coste si hay precio de venta.
+        if global_margin_pct is not None and sale is not None and sale > 0:
+            est_cost = round(sale * (1 - global_margin_pct / 100.0), 2)
+            if est_cost > 0:
+                return {
+                    "cost": est_cost,
+                    "costStatus": "estimated",
+                    "costSource": "global_margin",
+                    "salePrice": sale,
+                    "reason": "coste_estimado_con_margen_global_declarado",
+                }
         return {"cost": None, "costStatus": "missing", "costSource": "unknown", "salePrice": sale}
     if sale is not None and abs(net - sale) < 0.001:
-        # coste == PVD sin evidencia de adquisición → NO es coste real
+        # coste == PVD sin evidencia de adquisición → NO es coste real.
+        # Con margen global declarado, estimar a partir del PVD.
+        if global_margin_pct is not None and sale > 0:
+            est_cost = round(sale * (1 - global_margin_pct / 100.0), 2)
+            if est_cost > 0:
+                return {
+                    "cost": est_cost,
+                    "costStatus": "estimated",
+                    "costSource": "global_margin",
+                    "salePrice": sale,
+                    "reason": "coste_estimado_con_margen_global_declarado",
+                }
         return {
             "cost": None,
             "costStatus": "missing",
@@ -102,8 +128,8 @@ def resolve_cost(product: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def cost_available(product: dict[str, Any]) -> bool:
-    return resolve_cost(product).get("costStatus") in ("verified", "imported")
+def cost_available(product: dict[str, Any], global_margin_pct: float | None = None) -> bool:
+    return resolve_cost(product, global_margin_pct).get("costStatus") in ("verified", "imported", "estimated")
 
 
 # ---------------------------------------------------------------------------

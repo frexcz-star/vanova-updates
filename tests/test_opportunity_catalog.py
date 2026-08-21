@@ -128,6 +128,30 @@ class BuildCatalogTests(OpportunityCatalogBase):
         # 13.5 < 25 -> None
         self.assertIsNone(res[0]["upsideEuro"])
 
+    def test_global_margin_unblocks_cross_sell_upside(self):
+        """Onboarding simplificado (SPEC): un margen global DECLARADO por el
+        usuario estima el coste de SKUs sin coste por unidad y desbloquea el €.
+        Honesto: el margen lo dice el empresario (preferences.globalMarginPct),
+        nunca lo inventa el sistema. Sin margen global -> sigue UNKNOWN."""
+        f = _finding("cross_sell", "opportunity",
+                     metrics={"pair": "a+b", "ordersTogether": 60}, sig="cross_sell:gm")
+        # Productos con rrp pero SIN coste por unidad.
+        prods = [
+            {"sku": "a", "rrp": 100.0},
+            {"sku": "b", "rrp": 100.0},
+        ]
+        # Sin margen global declarado -> no cuantificable (honesto).
+        res_none = oc.build_catalog([f], products=prods)
+        self.assertIsNone(res_none[0]["upsideEuro"])
+        # Con margen global 60% declarado -> coste estimado 40 -> margen 60% ->
+        # upside 60*0.6=36 -> calculado.
+        data = {"companyProfile": {"preferences": {"globalMarginPct": 60}}}
+        res = oc.build_catalog([f], products=prods, data=data)
+        self.assertEqual(len(res), 1)
+        self.assertIsNotNone(res[0]["upsideEuro"])
+        self.assertGreater(res[0]["upsideEuro"], 25.0)
+        self.assertEqual(res[0]["impactKind"], "calculated")
+
     def test_dedupe_by_signature(self):
         f1 = _finding("cross_sell", "opportunity", metrics={"pair": "A+B", "ordersTogether": 100}, sig="cross_sell:ab")
         f2 = _finding("cross_sell", "opportunity", metrics={"pair": "A+B", "ordersTogether": 100}, sig="cross_sell:ab")

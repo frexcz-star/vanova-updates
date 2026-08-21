@@ -61,13 +61,14 @@ def _save(items: list[dict[str, Any]], *, data: dict[str, Any] | None = None) ->
 # ---------------------------------------------------------------------------
 
 
-def _product_cost_ok(product: dict[str, Any]) -> bool:
-    """Coste real disponible (verified/imported), nunca PVD disfrazado."""
-    resolved = product_identity.resolve_cost(product)
-    return str(resolved.get("costStatus") or "") in ("verified", "imported") and _as_float(resolved.get("cost")) is not None
+def _product_cost_ok(product: dict[str, Any], global_margin_pct: float | None = None) -> bool:
+    """Coste disponible (verified/imported), o estimado por margen global
+    declarado. Nunca PVD disfrazado sin evidencia ni margen declarado."""
+    resolved = product_identity.resolve_cost(product, global_margin_pct)
+    return str(resolved.get("costStatus") or "") in ("verified", "imported", "estimated") and _as_float(resolved.get("cost")) is not None
 
 
-def _upside_for_cross_sell(f: dict[str, Any], products: list[dict[str, Any]]) -> tuple[float | None, str, str]:
+def _upside_for_cross_sell(f: dict[str, Any], products: list[dict[str, Any]], global_margin_pct: float | None = None) -> tuple[float | None, str, str]:
     """Cross-sell: upside = tickets_potencial x margen promedio (solo con coste)."""
     metrics = f.get("metrics") or {}
     orders_together = _as_float(metrics.get("ordersTogether")) or 0.0
@@ -80,13 +81,13 @@ def _upside_for_cross_sell(f: dict[str, Any], products: list[dict[str, Any]]) ->
     for p in products:
         sku = str(p.get("sku") or "").lower()
         if sku in (a_l, b_l):
-            resolved = product_identity.resolve_cost(p)
+            resolved = product_identity.resolve_cost(p, global_margin_pct)
             sale = _as_float(resolved.get("salePrice"))
             cost = _as_float(resolved.get("cost"))
             if sale and cost is not None and sale > 0:
                 margins.append((sale - cost) / sale)
     if not margins:
-        return None, "not_quantifiable", "requiere margen por SKU para cuantificar"
+        return None, "not_quantifiable", "requiere margen por SKU o margen global para cuantificar"
     avg_margin = sum(margins) / len(margins)
     upside = orders_together * avg_margin
     if upside < MIN_UPSEID_EURO:
@@ -187,6 +188,21 @@ def build_catalog(
         cfg = data if data is not None else config_store.load()
         products = cfg.get("organizedProducts") or []
 
+    # Margen global declarado por el usuario (preferences.globalMarginPct):
+    # simplificación del onboarding para desbloquear el € sin coste SKU a SKU.
+    # Honesto: deriva de un dato que el empresario declara, nunca se inventa.
+    global_margin_pct = None
+    try:
+        _prof = (data if data is not None else config_store.load()).get("companyProfile") or {}
+        _pref = _prof.get("preferences") or {}
+        gm = _pref.get("globalMarginPct")
+        if gm is not None:
+            gm = float(gm)
+            if 0 < gm < 100:
+                global_margin_pct = gm
+    except (TypeError, ValueError):
+        global_margin_pct = None
+
     out: list[dict[str, Any]] = []
     seen_sigs: dict[str, dict[str, Any]] = {}
     for f in active:
@@ -197,7 +213,7 @@ def build_catalog(
         detail = ""
         if enricher is not None:
             if typ == "cross_sell":
-                upside, kind, detail = enricher(f, products)
+                upside, kind, detail = enricher(f, products, global_margin_pct)
             else:
                 upside, kind, detail = enricher(f)
         else:
