@@ -85,6 +85,7 @@ def _patch_all(store: dict):
     return [
         patch.object(config_store, "load", side_effect=lambda: dict(store)),
         patch.object(config_store, "save", side_effect=lambda d: store.update(d)),
+        patch.object(config_store, "update", side_effect=lambda mut: (mut(store) or store)),
     ]
 
 

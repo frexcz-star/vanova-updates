@@ -208,5 +208,29 @@ class ConfigStoreSetupTests(unittest.TestCase):
         self.assertIn("b2", ids)
 
 
+class Bug024CredentialsAtomicTests(unittest.TestCase):
+    """BUG-024: secure_store_credentials debe preservar todas las credenciales
+    (RMW atómico sobre credentials.json), no perder las de providers previos."""
+
+    def _cred_path(self):
+        return config_store.config_dir() / "credentials.json"
+
+    def test_multiple_providers_preserved(self):
+        import tempfile as _tf
+        from desktop.runtime import config_store
+
+        # Aislar config_dir para no tocar la instalación real
+        tmp = _tf.TemporaryDirectory()
+        base = Path(tmp.name)
+        (base / "config").mkdir(parents=True, exist_ok=True)
+        with patch.object(config_store, "config_dir", lambda: base / "config"):
+            config_store.secure_store_credentials("provider-a", "key-a")
+            config_store.secure_store_credentials("provider-b", "key-b")
+            data = json.loads((base / "config" / "credentials.json").read_text(encoding="utf-8"))
+            self.assertIn("provider-a", data, "provider-a debe persistir")
+            self.assertIn("provider-b", data, "provider-b debe persistir (no perderse en el RMW)")
+        tmp.cleanup()
+
+
 if __name__ == "__main__":
     unittest.main()

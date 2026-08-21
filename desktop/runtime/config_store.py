@@ -15,6 +15,10 @@ log = get_logger("maios.config")
 
 _config_lock = threading.Lock()
 _config_corrupt = False
+# BUG-024: lock dedicado para serializar el RMW de credentials.json (archivo
+# de API keys). Se usa un lock separado de _config_lock porque este protege
+# maios.json y credentials.json es un archivo distinto.
+_credentials_lock = threading.Lock()
 CONFIG_FILE = config_dir() / "maios.json"
 # Legacy flag — no longer used as source of truth (kept for cleanup only).
 SETUP_FLAG = data_dir() / ".setup_complete"
@@ -302,15 +306,26 @@ def _now() -> str:
 
 
 def secure_store_credentials(provider_id: str, api_key: str) -> None:
-    """Store API key encrypted in a separate credentials file with restricted permissions."""
+    """Store API key encrypted in a separate credentials file with restricted permissions.
+
+    BUG-024 FIX: antes hacía read→modify→write SIN lock sobre credentials.json,
+    perdiendo API keys de providers configurados concurrentemente
+    (ThreadingHTTPServer). Ahora el RMW completo corre bajo _credentials_lock.
+    """
     from . import credential_vault
 
     cred_path = config_dir() / "credentials.json"
-    creds: dict = {}
-    if cred_path.exists():
-        creds = json.loads(cred_path.read_text(encoding="utf-8"))
-    creds[provider_id] = {"apiKey": credential_vault.encrypt_if_needed(api_key)}
-    cred_path.write_text(json.dumps(creds, ensure_ascii=False), encoding="utf-8")
+    with _credentials_lock:
+        creds: dict = {}
+        if cred_path.exists():
+            try:
+                creds = json.loads(cred_path.read_text(encoding="utf-8"))
+            except Exception:
+                creds = {}
+            if not isinstance(creds, dict):
+                creds = {}
+        creds[provider_id] = {"apiKey": credential_vault.encrypt_if_needed(api_key)}
+        cred_path.write_text(json.dumps(creds, ensure_ascii=False), encoding="utf-8")
     if os.name == "nt":
         try:
             import subprocess

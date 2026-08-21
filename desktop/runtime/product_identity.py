@@ -155,7 +155,8 @@ def add_mapping(
         return {"ok": False, "error": "sourceSku y canonicalProductId son obligatorios"}
     if match_method not in MATCH_METHODS:
         return {"ok": False, "error": f"matchMethod inválido: {match_method}"}
-    mappings = load_mappings()
+    # BUG-023 FIX: RMW atómico bajo un solo lock (lost-update). Antes:
+    # load_mappings() → modificar → save_mappings() sin config_store.update().
     now = _now()
     entry = {
         "sourceSku": sku,
@@ -172,27 +173,52 @@ def add_mapping(
         "shopifySku": sku,
         "shopifyVariantId": (variant_id or "").strip() or None,
     }
-    # Idempotente: un mapping existente para la misma clave de fuente se
-    # actualiza (cualquier fuente, no solo Shopify).
-    for m in mappings:
-        if _sku_of(m) == sku:
-            m.update(entry)
-            m["updatedAt"] = now
-            save_mappings(mappings)
-            return {"ok": True, "mapping": entry, "updated": True}
-    mappings.append(entry)
-    save_mappings(mappings)
-    return {"ok": True, "mapping": entry, "updated": False}
+
+    was_updated = False
+
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        nonlocal was_updated
+        mappings = cfg.get("productMappings") or []
+        if not isinstance(mappings, list):
+            mappings = []
+        mappings = [m for m in mappings if isinstance(m, dict)]
+        # Idempotente: un mapping existente para la misma clave de fuente se
+        # actualiza (cualquier fuente, no solo Shopify).
+        for m in mappings:
+            if _sku_of(m) == sku:
+                m.update(entry)
+                m["updatedAt"] = now
+                cfg["productMappings"] = mappings
+                was_updated = True
+                return cfg
+        mappings.append(entry)
+        cfg["productMappings"] = mappings
+        return cfg
+
+    config_store.update(_mutate)
+    return {"ok": True, "mapping": entry, "updated": was_updated}
 
 
 def remove_mapping(source_sku: str, shopify_sku: str | None = None) -> dict[str, Any]:
     sku = (source_sku or shopify_sku or "").strip()
-    mappings = load_mappings()
-    before = len(mappings)
-    mappings = [m for m in mappings if _sku_of(m) != sku]
-    if len(mappings) == before:
+    # BUG-023 FIX: RMW atómico bajo un solo lock.
+    removed = False
+
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        nonlocal removed
+        mappings = cfg.get("productMappings") or []
+        if not isinstance(mappings, list):
+            mappings = []
+        mappings = [m for m in mappings if isinstance(m, dict)]
+        before = len(mappings)
+        mappings = [m for m in mappings if _sku_of(m) != sku]
+        removed = len(mappings) != before
+        cfg["productMappings"] = mappings
+        return cfg
+
+    config_store.update(_mutate)
+    if not removed:
         return {"ok": False, "error": "Mapping no encontrado"}
-    save_mappings(mappings)
     return {"ok": True, "removed": True}
 
 
@@ -216,21 +242,41 @@ def ignore_sku(source_sku: str, shopify_sku: str | None = None) -> dict[str, Any
     sku = (source_sku or shopify_sku or "").strip()
     if not sku:
         return {"ok": False, "error": "sourceSku obligatorio"}
-    ignored = load_ignored()
-    if sku not in ignored:
-        ignored.append(sku)
-        _save_ignored(ignored)
+    # BUG-023 FIX: RMW atómico bajo un solo lock.
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        ignored = cfg.get("productIgnoredSkus") or []
+        if not isinstance(ignored, list):
+            ignored = []
+        ignored = [str(x).strip() for x in ignored if str(x or "").strip()]
+        if sku not in ignored:
+            ignored.append(sku)
+        cfg["productIgnoredSkus"] = ignored
+        return cfg
+
+    config_store.update(_mutate)
     return {"ok": True, "ignored": True}
 
 
 def unignore_sku(source_sku: str, shopify_sku: str | None = None) -> dict[str, Any]:
     sku = (source_sku or shopify_sku or "").strip()
-    ignored = load_ignored()
-    before = len(ignored)
-    ignored = [x for x in ignored if x != sku]
-    if len(ignored) == before:
+    # BUG-023 FIX: RMW atómico bajo un solo lock.
+    unignored = False
+
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        nonlocal unignored
+        ignored = cfg.get("productIgnoredSkus") or []
+        if not isinstance(ignored, list):
+            ignored = []
+        ignored = [str(x).strip() for x in ignored if str(x or "").strip()]
+        before = len(ignored)
+        ignored = [x for x in ignored if x != sku]
+        unignored = len(ignored) != before
+        cfg["productIgnoredSkus"] = ignored
+        return cfg
+
+    config_store.update(_mutate)
+    if not unignored:
         return {"ok": False, "error": "SKU no estaba ignorado"}
-    _save_ignored(ignored)
     return {"ok": True, "unignored": True}
 
 

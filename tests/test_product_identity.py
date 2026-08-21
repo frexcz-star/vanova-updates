@@ -94,10 +94,15 @@ def _store(**data) -> dict:
 
 
 def _patch_all(store: dict):
-    """Parchea load Y save (nunca se toca la instalación real)."""
+    """Parchea load, save Y update (nunca se toca la instalación real).
+
+    BUG-023: add_mapping/remove_mapping/ignore_sku/unignore_sku ahora usan
+    config_store.update() (RMW atómico). update aplica el mutator al store.
+    """
     return [
         patch.object(config_store, "load", side_effect=lambda: dict(store)),
         patch.object(config_store, "save", side_effect=lambda d: store.update(d)),
+        patch.object(config_store, "update", side_effect=lambda mut: (mut(store) or store)),
     ]
 
 
@@ -636,6 +641,31 @@ class ReconciliationSafetyTests(unittest.TestCase):
             self.assertEqual(rec["summary"]["matched"], 0)
             self.assertGreater(rec["summary"]["unmatched"], 0)
             self.assertEqual(rec["summary"]["coveragePct"], 0.0)
+
+
+class Bug023AtomicRmwTests(unittest.TestCase):
+    """BUG-023: add_mapping/remove_mapping/ignore_sku/unignore_sku deben usar
+    config_store.update() (RMW atómico), no load→save que pierde escrituras."""
+
+    def test_add_mapping_uses_atomic_update(self):
+        from unittest.mock import patch as _p
+        store = _store()
+        with ExitStack() as s:
+            for p in _patch_all(store):
+                s.enter_context(p)
+            with _p.object(config_store, "update", wraps=config_store.update) as mock_upd:
+                product_identity.add_mapping(shopify_sku="BUG23-A", canonical_product_id="A")
+            mock_upd.assert_called_once()
+
+    def test_ignore_sku_uses_atomic_update(self):
+        from unittest.mock import patch as _p
+        store = _store()
+        with ExitStack() as stack:
+            for pat in _patch_all(store):
+                stack.enter_context(pat)
+            with _p.object(config_store, "update", wraps=config_store.update) as mock_upd:
+                product_identity.ignore_sku("IGN-X")
+            mock_upd.assert_called_once()
 
 
 class SecretsAndInstallationTests(unittest.TestCase):
