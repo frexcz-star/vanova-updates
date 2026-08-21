@@ -130,6 +130,8 @@ a{color:var(--accent);text-decoration:none}
 svg{display:block;width:1em;height:1em;flex-shrink:0}
 /* Live agent info on cards */
 .agent-live{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--text-2);margin-top:8px;line-height:1.45;min-width:0}
+.bot-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#34d399;margin-top:8px;padding:3px 8px;border-radius:999px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25)}
+.bot-badge .bot-dot{width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 6px rgba(52,211,153,.6)}
 .agent-live.running{color:var(--accent)}
 .agent-live .pulse-dot{width:8px;height:8px;border-radius:50%;background:#34d399;flex-shrink:0;margin-top:4px;box-shadow:0 0 0 0 rgba(52,211,153,.5);animation:livePulse 1.6s infinite}
 @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.45)}70%{box-shadow:0 0 0 7px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
@@ -2595,6 +2597,16 @@ function agentStatusHTML(status, reason){
   return `<span class="status-label"><span class="status-dot ${agentStatusDotClass(status)}"></span>${agentStatusLabel(status, reason)}</span>`;
 }
 /* Live per-agent block: current activity, progress bar and stats chips. */
+function agentBotBadge(a){
+  // FASE B, PASO 4 — indicador de "Bot de Hermes activo". Honesto: se muestra
+  // solo si el agente tiene su perfil Hermes sincronizado (campo hermesBot).
+  const botName = a.hermesBot || a.hermes_bot;
+  if (!botName) return '';
+  return `<div class="bot-badge" title="Este agente es un bot persistente de Hermes (perfil ${escapeHtml(botName)})">
+    <span class="bot-dot"></span>Bot de Hermes activo
+  </div>`;
+}
+
 function agentLiveHTML(a){
   const s = normalizeAgentStatus(a.status);
   const live = [];
@@ -3590,6 +3602,7 @@ function viewAgents(){
             <div style="flex:1;min-width:0">
               <div class="agent-name">${a.name}</div>
               <div class="agent-desc">${a.desc}</div>
+              ${agentBotBadge(a)}
               ${agentLiveHTML(a)}
             </div>
           </div>
@@ -8968,7 +8981,7 @@ async function loadAppData(opts){
             color:a.color||'#dc2626', status:'offline',
             last:'—', insights:a.insightsGenerated||0, tasks:a.tasksCompleted||0,
             current:'Runtime no disponible — puerto 8765', autonomy:a.autonomyLevel||'auto',
-            desc:a.description||'', data:[], runs:0, perf:'—'
+            desc:a.description||'', hermesBot:a.hermesBot||a.hermes_bot||'', data:[], runs:0, perf:'—'
           }));
         } else {
           AGENTS = AGENTS.map(a=>Object.assign({}, a, {status:'offline', current:'Runtime no disponible — puerto 8765'}));
@@ -8979,7 +8992,7 @@ async function loadAppData(opts){
           color:a.color||'#dc2626', status: normalizeAgentStatus(a.status||'idle'),
           last:'—', insights:a.insightsGenerated||0, tasks:a.tasksCompleted||0,
           current:a.currentTask||a.statusReason||'', autonomy:a.autonomyLevel||'auto',
-          desc:a.description||'', data:[], runs:0, perf:'—'
+          desc:a.description||'', hermesBot:a.hermesBot||a.hermes_bot||'', data:[], runs:0, perf:'—'
         }));
       }
       store.agents = AGENTS;
