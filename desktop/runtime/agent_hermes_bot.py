@@ -240,3 +240,95 @@ def remove_bot(slug: str) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         log.warning("No se pudo borrar el perfil Hermes: %s", exc)
         return {"ok": False, "error": str(exc), "profile": slug}
+
+
+# ---------------------------------------------------------------------------
+# FASE B, PASO 3 — rutina cron persistente por agente ([bot:<name>]).
+# ---------------------------------------------------------------------------
+
+# Mapeo weekday (agente_scheduler) -> cron weekday (0=domingo en cron).
+_WEEKDAY_CRON = {
+    "monday": 1, "tuesday": 2, "wednesday": 3, "thursday": 4,
+    "friday": 5, "saturday": 6, "sunday": 0,
+}
+
+
+def schedule_to_cron(spec: str) -> str | None:
+    """Traduce un schedule de VANOVA ('Daily 18:00' / 'Weekly Monday 09:00')
+    al formato cron de Hermes ('0 18 * * *' / '0 9 * * 1'). Devuelve None si
+    no se puede interpretar."""
+    try:
+        from . import agent_scheduler
+        rule = agent_scheduler.parse_schedule(spec)
+    except Exception:  # noqa: BLE001
+        return None
+    if not rule:
+        return None
+    minute = rule["minute"]
+    hour = rule["hour"]
+    if rule["freq"] == "daily":
+        return f"{minute} {hour} * * *"
+    if rule["freq"] == "weekly":
+        wd = _WEEKDAY_CRON.get(agent_scheduler._WEEKDAYS.get(list(agent_scheduler._WEEKDAYS.keys())[rule["weekday"]], ""), None) if isinstance(rule.get("weekday"), int) else None
+        # Resolver weekday por indice de _WEEKDAYS
+        wd = None
+        for name, idx in agent_scheduler._WEEKDAYS.items():
+            if idx == rule["weekday"]:
+                wd = _WEEKDAY_CRON.get(name)
+                break
+        if wd is None:
+            return None
+        return f"{minute} {hour} * * {wd}"
+    return None
+
+
+def sync_agent_routines(agent: dict[str, Any]) -> dict[str, Any]:
+    """Crea/actualiza un cron job de Hermes por cada schedule del agente
+    (namespaced `[bot:<name>]`). Coexiste con la Fase A (task_queue)."""
+    slug = agent_slug(agent)
+    cli = _hermes_cli()
+    if not cli:
+        return {"ok": False, "error": "Hermes CLI no disponible"}
+    schedules = agent.get("schedules") or []
+    if not schedules:
+        return {"ok": True, "profile": slug, "routines": []}
+    created = []
+    for spec in schedules:
+        cron_expr = schedule_to_cron(str(spec))
+        if not cron_expr:
+            continue
+        name = f"[bot:{slug}] {spec}"
+        prompt = _routine_prompt(agent)
+        # Intentar borrar un cron previo del mismo nombre para no duplicar.
+        try:
+            subprocess.run(
+                cli + ["cron", "remove", name, "-y"],
+                capture_output=True, timeout=30,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            proc = subprocess.run(
+                cli + ["cron", "create", cron_expr, prompt, "--name", name, "--deliver", "local"],
+                capture_output=True, timeout=60,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
+            created.append({"schedule": str(spec), "cron": cron_expr, "ok": proc.returncode == 0})
+        except Exception as exc:  # noqa: BLE001
+            log.warning("No se pudo crear cron para %s: %s", name, exc)
+            created.append({"schedule": str(spec), "cron": cron_expr, "ok": False})
+    return {"ok": True, "profile": slug, "routines": created}
+
+
+def _routine_prompt(agent: dict[str, Any]) -> str:
+    """Prompt de la rutina del agente (datos reales, honestidad)."""
+    name = str(agent.get("name") or agent.get("id") or "agente")
+    resp = agent.get("responsibilities") or []
+    resp_txt = ", ".join(str(r) for r in resp) if resp else "analizar el negocio con datos reales"
+    return (
+        f"{name}, ejecuta tu rutina programada de análisis.\n"
+        f"Responsabilidades: {resp_txt}.\n"
+        f"Usa SOLO datos reales disponibles en VANOVA. NUNCA inventes cifras ni euros. "
+        f"Si falta un dato, dilo con claridad. Resume acciones concretas."
+    )

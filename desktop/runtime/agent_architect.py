@@ -89,6 +89,11 @@ def create_custom_agent(*, name: str, role: str = "", description: str = "", res
             config_store.update(
                 lambda cfg: _persist_hermes_bot_flag(cfg, profile_name) if profile_name else cfg
             )
+            # FASE B, PASO 3 — rutina cron persistente del bot (si tiene schedules).
+            if added[0].get("schedules"):
+                routines = agent_hermes_bot.sync_agent_routines(added[0])
+                if routines.get("ok"):
+                    result["routines"] = routines.get("routines", [])
     except Exception as exc:  # noqa: BLE001
         log.warning("sync_agent_to_bot fallo (no bloquea): %s", exc)
     return result
