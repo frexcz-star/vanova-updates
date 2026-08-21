@@ -75,5 +75,25 @@ class Bug028FileRemovalPersistsTests(unittest.TestCase):
         self.assertEqual(found, [])
 
 
+class Bug032FileExclusionsExposedTests(unittest.TestCase):
+    """BUG-032: la vista Archivos mezcla cloud+runtime y, si el sync cloud de
+    removeFile falla (best-effort), el snapshot cloud reintroduce el archivo
+    eliminado. El fix: list_imported_files expone las scanExclusions para que
+    el frontend las filtre. Este test verifica que las exclusiones se exponen.
+    Fallaría sin el fix (sin el campo `excluded`)."""
+
+    def test_list_exposes_exclusions(self):
+        stored = {
+            "scanFiles": [{"path": "C:/empresa/a.csv", "name": "a.csv"}],
+            "scanExclusions": ["C:/empresa/borrado.csv", "C:/empresa/a.csv"],
+        }
+        with patch.object(config_store, "load", return_value=stored):
+            r = file_inventory.list_imported_files()
+        self.assertIn("excluded", r)
+        self.assertIn("C:/empresa/borrado.csv", r["excluded"])
+        self.assertIn("C:/empresa/a.csv", r["excluded"])
+        self.assertEqual(r["excludedCount"], 2)
+
+
 if __name__ == "__main__":
     unittest.main()

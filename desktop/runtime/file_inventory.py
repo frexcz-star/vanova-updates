@@ -22,7 +22,15 @@ def list_imported_files() -> dict[str, Any]:
     exclusions = data.get("scanExclusions") or []
     if not isinstance(exclusions, list):
         exclusions = []
-    return {"files": files, "count": len(files), "excludedCount": len(exclusions)}
+    # BUG-032: exponer las rutas excluidas (las que el usuario eliminó). El
+    # frontend las usa para NO reintroducir archivos desde la copia cloud del
+    # snapshot (el sync cloud de removeFile es best-effort y puede fallar).
+    return {
+        "files": files,
+        "count": len(files),
+        "excludedCount": len(exclusions),
+        "excluded": [str(x) for x in exclusions],
+    }
 
 
 def add_imported_file(entry: dict[str, Any]) -> dict[str, Any]:

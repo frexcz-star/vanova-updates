@@ -1325,16 +1325,34 @@
         return null;
       }
 
+      // BUG-032: el runtime es la autoridad local. Si el sync cloud de
+      // removeFile falló (best-effort), el snapshot cloud sigue teniendo el
+      // archivo eliminado y el merge de abajo lo reintroduciría. El runtime
+      // expone sus scanExclusions (rutas que el usuario eliminó); filtrarlas
+      // para que el archivo no vuelva a aparecer.
+      const excluded = new Set(
+        (runtime && Array.isArray(runtime.excluded) ? runtime.excluded : [])
+          .map((p) => String(p || "").toLowerCase())
+          .filter(Boolean)
+      );
+
       const byPath = new Map();
       const keyOf = (f) => (f.path || f.name || "").toLowerCase();
 
-      for (const f of cloudFiles) {
-        const k = keyOf(f);
-        if (k) byPath.set(k, f);
-      }
+      const addAll = (list) => {
+        for (const f of list) {
+          const k = keyOf(f);
+          if (!k) continue;
+          if (excluded.has(k)) continue;
+          byPath.set(k, f);
+        }
+      };
+      addAll(cloudFiles);
       for (const f of runtimeFiles) {
         const k = keyOf(f);
-        if (k) byPath.set(k, Object.assign({}, byPath.get(k) || {}, f));
+        if (!k) continue;
+        if (excluded.has(k)) continue;
+        byPath.set(k, Object.assign({}, byPath.get(k) || {}, f));
       }
 
       return { files: Array.from(byPath.values()) };

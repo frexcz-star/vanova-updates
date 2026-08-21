@@ -76,6 +76,10 @@ _RESOURCES: dict[str, dict[str, str]] = {
     "lineasprov": {"kind": "line", "invoiceType": "received"},
     "cobros": {"kind": "cash", "cashType": "collection"},
     "pagos": {"kind": "cash", "cashType": "payment"},
+    # BUG-033 (Tarea A): el catálogo de artículos de FacturaScripts expone el
+    # coste de adquisición (preciocoste). Sincronizarlo al catálogo cierra el
+    # flujo coste → margen → € reales en el Detector desde FS/ERP.
+    "articulos": {"kind": "article"},
 }
 
 _sync_lock = threading.Lock()
@@ -246,6 +250,32 @@ def _normalize_line(raw: dict[str, Any], invoice_type: str) -> dict[str, Any]:
     }
 
 
+def _normalize_article(raw: dict[str, Any]) -> dict[str, Any]:
+    """Artículo de FacturaScripts → producto con coste de adquisición real.
+
+    BUG-033 (Tarea A): el campo ``preciocoste`` (o ``coste``) de FacturaScripts
+    es el coste real de compra. Se conserva como ``cost`` con
+    costSource=facturascripts (verified), lo que cierra el flujo coste → margen
+    → € reales en el Detector de Oportunidades. NUNCA se usa el PVD como coste.
+    """
+    sku = str(raw.get("referencia") or raw.get("codigo") or raw.get("id") or "").strip()
+    name = str(raw.get("descripcion") or raw.get("nombre") or "").strip() or sku
+    cost = _num(raw.get("preciocoste") or raw.get("coste") or raw.get("costprice"))
+    rrp = _num(raw.get("pvp") or raw.get("precioventa") or raw.get("precio"))
+    if cost is not None and cost < 0:
+        cost = None
+    return {
+        "sku": sku,
+        "name": name,
+        "cost": cost,
+        "rrp": rrp,
+        "costSource": "facturascripts" if cost is not None else "unknown",
+        "costStatus": "verified" if cost is not None else "missing",
+        "sourceReference": "facturascript:articulos",
+        "source": "facturascript",
+    }
+
+
 def _normalize_partner(raw: dict[str, Any], kind: str) -> dict[str, Any]:
     return {
         "name": str(raw.get("nombre") or raw.get("razonsocial") or "").strip(),
@@ -346,6 +376,10 @@ def treasury_summary() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 def _persist(kind: str, rows: list[dict[str, Any]], source: str) -> None:
     """Validate + stamp + MERGE into the stored dataset (idempotent by id).
 
@@ -361,6 +395,11 @@ def _persist(kind: str, rows: list[dict[str, Any]], source: str) -> None:
             ok, _ = business_model.validate_invoice_line(raw)
         elif kind == "cash":
             ok, _ = business_model.validate_cash_row(raw)
+        elif kind == "article":
+            # BUG-033: artículos → validación mínima (SKU con coste/venta)
+            ok = bool(str(raw.get("sku") or "").strip()) and (
+                raw.get("cost") is not None or raw.get("rrp") is not None
+            )
         else:
             ok, _ = business_model.validate_customer(raw)
         if ok:
@@ -385,6 +424,29 @@ def _persist(kind: str, rows: list[dict[str, Any]], source: str) -> None:
         existing = data.get("organizedSuppliers") or []
         merged = business_model.dedupe(list(existing) + valid, lambda r: str(r.get("taxId") or r.get("email") or r.get("name") or "").lower())
         config_store.save({"organizedSuppliers": merged})
+    elif kind == "article":
+        # BUG-033: mergear artículos (con coste) al catálogo de productos.
+        # Idempotente por SKU; si el coste de FS difiere del existente, se
+        # conserva el de FS (fuente verificada) sin tocar sku/name/rrp.
+        existing = data.get("organizedProducts") or []
+        by_sku = {str(p.get("sku") or "").strip().lower(): p for p in existing if isinstance(p, dict)}
+        for a in valid:
+            key = str(a.get("sku") or "").strip().lower()
+            if not key:
+                continue
+            prod = by_sku.get(key)
+            if prod is None:
+                existing.append(a)
+                by_sku[key] = a
+            else:
+                # Actualizar coste si FS trae uno verificado
+                if a.get("cost") is not None:
+                    prod["cost"] = a["cost"]
+                    prod["costSource"] = "facturascripts"
+                    prod["costStatus"] = "verified"
+                    prod["sourceReference"] = a.get("sourceReference") or prod.get("sourceReference")
+                    prod["costUpdatedAt"] = _now()
+        config_store.save({"organizedProducts": existing})
     else:  # customer
         _merge_customers(valid)
 
@@ -494,6 +556,8 @@ def sync_now() -> dict[str, Any]:
                     normalized.append(_normalize_line(raw, meta["invoiceType"]))
                 elif kind == "cash":
                     normalized.append(_normalize_cash(raw, meta["cashType"]))
+                elif kind == "article":
+                    normalized.append(_normalize_article(raw))
                 else:
                     normalized.append(_normalize_partner(raw, kind))
             _persist(kind, normalized, source="facturascript")

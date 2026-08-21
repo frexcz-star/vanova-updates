@@ -96,6 +96,10 @@ def _full_payloads():
         "lineasprov": {"data": [{"idlinea": 1, "idfactura": 7, "referencia": "PAP", "descripcion": "Papel", "cantidad": 1, "pvpunitario": "55.00", "dtopor": 0, "iva": 21, "pvptotal": "55.00"}]},
         "cobros": {"data": [{"idcobro": 1, "fecha": "2026-07-10", "importe": "121.00", "codcliente": "C1", "codigo": "F2026-001"}]},
         "pagos": {"data": [{"idpago": 2, "fecha": "2026-06-20", "importe": "55.00", "codproveedor": "P1"}]},
+        "articulos": {"data": [
+            {"referencia": "AG1", "descripcion": "Agenda A5", "preciocoste": "3.50", "pvp": "10.00"},
+            {"referencia": "PAP", "descripcion": "Papel", "preciocoste": "2.00", "pvp": "5.50"},
+        ]},
     }
 
 
@@ -266,7 +270,7 @@ class SyncPipelineTests(unittest.TestCase):
     def test_all_resources_fail_touches_nothing(self):
         client = _FakeClient(
             _full_payloads(),
-            fail={"facturascli", "facturasprov", "lineascli", "lineasprov", "cobros", "pagos", "clientes", "proveedores"},
+            fail={"facturascli", "facturasprov", "lineascli", "lineasprov", "cobros", "pagos", "clientes", "proveedores", "articulos"},
         )
         stored = {"organizedInvoices": [{"id": "old", "code": "OLD", "type": "issued", "total": 5.0, "date": "2026-01-01"}]}
         result, stored = self._run(client, stored)
@@ -431,6 +435,56 @@ class ProviderConnectionTests(unittest.TestCase):
         # URL was normalized: /api/3 stripped before probing, so the probe is /api/3 once.
         self.assertTrue(any(h.rstrip("/").endswith("/api/3") for h in hits))
         self.assertFalse(any("/api/3/api/3" in h for h in hits))
+
+
+class Bug033ArticleCostSyncTests(unittest.TestCase):
+    """BUG-033 (Tarea A): FacturaScripts debe sincronizar el coste de los
+    artículos al catálogo de productos. Fallaba porque _RESOURCES no incluía
+    'articulos'. Este test verifica el cierre del flujo coste → catálogo."""
+
+    def test_full_sync_persists_articles_with_cost(self):
+        client = _FakeClient(_full_payloads())
+        stored: dict = {}
+        with patch.object(fs.integrations_store, "get_config", return_value=_cfg()), patch.object(
+            fs.config_store, "load", side_effect=lambda: dict(stored)
+        ), patch.object(fs.config_store, "save", side_effect=lambda d: stored.update(d)), patch.object(
+            fs.httpx, "Client", return_value=client
+        ), patch.object(fs.time, "sleep", return_value=None):
+            result = fs.sync_now()
+        self.assertTrue(result["ok"])
+        products = stored.get("organizedProducts") or []
+        by_sku = {str(p.get("sku") or ""): p for p in products}
+        ag1 = by_sku.get("AG1")
+        self.assertIsNotNone(ag1)
+        self.assertEqual(ag1.get("cost"), 3.5)
+        self.assertEqual(ag1.get("costSource"), "facturascripts")
+        self.assertEqual(ag1.get("costStatus"), "verified")
+        pap = by_sku.get("PAP")
+        self.assertEqual(pap.get("cost"), 2.0)
+
+    def test_article_persist_updates_existing_cost(self):
+        """BUG-033: si el artículo ya existe en el catálogo, FS actualiza el coste
+        (verified) sin tocar sku/name/rrp."""
+        stored = {
+            "organizedProducts": [
+                {"sku": "AG1", "name": "Agenda A5", "rrp": 10.0, "cost": None, "costStatus": "missing"}
+            ]
+        }
+        article = fs._normalize_article({"referencia": "AG1", "descripcion": "Agenda A5", "preciocoste": "3.50", "pvp": "10.00"})
+        with patch.object(fs.config_store, "load", return_value=stored), patch.object(
+            fs.config_store, "save", side_effect=lambda d: stored.update(d)
+        ):
+            fs._persist("article", [article], source="facturascript")
+        prod = stored["organizedProducts"][0]
+        self.assertEqual(prod["cost"], 3.5)
+        self.assertEqual(prod["costStatus"], "verified")
+        self.assertEqual(prod["rrp"], 10.0)  # no tocado
+
+    def test_article_without_cost_is_not_verified(self):
+        """Sin preciocoste, el artículo no se marca como verified (honestidad)."""
+        art = fs._normalize_article({"referencia": "X1", "descripcion": "X", "pvp": "5.00"})
+        self.assertEqual(art["costStatus"], "missing")
+        self.assertIsNone(art["cost"])
 
 
 if __name__ == "__main__":
