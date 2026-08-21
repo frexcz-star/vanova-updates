@@ -567,6 +567,15 @@
       }
     },
 
+    /** SPEC STRATI §4.4 — total capturado en € (ROI visible de retención). */
+    async getRecommendationsImpact() {
+      try {
+        return await runtimeApi("/api/recommendations/impact", { timeoutMs: 8000 });
+      } catch (e) {
+        return null;
+      }
+    },
+
     async setRecommendationStatus(id, status) {
       try {
         return await runtimeApi("/api/recommendations/status", {

@@ -2757,8 +2757,8 @@ function viewInsights(){
 }
 
 /* ---- RECOMMENDATIONS (PRODUCT LEAP: recomendar → actuar → medir) ---- */
-const REC_STATUS_LABEL = { open:'Nueva', in_progress:'En curso', done:'Realizada', not_done:'No realizada', resolved:'Resuelta', measured:'Medida' };
-const REC_OUTCOME_LABEL = { improved:'🟢 Mejoró', worsened:'🔴 Empeoró', no_change:'🟡 Sin cambio', unmeasurable:'⚪ No medible' };
+const REC_STATUS_LABEL = { open:'Nueva', in_progress:'En curso', done:'Realizada', not_done:'No realizada', resolved:'Resuelta', measured:'Con impacto' };
+const REC_OUTCOME_LABEL = { improved:'Resultado: mejoró', worsened:'Resultado: empeoró', no_change:'Resultado: sin cambio', unmeasurable:'Sin dato comparable' };
 
 function recStatusBadge(status){
   const map = { open:'badge', in_progress:'badge badge-warn', done:'badge badge-ok', resolved:'badge badge-ok', not_done:'badge', measured:'badge badge-blue' };
@@ -2784,9 +2784,26 @@ function viewRecommendations(){
   const activeRecs = allRecs.filter(function(r){ return ['open','in_progress'].indexOf(r.status) !== -1; });
   const closedRecs = allRecs.filter(function(r){ return ['open','in_progress'].indexOf(r.status) === -1; });
   const recs = activeRecs;
+  // SPEC STRATI §4.4 — total capturado (ROI visible). Honestidad: solo si hay
+  // revenue comparable en recomendaciones mejoradas; si no, se omite (no 0 €).
+  const impact = store.recImpact || null;
+  const captured = impact && impact.capturedEuro > 0 ? impact.capturedEuro : null;
+  const improved = impact ? impact.improvedCount : 0;
+  const impactBanner = captured != null
+    ? `<div class="dash-card" style="margin-bottom:16px;max-width:820px;border-left:3px solid var(--success)">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="font-size:30px;font-weight:700;color:var(--success)">${fmtEuro(captured)}</div>
+          <div style="flex:1;min-width:220px">
+            <div style="font-weight:600;font-size:14px">Valor capturado con VANOVA</div>
+            <div style="font-size:12.5px;color:var(--text-2);margin-top:2px">${improved} recomendación(es) que seguiste tuvieron impacto positivo, medido con tus datos reales.</div>
+          </div>
+        </div>
+      </div>`
+    : '';
   return `<div class="page">
     <div class="page-head"><div class="page-title">Recomendaciones</div>
       <div class="page-sub">Lo que VANOVA te ha recomendado, si lo has hecho y qué resultado ha producido.</div></div>
+    ${impactBanner}
 
     <div class="dash-card" style="margin-bottom:16px;max-width:820px">
       <div class="section-head">
@@ -2816,7 +2833,7 @@ function viewRecommendations(){
             <label style="font-size:11px;color:var(--text-3);display:block;margin-bottom:4px">Estado</label>
             <select class="input" data-rec-status="${escapeHtml(r.id)}" style="width:100%">
               ${Object.keys(REC_STATUS_LABEL).map(s=>{
-                if (s==='measured') return `<option value="measured" disabled ${String(r.status)===s?'selected':''}>Medida (automática)</option>`;
+                if (s==='measured') return `<option value="measured" disabled ${String(r.status)===s?'selected':''}>Con impacto (automática)</option>`;
                 return `<option value="${s}" ${String(r.status)===s?'selected':''}>${REC_STATUS_LABEL[s]}</option>`;
               }).join('')}
             </select>
@@ -8905,7 +8922,7 @@ let store = {
   overview: { revenue:null, revenueChange:null, revenueUp:null, orders:null, ordersChange:null, ordersUp:null,
               grossMargin:null, grossMarginChange:null, grossMarginUp:null, customers:null, customersChange:null, customersUp:null,
               inventoryValue:null, inventoryChange:null, inventoryUp:null },
-  priorities: [], activity: [], agents: [], decisions: [], automations: [], sources: [], products: [], sales: [], customers: [], salesSummary: null, shopifySync: null, files: [], insightActions: {}, importantItems: [], uiPrefs: {}, facturascript: null, drive: null, shopify: null, erp: null, mcp: null, email: null, instagram: null,   guardrails: [], tasks: [], internalTasks: [], pendingApprovals: [], commandCenter: null, autonomy: null, autonomyLevels: [], integrationLifecycle: [], insights: [], fileCandidates: [], scanStatus: null, hermesActivity: null, recommendations: [], opportunities: []
+  priorities: [], activity: [], agents: [], decisions: [], automations: [], sources: [], products: [], sales: [], customers: [], salesSummary: null, shopifySync: null, files: [], insightActions: {}, importantItems: [], uiPrefs: {}, facturascript: null, drive: null, shopify: null, erp: null, mcp: null, email: null, instagram: null,   guardrails: [], tasks: [], internalTasks: [], pendingApprovals: [], commandCenter: null, autonomy: null, autonomyLevels: [], integrationLifecycle: [], insights: [], recImpact: null, fileCandidates: [], scanStatus: null, hermesActivity: null, recommendations: [], opportunities: []
 };
 
 async function loadAppData(opts){
@@ -9045,6 +9062,13 @@ async function loadAppData(opts){
       if (ds.getRecommendations) {
         const recs = await ds.getRecommendations();
         if (Array.isArray(recs)) store.recommendations = recs;
+      }
+    } catch(e){}
+    // SPEC STRATI §4.4 — total capturado en € (ROI visible)
+    try {
+      if (ds.getRecommendationsImpact) {
+        const imp = await ds.getRecommendationsImpact();
+        if (imp) store.recImpact = imp;
       }
     } catch(e){}
     // STRATI — Detector de Oportunidades de Crecimiento (vista Oportunidades)

@@ -239,6 +239,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/insights": lambda: _require("insight_store").list_insights(),
                 "/api/opportunities": lambda: _require("opportunity_catalog").catalog(),
                 "/api/recommendations": lambda: _require("recommendation_store").list_recommendations(),
+                "/api/recommendations/impact": lambda: _recommendations_impact(),
                 "/api/important": lambda: {"items": _require("important_store").list_important()},
                 "/api/integrations/providers": lambda: {"providers": _provider_manifest()},
                 "/api/integrations/test": lambda: {"ok": False, "error": "Usa POST con la configuración"},
@@ -992,6 +993,35 @@ def _approvals_with_tasks() -> list[dict[str, Any]]:
             a["taskCreatedAt"] = task.get("createdAt") or ""
         out.append(a)
     return out
+
+
+def _recommendations_impact() -> dict[str, Any]:
+    """SPEC STRATI §4.4 — resumen de impacto total (ROI visible).
+
+    Suma el delta € (metricNow.revenue - metricBefore.revenue) de las
+    recomendaciones `measured` con `outcome=improved`. Honestidad: solo suma
+    las que tienen revenue comparable; nunca inventa 0 ni cifras.
+    """
+    from . import recommendation_store
+
+    recs = recommendation_store.list_recommendations()
+    captured = 0.0
+    count = 0
+    for r in recs:
+        if str(r.get("status") or "") != "measured" or str(r.get("outcome") or "") != "improved":
+            continue
+        before = r.get("metricBefore") or {}
+        now = r.get("metricNow") or {}
+        b = float(before.get("revenue") or 0.0)
+        n = float(now.get("revenue") or 0.0)
+        if b > 0 and n > 0:
+            captured += (n - b)
+            count += 1
+    return {
+        "capturedEuro": round(captured, 2),
+        "improvedCount": count,
+        "total": len(recs),
+    }
 
 
 def _scanner_call(method: str):
