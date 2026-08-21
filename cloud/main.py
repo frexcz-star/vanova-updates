@@ -417,6 +417,14 @@ class CloudDataSource(DataSource):
 
 
 # Store latest snapshots pushed by connectors
+# BUG-010 FIX: retention — la tabla snapshots crecía SIN LÍMITE (un INSERT por
+# llamada, ~2880 filas/día/workspace con heartbeats de 30s). Se conservan solo
+# los últimos SNAPSHOT_RETENTION por (workspace_id, kind) usando el rowid
+# implícito de SQLite. Los SELECT usan "ORDER BY rowid DESC LIMIT 1", así que
+# mantener los N más recientes preserva la lectura sin cambiar ningún consumidor.
+SNAPSHOT_RETENTION = 100
+
+
 def store_snapshot(workspace_id: str, kind: str, data: dict):
     conn = get_db()
     conn.execute(
@@ -427,6 +435,21 @@ def store_snapshot(workspace_id: str, kind: str, data: dict):
     conn.execute(
         "INSERT INTO snapshots (workspace_id, kind, data, ts) VALUES (?,?,?,?)",
         (workspace_id, kind, json.dumps(data, ensure_ascii=False), datetime.now(timezone.utc).isoformat()),
+    )
+    # Prune: conservar solo los SNAPSHOT_RETENTION más recientes por par
+    # (workspace_id, kind). SQLite expone un rowid implícito en las filas.
+    # BUG-013 FIX: el DELETE también debe filtrar por (workspace_id, kind); antes
+    # solo filtraba en el sub-SELECT, así que el DELETE borraba filas de OTROS
+    # kinds/workspaces (p.ej. insertar el 1er snapshot de 'products' borraba los
+    # de 'dashboard').
+    conn.execute(
+        """DELETE FROM snapshots
+           WHERE workspace_id = ? AND kind = ? AND rowid NOT IN (
+               SELECT rowid FROM snapshots
+               WHERE workspace_id = ? AND kind = ?
+               ORDER BY rowid DESC LIMIT ?
+           )""",
+        (workspace_id, kind, workspace_id, kind, SNAPSHOT_RETENTION),
     )
     conn.commit()
     conn.close()

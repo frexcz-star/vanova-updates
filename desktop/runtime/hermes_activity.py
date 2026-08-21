@@ -15,16 +15,23 @@ def _now() -> str:
 
 def log_step(message: str, *, step: str = "info", source: str = "hermes") -> dict[str, Any]:
     entry = {"step": step, "message": message, "source": source, "at": _now()}
-    data = config_store.load()
-    activity = dict(data.get("hermesActivity") or {})
-    log = list(activity.get("log") or [])
-    log.append(entry)
-    activity["current"] = message
-    activity["step"] = step
-    activity["source"] = source
-    activity["updatedAt"] = _now()
-    activity["log"] = log[-MAX_LOG:]
-    config_store.save({"hermesActivity": activity})
+    # BUG-011 FIX: RMW atómico bajo un solo lock. Antes hacía load() → modificar
+    # → save() sin serializar; el API server (ThreadingHTTPServer) y el scheduler
+    # pueden invocar log_step concurrentemente y perder un step. update() cubre
+    # todo el ciclo load→modify→save bajo _config_lock.
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        activity = dict(cfg.get("hermesActivity") or {})
+        log = list(activity.get("log") or [])
+        log.append(entry)
+        activity["current"] = message
+        activity["step"] = step
+        activity["source"] = source
+        activity["updatedAt"] = _now()
+        activity["log"] = log[-MAX_LOG:]
+        cfg["hermesActivity"] = activity
+        return cfg
+
+    config_store.update(_mutate)
     return entry
 
 

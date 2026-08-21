@@ -106,7 +106,13 @@ def _is_product_entity(item: Any) -> bool:
 
 
 def add_product(entry: dict[str, Any]) -> dict[str, Any]:
-    """Append a manually entered product to the local catalog."""
+    """Append a manually entered product to the local catalog.
+
+    BUG-012 FIX: usa config_store.update() (RMW atómico bajo un solo lock).
+    Antes hacía load() → añadir → save() sin serializar el ciclo completo;
+    con ThreadingHTTPServer (/api/products/add) dos POST concurrentes podían
+    hacer lost-update (el producto añadido primero se perdía).
+    """
     name = (entry.get("name") or "").strip()
     if not name:
         return {"ok": False, "error": "El nombre del producto es obligatorio"}
@@ -120,12 +126,17 @@ def add_product(entry: dict[str, Any]) -> dict[str, Any]:
         "rrp": rrp,
         "source": "manual",
     }
-    data = config_store.load()
-    products = list(data.get("organizedProducts") or [])
-    if not isinstance(products, list):
-        products = []
-    products = _dedupe_products(products + [product])
-    config_store.save({"organizedProducts": products})
+    products: list[dict[str, Any]] = []
+
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        nonlocal products
+        raw = cfg.get("organizedProducts") or []
+        items = list(raw) if isinstance(raw, list) else []
+        products = _dedupe_products(items + [product])
+        cfg["organizedProducts"] = products
+        return cfg
+
+    config_store.update(_mutate)
     sync_dashboard_overview(products=products)
     return {"ok": True, "product": product, "count": len(products), "products": products}
 
