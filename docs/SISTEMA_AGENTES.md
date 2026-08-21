@@ -43,10 +43,82 @@ desde la UI sin código.
 - El agente se guarda idempotente y se ejecuta igual que el resto (task_queue → Hermes).
 - UI: botón "Crear agente" en la vista Agents + modal sin código.
 
-**Fase B — bots persistentes de Hermes (futuro):** aprovechar `hermes profile`
-para dar a cada agente un perfil Hermes real (memoria, skills, canal propio).
-Cada agente VANOVA → un perfil Hermes con su SOUL.md/personalidad, delegando la
-ejecución persistente a un bot en lugar de una consulta one-shot.
+**Fase B — bots persistentes de Hermes (en curso, por pasos):** cada agente
+VANOVA → un **perfil Hermes real** (bot) con su propia identidad, memoria,
+skills y canal. La ejecución pasa de one-shot a persistente/rutina.
+
+---
+
+## 2b. FASE B — Migración completa: agente VANOVA → bot Hermes persistente
+
+### 2b.1 Qué es un bot de Hermes (verificado en esta instalación)
+
+Un bot de Hermes **es un perfil** (`~/.hermes/profiles/<name>/`). No hay
+primitiva nueva. Cada bot tiene:
+- `SOUL.md` — la personalidad e instrucciones permanentes del agente.
+- `memories/MEMORY.md` + `memories/USER.md` — memoria propia y persistente.
+- `config.yaml` — su propio modelo/proveedor, skills, toolsets.
+- Un **Bot Chat** canónico y persistente (conversación continua).
+- **Routines** = cron jobs namespaced `[bot:<name>] …` (ver `hermes cron list`).
+- Canal/mensajería opcional (Telegram/Discord/…).
+
+Crear un bot desde CLI:
+```
+hermes profile create <nombre> [--clone] [--no-alias]
+# luego escribir su SOUL.md
+```
+Y es visible en el **Hermes desktop** (pestaña Bots) y en CLI con
+`hermes -p <nombre> chat`.
+
+### 2b.2 Mapeo agente VANOVA → perfil Hermes
+
+| Agente VANOVA (Fase A) | Perfil Hermes (Fase B) |
+|---|---|
+| `id` (`custom-ventas`) | `profile_name` → `vanova-ventas` (namespaced) |
+| `name` | título/descripción del bot |
+| `role` (ventas/contabilidad/stock/…) | SOUL.md (personalidad + responsabilidades) |
+| `permissions` (solo lectura) | toolsets restringidos del perfil |
+| datos reales de VANOVA | inyectados vía `agent_data_tools` en el contexto de cada run |
+| `schedules` (agent_scheduler) | rutina cron `[bot:<name>]` |
+| ejecución one-shot (task_queue→CLI) | ejecución persistente (bot + cron) |
+
+### 2b.3 Mecanismo de sincronización (paso a paso)
+
+**Paso 1 — Generador de perfil bot.** Nuevo módulo
+`desktop/runtime/agent_hermes_bot.py` con:
+- `sync_agent_to_bot(agent)` → crea/actualiza el perfil Hermes del agente:
+  1. `hermes profile create vanova-<slug> --no-alias` (si no existe).
+  2. Escribe `SOUL.md` desde `name` + `role` + `description` + `responsibilities`
+     (personalidad del agente, en español, con las reglas de honestidad de VANOVA).
+  3. Escribe `memories/` inicial (rol, empresa, regla "usa datos reales, nunca € inventado").
+  4. Opcional: pin modelo (igual que el activo) y skills/toolsets solo lectura.
+- `ensure_bot(agent)` — idempotente: si el perfil existe, solo actualiza SOUL.md.
+- `remove_bot(agent)` — borra el perfil al eliminar el agente (coherente).
+
+**Paso 2 — Coexistencia.** Fase A sigue intacta. `create_custom_agent` llama
+`sync_agent_to_bot` como efecto secundario opcional (si Hermes está disponible).
+El agente sigue ejecutándose por `task_queue`; **además** existe como bot.
+
+**Paso 3 — Ejecución persistente.** Para agentes con `schedules` (rutina), crear
+un cron job Hermes namespaced `[bot:<name>] <rutina>` (vía `hermes cron create`)
+que ejecute la tarea del bot con los datos reales de VANOVA (`agent_data_tools`).
+El bot pasa de "consulta one-shot" a "rutina recurrente en su propio chat".
+
+**Paso 4 — Canal.** Opcional: conectar el bot a un canal de mensajería
+(Telegram, etc.) para que el empresario pueda hablarlo fuera de VANOVA. Fuera
+del alcance del MVP inicial; se documenta como siguiente nivel.
+
+### 2b.4 Datos reales y honestidad
+El bot lee los datos **reales** de VANOVA (`agent_data_tools`, la misma fuente
+que el dashboard). Sus `SOUL.md`/memorias incluyen la regla de honestidad: nunca
+inventa un € ni afirma un resultado sin métrica comparable (`UNKNOWN ≠ 0`).
+
+### 2b.5 Orden de implementación (sólido, sin romper Fase A)
+1. [ ] `agent_hermes.py` — `sync_agent_to_bot` / `remove_bot` (perfil + SOUL.md).
+2. [ ] Enchufar a `create_custom_agent` (sincroniza bot si Hermes disponible).
+3. [ ] Rutina cron por agente con `schedules` (`[bot:<name>]`).
+4. [ ] Vista en dashboard: indicador "Bot de Hermes activo" + link a verlo.
+5. [ ] Tests: creación de perfil idempotente, SOUL.md generado, borrado coherente.
 
 ---
 

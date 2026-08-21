@@ -63,6 +63,7 @@ def create_custom_agent(*, name: str, role: str = "", description: str = "", res
         "id": slug,
         "name": name,
         "description": description or f"Agente personalizado de {name} creado desde VANOVA.",
+        "role": role,
         "responsibilities": responsibilities or [f"Ejecutar la rutina de {name}"],
         "tools": [],
         "integrations": [],
@@ -74,7 +75,37 @@ def create_custom_agent(*, name: str, role: str = "", description: str = "", res
     added = add_agents([agent_def])
     if not added:
         return {"ok": False, "error": "El agente ya existe o no se pudo crear"}
-    return {"ok": True, "agent": added[0]}
+    result = {"ok": True, "agent": added[0]}
+    # FASE B — sincronizar a bot Hermes persistente (coexiste con Fase A). Si
+    # Hermes no está disponible, el agente VANOVA funciona igual: no falla.
+    try:
+        from . import agent_hermes_bot
+
+        bot = agent_hermes_bot.sync_agent_to_bot(added[0])
+        if bot.get("ok"):
+            result["bot"] = bot
+            profile_name = bot.get("profile")
+            added[0]["hermesBot"] = profile_name
+            config_store.update(
+                lambda cfg: _persist_hermes_bot_flag(cfg, profile_name) if profile_name else cfg
+            )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("sync_agent_to_bot fallo (no bloquea): %s", exc)
+    return result
+
+
+def _persist_hermes_bot_flag(cfg: dict[str, Any], profile_name: str) -> dict[str, Any]:
+    """Marca en config el agente que tiene bot Hermes persistente (FASE B)."""
+    agents = cfg.get("agents") or []
+    if not isinstance(agents, list):
+        agents = []
+    for a in agents:
+        if isinstance(a, dict) and str(a.get("id") or "") == "custom-" + profile_name.replace("vanova-", ""):
+            a["hermesBot"] = profile_name
+        elif isinstance(a, dict) and str(a.get("name") or "").lower() == profile_name.replace("vanova-", "").replace("-", " "):
+            a["hermesBot"] = profile_name
+    cfg["agents"] = agents
+    return cfg
 
 
 def create_agents(agent_defs: list[dict[str, Any]]) -> list[dict[str, Any]]:
