@@ -132,24 +132,33 @@ def get_shopify_entry() -> dict[str, Any]:
 
 
 def clear_stale_shopify_sync_errors() -> None:
-    """Drop cached permission errors after credentials validate successfully."""
+    """Drop cached permission errors after credentials validate successfully.
+
+    BUG-022 FIX: antes hacía config_store.save({"shopifySync": {...}}) que
+    REEMPLAZABA todo el objeto shopifySync con solo 6 campos, perdiendo
+    lastSync/counts/status/message/guardAlerts/guard/backfill/startedAt de la
+    última sync válida. Ahora hace un UPDATE (merge) de los 6 campos de error
+    sobre el dict existente, preservando los metadatos de la última sync.
+    """
     from . import config_store
 
-    st = config_store.load().get("shopifySync") or {}
-    if not (st.get("missingScopes") or st.get("errorCategory") == "permission_denied"):
-        return
-    config_store.save(
-        {
-            "shopifySync": {
-                "missingScopes": [],
-                "scopeErrors": [],
-                "errorCategory": None,
-                "lastError": None,
-                "userMessage": None,
-                "partial": False,
-            }
-        }
-    )
+    def _mutate(cfg: dict[str, object]) -> dict[str, object]:
+        st = cfg.get("shopifySync") or {}
+        if not isinstance(st, dict):
+            st = {}
+        if not (st.get("missingScopes") or st.get("errorCategory") == "permission_denied"):
+            return cfg
+        # Merge: solo actualiza los campos de error, conserva el resto.
+        st["missingScopes"] = []
+        st["scopeErrors"] = []
+        st["errorCategory"] = None
+        st["lastError"] = None
+        st["userMessage"] = None
+        st["partial"] = False
+        cfg["shopifySync"] = st
+        return cfg
+
+    config_store.update(_mutate)
 
 
 def sync_shopify_from_hermes_if_needed() -> dict[str, Any] | None:

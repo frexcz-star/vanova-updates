@@ -44,40 +44,55 @@ def mark_important(
     agent_id: str = "",
     meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Mark an item (task or insight) as important/curated knowledge."""
+    """Mark an item (task or insight) as important/curated knowledge.
+
+    BUG-010 FIX: usa config_store.update() (RMW atómico bajo un solo lock).
+    Antes hacía load() → modificar → save() sin serializar el ciclo completo;
+    con ThreadingHTTPServer (API server) un lost-update podía perder el item.
+    """
     kind = str(kind or "item").strip().lower()
     ref_id = str(ref_id or "").strip()
     if not ref_id:
         return {"ok": False, "error": "Falta el identificador del elemento"}
 
-    items = _load()
-    # Avoid duplicates: same kind + ref_id gets refreshed instead.
-    for existing in items:
-        if str(existing.get("kind") or "").lower() == kind and str(existing.get("refId") or "") == ref_id:
-            existing["title"] = title or existing.get("title") or ""
-            existing["body"] = body or existing.get("body") or ""
-            existing["updatedAt"] = _now()
-            if meta:
-                existing["meta"] = {**(existing.get("meta") or {}), **meta}
-            _save(items)
-            return {"ok": True, "item": existing, "updated": True}
+    outcome: dict[str, Any] = {"ok": False, "error": "No se pudo marcar"}
 
-    item = {
-        "id": str(uuid.uuid4()),
-        "kind": kind,
-        "refId": ref_id,
-        "title": (title or "Elemento importante").strip(),
-        "body": (body or "").strip(),
-        "agentId": agent_id or "",
-        "createdAt": _now(),
-        "updatedAt": _now(),
-    }
-    if meta:
-        item["meta"] = meta
-    items.insert(0, item)
-    _save(items)
-    log.info("Important marked (%s): %s", kind, item["title"][:60])
-    return {"ok": True, "item": item, "updated": False}
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        nonlocal outcome
+        raw_items = cfg.get(IMPORTANT_KEY) or []
+        items = [i for i in raw_items if isinstance(i, dict)] if isinstance(raw_items, list) else []
+        # Avoid duplicates: same kind + ref_id gets refreshed instead.
+        for existing in items:
+            if str(existing.get("kind") or "").lower() == kind and str(existing.get("refId") or "") == ref_id:
+                existing["title"] = title or existing.get("title") or ""
+                existing["body"] = body or existing.get("body") or ""
+                existing["updatedAt"] = _now()
+                if meta:
+                    existing["meta"] = {**(existing.get("meta") or {}), **meta}
+                cfg[IMPORTANT_KEY] = items[:MAX_IMPORTANT]
+                outcome = {"ok": True, "item": existing, "updated": True}
+                return cfg
+        item = {
+            "id": str(uuid.uuid4()),
+            "kind": kind,
+            "refId": ref_id,
+            "title": (title or "Elemento importante").strip(),
+            "body": (body or "").strip(),
+            "agentId": agent_id or "",
+            "createdAt": _now(),
+            "updatedAt": _now(),
+        }
+        if meta:
+            item["meta"] = meta
+        items.insert(0, item)
+        cfg[IMPORTANT_KEY] = items[:MAX_IMPORTANT]
+        outcome = {"ok": True, "item": item, "updated": False}
+        return cfg
+
+    config_store.update(_mutate)
+    if outcome.get("updated") is False:
+        log.info("Important marked (%s): %s", kind, (outcome.get("item") or {}).get("title", "")[:60])
+    return outcome
 
 
 def unmark(kind: str, ref_id: str) -> dict[str, Any]:

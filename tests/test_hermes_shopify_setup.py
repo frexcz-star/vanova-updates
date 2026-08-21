@@ -118,5 +118,45 @@ class HermesShopifySetupTests(unittest.TestCase):
         self.assertFalse(result["shopifySetup"]["active"])
 
 
+class ClearStaleShopifyErrorsTests(unittest.TestCase):
+    """BUG-022: clear_stale_shopify_sync_errors debe hacer un merge UPDATE que
+    preserve lastSync/counts/status, no reemplazar todo el objeto shopifySync."""
+
+    def _run_with(self, stored):
+        from desktop.runtime import config_store
+        with patch.object(config_store, "update", side_effect=lambda mut: mut(stored)):
+            integrations_store.clear_stale_shopify_sync_errors()
+        return stored
+
+    def test_clears_errors_but_preserves_sync_metadata(self):
+        stored = {
+            "shopifySync": {
+                "lastSync": "2026-08-20T10:00:00Z",
+                "counts": {"products": 461, "orders": 101},
+                "status": "ok",
+                "missingScopes": ["read_customers"],
+                "errorCategory": "permission_denied",
+                "lastError": "403 scope",
+            }
+        }
+        result = self._run_with(stored)
+        sync = result["shopifySync"]
+        # Errores limpiados
+        self.assertEqual(sync["missingScopes"], [])
+        self.assertEqual(sync["errorCategory"], None)
+        self.assertEqual(sync["lastError"], None)
+        # Metadatos de la última sync válida PRESERVADOS
+        self.assertEqual(sync["lastSync"], "2026-08-20T10:00:00Z")
+        self.assertEqual(sync["counts"], {"products": 461, "orders": 101})
+        self.assertEqual(sync["status"], "ok")
+
+    def test_no_errors_returns_without_touching(self):
+        stored = {"shopifySync": {"lastSync": "x", "counts": {"products": 1}, "status": "ok"}}
+        result = self._run_with(stored)
+        self.assertEqual(result["shopifySync"]["lastSync"], "x")
+        self.assertEqual(result["shopifySync"]["counts"], {"products": 1})
+        self.assertEqual(result["shopifySync"]["status"], "ok")
+
+
 if __name__ == "__main__":
     unittest.main()
