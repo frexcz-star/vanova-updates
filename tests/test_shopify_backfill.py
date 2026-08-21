@@ -58,12 +58,22 @@ class ShopifyBackfillTests(unittest.TestCase):
         store.update(saved)
         return store
 
+    # BUG-034: backfill_line_items ahora persiste con config_store.update()
+    # (RMW atómico). El mutator muta la lista en el dict que se le pasa (misma
+    # referencia que store['organizedSales'] al copiar superficialmente), así
+    # que el resultado se refleja en `store`.
+    def _patch_update(self, store):
+        return patch.object(
+            shopify_sync.config_store, "update",
+            side_effect=lambda mutator: mutator(dict(store)),
+        )
+
     def test_backfills_missing_lines_and_preserves_fields(self):
         sales = [_sale("#1001"), _sale("#1002", with_lines=True)]
         store = self._store(sales)
         with patch.object(shopify_sync.integrations_store, "get_shopify_credentials", return_value={"url": URL, "token": TOKEN}), \
              patch.object(shopify_sync.config_store, "load", return_value=dict(store)), \
-             patch.object(shopify_sync.config_store, "save", side_effect=lambda d: store.update(d)), \
+             self._patch_update(store), \
              patch.object(shopify_sync, "_shopify_get", return_value=_shopify_order("#1001")):
             res = shopify_sync.backfill_line_items()
 
@@ -91,7 +101,7 @@ class ShopifyBackfillTests(unittest.TestCase):
         calls = {"n": 0}
         with patch.object(shopify_sync.integrations_store, "get_shopify_credentials", return_value={"url": URL, "token": TOKEN}), \
              patch.object(shopify_sync.config_store, "load", side_effect=lambda: dict(store)), \
-             patch.object(shopify_sync.config_store, "save", side_effect=lambda d: store.update(d)), \
+             self._patch_update(store), \
              patch.object(shopify_sync, "_shopify_get", side_effect=lambda *a, **k: calls.update(n=calls["n"] + 1) or _shopify_order("#1001")):
             r1 = shopify_sync.backfill_line_items()
             r2 = shopify_sync.backfill_line_items()
@@ -118,7 +128,7 @@ class ShopifyBackfillTests(unittest.TestCase):
 
         with patch.object(shopify_sync.integrations_store, "get_shopify_credentials", return_value={"url": URL, "token": TOKEN}), \
              patch.object(shopify_sync.config_store, "load", return_value=dict(store)), \
-             patch.object(shopify_sync.config_store, "save", side_effect=lambda d: store.update(d)), \
+             self._patch_update(store), \
              patch.object(shopify_sync, "_shopify_get", side_effect=fake_get):
             res = shopify_sync.backfill_line_items()
 
@@ -141,7 +151,7 @@ class ShopifyBackfillTests(unittest.TestCase):
         store = self._store(sales)
         with patch.object(shopify_sync.integrations_store, "get_shopify_credentials", return_value={}), \
              patch.object(shopify_sync.config_store, "load", return_value=dict(store)), \
-             patch.object(shopify_sync.config_store, "save", side_effect=lambda d: store.update(d)):
+             self._patch_update(store):
             res = shopify_sync.backfill_line_items()
         self.assertFalse(res["ok"])
         self.assertNotIn("line_items", store["organizedSales"][0])
@@ -184,7 +194,7 @@ class ShopifyBackfillTests(unittest.TestCase):
         store["organizedProducts"] = [{"sku": "SKU-AGENDA", "netPrice": 3.0, "name": "Agenda"}]
         with patch.object(shopify_sync.integrations_store, "get_shopify_credentials", return_value={"url": URL, "token": TOKEN}), \
              patch.object(shopify_sync.config_store, "load", side_effect=lambda: dict(store)), \
-             patch.object(shopify_sync.config_store, "save", side_effect=lambda d: store.update(d)), \
+             self._patch_update(store), \
              patch.object(shopify_sync, "_shopify_get", return_value=_shopify_order("#1001")):
             shopify_sync.backfill_line_items()
 
@@ -197,6 +207,40 @@ class ShopifyBackfillTests(unittest.TestCase):
         self.assertEqual(row["margin"], 2.94)   # 8.94 - 2*3.0
         self.assertEqual(row["marginPct"], round(2.94 / 8.94 * 100, 1))
         self.assertEqual(row["markupPct"], round(2.94 / 6.0 * 100, 1))
+
+
+class Bug034AtomicShopifyRmwTests(unittest.TestCase):
+    """BUG-034: backfill_line_items y recover_variant_identity hacían RMW no
+    atómico (config_store.save sobrescribiendo la lista completa tras un fetch
+    de red largo), perdiendo escrituras concurrentes (lost-update). Deben usar
+    config_store.update() (RMW atómico)."""
+
+    def test_backfill_uses_atomic_update(self):
+        sales = [_sale("#1001")]
+        store = {"organizedSales": sales, "shopifySync": {}}
+        used = []
+        with patch.object(shopify_sync.integrations_store, "get_shopify_credentials", return_value={"url": URL, "token": TOKEN}), \
+             patch.object(shopify_sync.config_store, "load", return_value=dict(store)), \
+             patch.object(shopify_sync.config_store, "update", side_effect=lambda m: (used.append("update") or m(dict(store)))), \
+             patch.object(shopify_sync.config_store, "save", side_effect=lambda d: store.update(d)), \
+             patch.object(shopify_sync, "_shopify_get", return_value=_shopify_order("#1001")):
+            shopify_sync.backfill_line_items()
+        self.assertIn("update", used)
+        self.assertNotIn("save", used)  # no debe sobrescribir la lista completa
+
+    def test_variant_identity_uses_atomic_update(self):
+        products = [{"sku": "SKU-AGENDA", "name": "Agenda"}]
+        store = {"organizedProducts": products, "organizedSales": []}
+        used = []
+        with patch.object(shopify_sync.integrations_store, "get_shopify_credentials", return_value={"url": URL, "token": TOKEN}), \
+             patch.object(shopify_sync.config_store, "load", side_effect=lambda: dict(store)), \
+             patch.object(shopify_sync.config_store, "update", side_effect=lambda m: (used.append("update") or m(dict(store)))), \
+             patch.object(shopify_sync, "_shopify_get_all", return_value=[
+                 {"variants": [{"sku": "SKU-AGENDA", "id": "111", "barcode": "12345"}]}
+             ]), \
+             patch("desktop.runtime.file_organizer.sync_dashboard_overview", return_value=None):
+            shopify_sync.recover_variant_identity()
+        self.assertIn("update", used)
 
 
 if __name__ == "__main__":

@@ -97,6 +97,9 @@ class E2EFlowTests(unittest.TestCase):
         return [
             patch.object(config_store, "load", side_effect=lambda: dict(self.store)),
             patch.object(config_store, "save", side_effect=lambda d: self.store.update(d)),
+            # BUG-034: el backfill de Shopify ahora persiste con update() (RMW
+            # atómico); debe mutar el store del test, no el config real.
+            patch.object(config_store, "update", side_effect=lambda m: m(self.store)),
         ]
 
     def test_full_flow_shopify_to_hermes(self):

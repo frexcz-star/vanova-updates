@@ -421,7 +421,39 @@ def backfill_line_items() -> dict[str, Any]:
         "linesRecovered": lines_recovered,
         "errors": errors[:50],
     }
-    config_store.save({"organizedSales": sales, "shopifySync": prev_sync})
+    # BUG-034 FIX (raíz): RMW atómico bajo config_store.update(). Antes este
+    # backfill (fetch de red con sleep 0.25s, puede durar minutos) acumulaba
+    # `sales` en memoria y al final hacía config_store.save({"organizedSales":
+    # sales}) SOBRESCRIBIENDO la lista completa — si otro escritor (cost_importer,
+    # facturascripts_sync, un sync de Shopify simultáneo) persistía
+    # organizedSales/organizedProducts durante el fetch, su cambio se perdía
+    # (lost-update, mismo patrón que BUG-006/015/019/021/027). Ahora el backfill
+    # solo captura los pedidos ACTUALIZADOS (con line_items) y los aplica con
+    # update() sobre la lista vigente, sin pisar escrituras concurrentes.
+    updated_by_id = {str(s.get("id") or ""): s for s in sales if s.get("line_items")}
+
+    def _mutate(cfg):
+        current = cfg.get("organizedSales") or []
+        if not isinstance(current, list):
+            current = []
+        # Re-aplicar solo los pedidos actualizados sobre la lista vigente.
+        for s in current:
+            if not isinstance(s, dict):
+                continue
+            repl = updated_by_id.get(str(s.get("id") or ""))
+            if repl is not None:
+                # conserva la versión más reciente (la del backfill con líneas)
+                # pero preserva cualquier campo que otro escritor haya tocado
+                merged = dict(repl)
+                for k, v in s.items():
+                    if k not in ("line_items",) and v is not None and merged.get(k) is None:
+                        merged[k] = v
+                current[current.index(s)] = merged
+        cfg["organizedSales"] = current
+        cfg["shopifySync"] = prev_sync
+        return cfg
+
+    config_store.update(_mutate)
     log.info("Shopify backfill: %d/%d actualizados (%d líneas), %d fallidos", updated, len(candidates), lines_recovered, failed)
     return {
         "ok": True,
@@ -490,11 +522,36 @@ def recover_variant_identity() -> dict[str, Any]:
             product["barcode"] = info["barcode"]
         updated += 1
 
-    # Persistencia única al final: si algo falló antes, nada se escribió.
-    config_store.save({"organizedProducts": products})
+    # BUG-034 FIX (raíz): RMW atómico bajo config_store.update(). Antes esta
+    # función persistía con config_store.save({"organizedProducts": products})
+    # SOBRESCRIBIENDO la lista completa tras un fetch de red largo — si otro
+    # escritor (cost_importer, facturascripts_sync, un sync de Shopify)
+    # persistía organizedProducts durante el fetch, su cambio se perdía
+    # (lost-update). Ahora solo se capturan los productos ACTUALIZADOS y se
+    # aplican con update() sobre la lista vigente.
+    enriched = {str(p.get("sku") or ""): p for p in products if p.get("shopifyVariantId")}
+
+    def _mutate(cfg):
+        current = cfg.get("organizedProducts") or []
+        if not isinstance(current, list):
+            current = []
+        for p in current:
+            if not isinstance(p, dict):
+                continue
+            repl = enriched.get(str(p.get("sku") or ""))
+            if repl is not None:
+                # preserva campos que otro escritor haya tocado; solo AÑADE
+                # shopifyVariantId/barcode (nunca pisa sku/name/cost/rrp)
+                for k, v in repl.items():
+                    if k in ("shopifyVariantId", "barcode") and not p.get(k):
+                        p[k] = v
+        cfg["organizedProducts"] = current
+        return cfg
+
+    config_store.update(_mutate)
     from . import file_organizer
 
-    file_organizer.sync_dashboard_overview(products, data.get("organizedSales") or [])
+    file_organizer.sync_dashboard_overview(config_store.load().get("organizedProducts") or [], config_store.load().get("organizedSales") or [])
     return {
         "ok": True,
         "productsProcessed": len(products),
