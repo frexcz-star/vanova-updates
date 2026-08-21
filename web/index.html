@@ -320,7 +320,7 @@ body.sidebar-collapsed .sp-meta,body.sidebar-collapsed .sp-more{display:none}
 .card:hover{border-color:var(--border-strong)}
 .card-pad{padding:var(--space-5)}
 .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5)}
+.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px}
 .dash-card--yellow{background:var(--pastel-yellow)}
 .dash-card--pink{background:var(--pastel-pink)}
 .dash-card--green{background:var(--pastel-green)}
@@ -1058,10 +1058,10 @@ button:focus-visible,[data-act]:focus-visible{
 [data-theme="dark"] .hdr-ws{background:rgba(255,255,255,.04);border-color:var(--border);backdrop-filter:blur(8px)}
 
 /* Home layout */
-.home-metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:14px;margin-bottom:16px}
-.home-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start}
+.home-metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:12px}
+.home-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px;align-items:start}
 @media (max-width:1100px){.home-grid{grid-template-columns:1fr}}
-.home-col-main,.home-col-side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.home-col-main,.home-col-side{display:flex;flex-direction:column;gap:14px;min-width:0}
 .hm-card{position:relative;overflow:hidden;border-radius:18px;padding:16px;border:1px solid var(--border);background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.012));transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
 .hm-card:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(0,0,0,.3);border-color:var(--border-strong)}
 .hm-card .hm-glow{position:absolute;top:-40px;right:-40px;width:130px;height:130px;border-radius:50%;filter:blur(42px);opacity:.5;pointer-events:none;transition:opacity .2s ease}
@@ -2015,11 +2015,11 @@ function homeRunningNowHTML(){
   </div>`).join('');
   const empty = !agentRows && !taskRows;
   const body = empty
-    ? `<div class="state-box" style="padding:28px;text-align:center;position:relative">${ic('pulse')}<div class="sb-title" style="font-size:14px;margin-top:8px">Ningún agente ni tarea en ejecución.</div><div style="font-size:12px;color:var(--text-3);margin-top:4px">Todo en calma. Ejecuta un agente o pide algo a Hermes.</div></div>`
-    : `<div style="position:relative">${agentRows ? `<div style="margin-bottom:10px">${agentRows}</div>` : ''}${taskRows}</div>`;
+    ? `<div class="state-box" style="padding:18px;text-align:center;position:relative">${ic('pulse')}<div class="sb-title" style="font-size:13px;margin-top:6px">Ningún agente ni tarea en ejecución.</div><div style="font-size:11.5px;color:var(--text-3);margin-top:2px">Todo en calma. Ejecuta un agente o pide algo a Hermes.</div></div>`
+    : `<div style="position:relative">${agentRows ? `<div style="margin-bottom:8px">${agentRows}</div>` : ''}${taskRows}</div>`;
   return `<div class="dash-card cosmic">
     <div class="cosmic-orbit" aria-hidden="true"></div>
-    <div class="section-head" style="margin-bottom:10px">
+    <div class="section-head" style="margin-bottom:8px">
       <div class="section-title">${ic('pulse')} Ejecutándose ahora</div>
       <button class="section-link" data-go="tasks">Ver cola →</button>
     </div>
@@ -2353,15 +2353,19 @@ function homeConfigurableMetricsHTML(){
       <div class="metric-foot" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">${tabs}</div>
     </div>`;
   }).join('');
-  return `<div class="dash-card" style="margin-bottom:20px">
-    <div class="section-head" style="margin-bottom:12px">
-      <div>
-        <div class="section-title">${ic('chart')} Métricas</div>
-        <div class="section-sub">Selecciona el periodo para cada métrica</div>
+  return `<details class="dash-card bi-finding" open style="margin-bottom:12px">
+    <summary style="cursor:pointer;list-style:none">
+      <div class="section-head" style="margin-bottom:0">
+        <div>
+          <div class="section-title">${ic('chart')} Métricas <span style="font-size:11px;color:var(--text-3);margin-left:8px">▾</span></div>
+          <div class="section-sub">Selecciona el periodo para cada métrica</div>
+        </div>
       </div>
+    </summary>
+    <div style="margin-top:12px">
+      <div class="home-metrics-row" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${metricTabs}</div>
     </div>
-    <div class="home-metrics-row" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${metricTabs}</div>
-  </div>`;
+  </details>`;
 }
 
 /* ---- Home: right column ---- */
@@ -4190,15 +4194,17 @@ function topActionsHTML(){
       </div>
     </div>`;
   }).join('');
-  return `<div class="dash-card" style="margin-bottom:20px;border-left:3px solid var(--accent)">
-    <div class="section-head" style="margin-bottom:6px">
-      <div>
-        <div class="section-title">Qué hacer hoy</div>
-        <div class="section-sub">Prioridad del motor por impacto económico estimado</div>
+  return `<details class="dash-card bi-finding" style="margin-bottom:12px;border-left:3px solid var(--accent)">
+    <summary style="cursor:pointer;list-style:none">
+      <div class="section-head" style="margin-bottom:0">
+        <div>
+          <div class="section-title">Qué hacer hoy <span style="font-size:11px;color:var(--text-3);margin-left:8px">▸</span></div>
+          <div class="section-sub">Prioridad del motor por impacto económico estimado</div>
+        </div>
       </div>
-    </div>
-    ${items}
-  </div>`;
+    </summary>
+    <div style="margin-top:8px">${items}</div>
+  </details>`;
 }
 
 // FASE 8 — VANOVA: hallazgos del motor determinista (evidencia, no opinión)
@@ -4267,16 +4273,18 @@ function businessFindingsHTML(){
       ${rest.length ? `<details style="margin-top:6px"><summary class="section-link" style="cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:6px">+ ${rest.length} más</summary><div style="margin-top:8px">${rest.map(card).join('')}</div></details>` : ''}
     </div>`;
   };
-  return `<div class="dash-card" style="margin-bottom:20px">
-    <div class="section-head" style="margin-bottom:12px">
-      <div>
-        <div class="section-title">VANOVA</div>
-        <div class="section-sub">Detectado por el motor de datos (evidencia, no opinión)</div>
+  return `<details class="dash-card bi-finding" style="margin-bottom:12px">
+    <summary style="cursor:pointer;list-style:none">
+      <div class="section-head" style="margin-bottom:0">
+        <div>
+          <div class="section-title">VANOVA <span style="font-size:11px;color:var(--text-3);margin-left:8px">▸</span></div>
+          <div class="section-sub">Detectado por el motor de datos (evidencia, no opinión)</div>
+        </div>
+        <button class="section-link" data-bi-act="refresh">Actualizar análisis</button>
       </div>
-      <button class="section-link" data-bi-act="refresh">Actualizar análisis</button>
-    </div>
-    ${groups.map(groupBlock).join('') || '<div style="color:var(--text-3);font-size:13px">Sin hallazgos activos.</div>'}
-  </div>`;
+    </summary>
+    <div style="margin-top:12px">${groups.map(groupBlock).join('') || '<div style="color:var(--text-3);font-size:13px">Sin hallazgos activos.</div>'}</div>
+  </details>`;
 }
 
 let _liveFinanceSignature = null;
