@@ -96,14 +96,30 @@ def mark_important(
 
 
 def unmark(kind: str, ref_id: str) -> dict[str, Any]:
+    """Remove an item from the important list (RMW atómico).
+
+    BUG-027 FIX: antes hacía _load() → modificar → _save() sin serializar el
+    ciclo; con ThreadingHTTPServer (API server) un lost-update podía reintroducir
+    el item que se estaba eliminando (o perder un mark concurrente). Ahora usa
+    config_store.update() (mismo patrón que mark_important).
+    """
     kind = str(kind or "").strip().lower()
     ref_id = str(ref_id or "").strip()
-    items = _load()
-    kept = [i for i in items if not (str(i.get("kind") or "").lower() == kind and str(i.get("refId") or "") == ref_id)]
-    if len(kept) == len(items):
-        return {"ok": False, "error": "El elemento no estaba marcado como importante"}
-    _save(kept)
-    return {"ok": True}
+    outcome: dict[str, Any] = {"ok": False, "error": "El elemento no estaba marcado como importante"}
+
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        nonlocal outcome
+        raw_items = cfg.get(IMPORTANT_KEY) or []
+        items = [i for i in raw_items if isinstance(i, dict)] if isinstance(raw_items, list) else []
+        kept = [i for i in items if not (str(i.get("kind") or "").lower() == kind and str(i.get("refId") or "") == ref_id)]
+        if len(kept) == len(items):
+            return cfg
+        cfg[IMPORTANT_KEY] = kept[:MAX_IMPORTANT]
+        outcome = {"ok": True}
+        return cfg
+
+    config_store.update(_mutate)
+    return outcome
 
 
 def is_important(kind: str, ref_id: str) -> bool:

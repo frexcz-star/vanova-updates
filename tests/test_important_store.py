@@ -34,6 +34,30 @@ def test_unmark_missing():
     assert r["ok"] is False
 
 
+def test_unmark_uses_atomic_update():
+    """BUG-027: unmark debe usar config_store.update() (RMW atómico), no
+    load→save que pierde escrituras concurrentes del API server."""
+    from unittest.mock import patch
+    from desktop.runtime import config_store
+
+    state = {"importantItems": [{"id": "1", "kind": "task", "refId": "X", "createdAt": "2026-08-21T00:00:00Z"}]}
+    calls = []
+
+    def fake_update(mutator):
+        calls.append("update")
+        cfg = dict(state)
+        out = mutator(cfg)
+        state.clear()
+        state.update(out)
+
+    with patch.object(config_store, "update", side_effect=fake_update), \
+         patch.object(config_store, "load", side_effect=lambda: dict(state)):
+        r = important_store.unmark("task", "X")
+    assert r["ok"] is True
+    assert calls == ["update"]
+    assert important_store.list_important() == []
+
+
 def test_get_providers_returns_three():
     ids = [p["id"] for p in get_providers()]
     assert "gmail" in ids
