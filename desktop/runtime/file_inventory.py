@@ -79,16 +79,26 @@ def remove_imported_file(path: str) -> dict[str, Any]:
     path = safe_path or ""
     # BUG-017 FIX: RMW atómico bajo un solo lock (mismo patrón que add_imported_file).
     files: list[dict[str, Any]] = []
+    exclusions: list[str] = []
 
     def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
-        nonlocal files
+        nonlocal files, exclusions
         files = [f for f in (cfg.get("scanFiles") or []) if f.get("path") != path]
         cfg["scanFiles"] = files
+        # BUG-028 FIX: registrar la exclusión para que un scan futuro NO
+        # reintroduzca el archivo eliminado (el archivo sigue en disco; sin
+        # exclusiones el siguiente scan lo volvería a añadir).
+        exclusions = list(cfg.get("scanExclusions") or [])
+        if not isinstance(exclusions, list):
+            exclusions = []
+        if path not in exclusions:
+            exclusions.append(path)
+        cfg["scanExclusions"] = exclusions
         return cfg
 
     config_store.update(_mutate)
     _organize_after_import(files)
-    return {"ok": True, "count": len(files)}
+    return {"ok": True, "count": len(files), "excludedCount": len(exclusions)}
 
 
 def list_candidates() -> dict[str, Any]:

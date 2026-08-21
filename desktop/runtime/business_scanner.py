@@ -450,6 +450,14 @@ def _scan_files(started: float) -> list[dict[str, Any]]:
     found: list[dict[str, Any]] = []
     candidates: list[dict[str, Any]] = []
     seen: set[str] = set()
+    # BUG-028: cargar exclusiones para no reintroducir archivos que el usuario
+    # eliminó de la vista de Archivos (persisten en scanExclusions).
+    _data = config_store.load()
+    exclusions = set(
+        str(x or "").strip().lower()
+        for x in (_data.get("scanExclusions") or [])
+        if isinstance(x, str)
+    )
 
     def _record(p: Path, folder_score: int, file_score: int, content_score: int) -> dict[str, Any]:
         try:
@@ -496,6 +504,10 @@ def _scan_files(started: float) -> list[dict[str, Any]]:
                         break
                     p = Path(dirpath) / name
                     if p.suffix.lower() not in DATA_EXTENSIONS:
+                        continue
+                    # BUG-028: saltar archivos que el usuario excluyó (eliminó
+                    # de la vista de Archivos). Un scan no debe reintroducirlos.
+                    if str(p).strip().lower() in exclusions:
                         continue
                     legacy_reason = file_relevance.legacy_app_artifact({"name": name, "path": str(p)})
                     if legacy_reason:

@@ -51,5 +51,29 @@ class Bug017FileInventoryAtomicTests(unittest.TestCase):
         self.assertEqual(stored["fileCandidates"][0]["status"], "approved")
 
 
+class Bug028FileRemovalPersistsTests(unittest.TestCase):
+    """BUG-028: eliminar un archivo en la vista Archivos debe persistir tras
+    reiniciar. La causa raíz era que remove_imported_file solo lo quitaba de
+    scanFiles, pero un scan futuro lo reintroducía del disco. Fix: registrar la
+    exclusión en scanExclusions Y que _scan_files la respete."""
+
+    def test_remove_adds_exclusion(self):
+        stored = {"scanFiles": [{"path": "C:/empresa/a.csv", "name": "a.csv"}], "scanExclusions": []}
+        with patch.object(config_store, "load", return_value=stored), patch.object(
+            config_store, "update", side_effect=lambda mutator: mutator(stored)
+        ), patch.object(file_inventory, "_organize_after_import", return_value=None):
+            r = file_inventory.remove_imported_file("C:/empresa/a.csv")
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["count"], 0)
+        self.assertIn("C:/empresa/a.csv", stored["scanExclusions"])
+
+    def test_scan_skips_excluded_files(self):
+        from desktop.runtime import business_scanner
+        stored = {"scanFiles": [], "scanExclusions": ["C:/empresa/eliminado.csv"]}
+        with patch.object(config_store, "load", return_value=stored):
+            found = business_scanner._scan_files(0)
+        self.assertEqual(found, [])
+
+
 if __name__ == "__main__":
     unittest.main()
