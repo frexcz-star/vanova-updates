@@ -19,6 +19,10 @@ def _normalize_agent(a: dict[str, Any]) -> dict[str, Any]:
         "id": a["id"],
         "name": a["name"],
         "description": a.get("description", ""),
+        # BUG-029 FIX: preservar role y hermesBot (antes se descartaban, de ahí
+        # que el config mostrara role=None y hermesBot=None).
+        "role": a.get("role", ""),
+        "hermesBot": a.get("hermesBot", ""),
         "responsibilities": a.get("responsibilities", []),
         "tools": a.get("tools", []),
         "integrations": a.get("integrations", []),
@@ -76,26 +80,31 @@ def create_custom_agent(*, name: str, role: str = "", description: str = "", res
     if not added:
         return {"ok": False, "error": "El agente ya existe o no se pudo crear"}
     result = {"ok": True, "agent": added[0]}
-    # FASE B — sincronizar a bot Hermes persistente (coexiste con Fase A). Si
-    # Hermes no está disponible, el agente VANOVA funciona igual: no falla.
-    try:
-        from . import agent_hermes_bot
+    # FASE B — sincronizar a bot Hermes persistente (coexiste con Fase A).
+    # add_agents ya sincroniza; aquí se reporta el estado honesto del bot.
+    # BUG-029 FIX: si el bot NO se pudo sincronizar (Hermes no disponible), se
+    # reporta explícitamente en vez de fallar en silencio.
+    from . import agent_hermes_bot
 
+    profile_name = str(added[0].get("hermesBot") or "")
+    if profile_name and agent_hermes_bot.profile_exists(profile_name):
+        result["bot"] = {"ok": True, "profile": profile_name, "exists": True}
+        if added[0].get("schedules"):
+            routines = agent_hermes_bot.sync_agent_routines(added[0])
+            if routines.get("ok"):
+                result["routines"] = routines.get("routines", [])
+    else:
+        # Sincronizar de nuevo por si add_agents no pudo (p.ej. Hermes arrancó
+        # después) y reportar el estado real.
         bot = agent_hermes_bot.sync_agent_to_bot(added[0])
-        if bot.get("ok"):
+        if bot.get("ok") and bot.get("profile"):
             result["bot"] = bot
-            profile_name = bot.get("profile")
-            added[0]["hermesBot"] = profile_name
-            config_store.update(
-                lambda cfg: _persist_hermes_bot_flag(cfg, profile_name) if profile_name else cfg
-            )
-            # FASE B, PASO 3 — rutina cron persistente del bot (si tiene schedules).
-            if added[0].get("schedules"):
-                routines = agent_hermes_bot.sync_agent_routines(added[0])
-                if routines.get("ok"):
-                    result["routines"] = routines.get("routines", [])
-    except Exception as exc:  # noqa: BLE001
-        log.warning("sync_agent_to_bot fallo (no bloquea): %s", exc)
+            added[0]["hermesBot"] = bot.get("profile")
+        else:
+            # Honesto: el agente existe pero su bot persistente no está listo.
+            result["bot"] = {"ok": False, "error": (bot or {}).get("error") or "Bot de Hermes no disponible"}
+            result["agent"]["hermesBot"] = ""
+
     return result
 
 
@@ -148,7 +157,32 @@ def add_agents(agent_defs: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     config_store.update(_mutate)
     log.info("Added %d agent(s), total %d", len(added), total)
+    # BUG-029 FIX: sincronizar cada agente nuevo a un bot Hermes persistente.
+    # Antes solo create_custom_agent lo hacía; los agentes del catálogo
+    # (/api/agents/add) quedaban sin hermesBot (bot no disponible). Ahora se
+    # sincroniza Y se persiste el campo hermesBot + role.
+    if added:
+        _sync_added_agents_to_bots(added)
     return added
+
+
+def _sync_added_agents_to_bots(added: list[dict[str, Any]]) -> None:
+    """Sincroniza los agentes recién añadidos a bots Hermes y persiste hermesBot."""
+    try:
+        from . import agent_hermes_bot
+
+        for agent in added:
+            bot = agent_hermes_bot.sync_agent_to_bot(agent)
+            if bot.get("ok") and bot.get("profile"):
+                profile_name = bot.get("profile")
+                agent["hermesBot"] = profile_name
+                config_store.update(
+                    lambda cfg: _persist_hermes_bot_flag(cfg, profile_name) if profile_name else cfg
+                )
+                if agent.get("schedules"):
+                    agent_hermes_bot.sync_agent_routines(agent)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("sync_agent_to_bot fallo (no bloquea): %s", exc)
 
 
 def catalog() -> list[dict[str, Any]]:

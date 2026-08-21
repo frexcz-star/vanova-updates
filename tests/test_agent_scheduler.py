@@ -78,6 +78,10 @@ class AgentCatalogTests(unittest.TestCase):
         self.config_file = Path(self.tmp.name) / "maios.json"
         self.patch = patch("desktop.runtime.config_store.CONFIG_FILE", self.config_file)
         self.patch.start()
+        # BUG-029: add_agents ahora sincroniza bots Hermes; parchear para no
+        # crear perfiles reales en la suite.
+        self.patch_bot = patch("desktop.runtime.agent_architect._sync_added_agents_to_bots", return_value=None)
+        self.patch_bot.start()
         add_agents(
             [
                 {"id": "marketing-agent", "name": "Marketing Agent", "permissions": ["read_analytics"]},
@@ -87,6 +91,7 @@ class AgentCatalogTests(unittest.TestCase):
 
     def tearDown(self):
         self.patch.stop()
+        self.patch_bot.stop()
         self.tmp.cleanup()
 
     def test_add_agents_merges_without_removing(self):
@@ -294,6 +299,27 @@ class ProactiveTickTests(unittest.TestCase):
              patch.object(config_store, "save", wraps=config_store.save) as mock_save:
             agent_scheduler._tick()
         mock_update.assert_called_once()
+
+
+class Bug029AgentRoleAndBotSyncTests(unittest.TestCase):
+    """BUG-029: un agente creado debe conservar `role` y sincronizarse a un bot
+    Hermes persistente (campo `hermesBot` poblado en el config). Antes el rol y
+    el bot se perdían en `_normalize_agent` o no se sincronizaban en add_agents."""
+
+    def test_normalize_preserves_role_and_hermesbot(self):
+        from desktop.runtime.agent_architect import _normalize_agent
+        n = _normalize_agent({"id": "sales-analyst", "name": "Sales Analyst", "role": "sales", "hermesBot": "vanova-sales-analyst"})
+        self.assertEqual(n["role"], "sales")
+        self.assertEqual(n["hermesBot"], "vanova-sales-analyst")
+
+    def test_add_agents_syncs_bot(self):
+        from desktop.runtime import agent_architect, config_store
+        stored = {"agents": []}
+        with patch.object(config_store, "load", return_value=stored), \
+             patch.object(config_store, "update", side_effect=lambda m: m(stored)), \
+             patch.object(agent_architect, "_sync_added_agents_to_bots", return_value=None) as m:
+            agent_architect.add_agents([{"id": "custom-ventas", "name": "Ventas", "role": "sales"}])
+        m.assert_called_once()
 
 
 if __name__ == "__main__":

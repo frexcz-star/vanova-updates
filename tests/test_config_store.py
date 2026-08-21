@@ -199,7 +199,8 @@ class ConfigStoreSetupTests(unittest.TestCase):
         from desktop.runtime import agent_architect
 
         config_store.save({"agents": [{"id": "a1", "name": "Agent 1"}]})
-        added = agent_architect.add_agents([{"id": "b2", "name": "Agent 2", "permissions": ["read"]}])
+        with patch.object(agent_architect, "_sync_added_agents_to_bots", return_value=None):
+            added = agent_architect.add_agents([{"id": "b2", "name": "Agent 2", "permissions": ["read"]}])
         self.assertEqual([a["id"] for a in added], ["b2"])
         # Ambos agentes persisten
         on_disk = json.loads(self.config_file.read_text(encoding="utf-8"))
