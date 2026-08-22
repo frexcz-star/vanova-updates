@@ -69,13 +69,19 @@ def _product_cost_ok(product: dict[str, Any], global_margin_pct: float | None = 
 
 
 def _upside_for_cross_sell(f: dict[str, Any], products: list[dict[str, Any]], global_margin_pct: float | None = None) -> tuple[float | None, str, str]:
-    """Cross-sell: upside = tickets_potencial x margen promedio (solo con coste)."""
+    """Cross-sell: upside = tickets_potencial x margen promedio (solo con coste).
+
+    Honestidad (SPEC boss): si el margen proviene del coste REAL por SKU
+    (verified/imported), el impacto es ``calculated``. Si algún margen se
+    estima a partir del margen global DECLARADO por el empresario, el impacto
+    es ``estimated`` (nunca se disfraza de cálculo exacto)."""
     metrics = f.get("metrics") or {}
     orders_together = _as_float(metrics.get("ordersTogether")) or 0.0
     pair = str(metrics.get("pair") or "")
     a_sku = pair.split("+")[0] if "+" in pair else ""
     b_sku = pair.split("+")[1] if "+" in pair and len(pair.split("+")) > 1 else ""
     margins: list[float] = []
+    used_estimated = False
     a_l = a_sku.lower()
     b_l = b_sku.lower()
     for p in products:
@@ -86,13 +92,17 @@ def _upside_for_cross_sell(f: dict[str, Any], products: list[dict[str, Any]], gl
             cost = _as_float(resolved.get("cost"))
             if sale and cost is not None and sale > 0:
                 margins.append((sale - cost) / sale)
+                if str(resolved.get("costStatus") or "") == "estimated":
+                    used_estimated = True
     if not margins:
         return None, "not_quantifiable", "requiere margen por SKU o margen global para cuantificar"
     avg_margin = sum(margins) / len(margins)
     upside = orders_together * avg_margin
     if upside < MIN_UPSEID_EURO:
         return None, "not_quantifiable", "volumen de co-compra insuficiente para cuantificar"
-    return round(upside, 2), "calculated", f"{int(orders_together)} pedidos co-comprados x margen promedio {round(avg_margin*100,1)}%"
+    kind = "estimated" if used_estimated else "calculated"
+    note = " (estimado con tu margen global declarado)" if used_estimated else ""
+    return round(upside, 2), kind, f"{int(orders_together)} pedidos co-comprados x margen promedio {round(avg_margin*100,1)}%{note}"
 
 
 def _upside_for_concentration(f: dict[str, Any]) -> tuple[float | None, str, str]:

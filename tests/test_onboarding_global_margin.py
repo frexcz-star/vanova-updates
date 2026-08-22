@@ -56,11 +56,11 @@ class GlobalMarginTests(unittest.TestCase):
         # Sin margen global -> UNKNOWN (honesto)
         res_none = opportunity_catalog.build_catalog([f], products=prods)
         self.assertIsNone(res_none[0]["upsideEuro"])
-        # Con margen global 60% -> estimado 40 -> upside 36 -> calculado
+        # Con margen global 60% -> estimado 40 -> upside 36 -> estimated
         data = {"companyProfile": {"preferences": {"globalMarginPct": 60}}}
         res = opportunity_catalog.build_catalog([f], products=prods, data=data)
         self.assertIsNotNone(res[0]["upsideEuro"])
-        self.assertEqual(res[0]["impactKind"], "calculated")
+        self.assertEqual(res[0]["impactKind"], "estimated")
 
 
 if __name__ == "__main__":

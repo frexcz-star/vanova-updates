@@ -144,13 +144,13 @@ class BuildCatalogTests(OpportunityCatalogBase):
         res_none = oc.build_catalog([f], products=prods)
         self.assertIsNone(res_none[0]["upsideEuro"])
         # Con margen global 60% declarado -> coste estimado 40 -> margen 60% ->
-        # upside 60*0.6=36 -> calculado.
+        # upside 60*0.6=36 -> impactKind estimated (nunca se disfraza de calculated).
         data = {"companyProfile": {"preferences": {"globalMarginPct": 60}}}
         res = oc.build_catalog([f], products=prods, data=data)
         self.assertEqual(len(res), 1)
         self.assertIsNotNone(res[0]["upsideEuro"])
         self.assertGreater(res[0]["upsideEuro"], 25.0)
-        self.assertEqual(res[0]["impactKind"], "calculated")
+        self.assertEqual(res[0]["impactKind"], "estimated")
 
     def test_dedupe_by_signature(self):
         f1 = _finding("cross_sell", "opportunity", metrics={"pair": "A+B", "ordersTogether": 100}, sig="cross_sell:ab")

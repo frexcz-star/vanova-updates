@@ -2525,8 +2525,11 @@ function homeAhaMoneyHTML(){
     <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
       ${top.map(function(o){
         const n = typeof o.upsideEuro === 'number' ? o.upsideEuro.toLocaleString('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:2}) : '—';
+        const est = o.impactKind === 'estimated'
+          ? '<span style="font-size:10.5px;color:var(--text-3);margin-left:6px">estimado con tu margen global</span>'
+          : '';
         return `<div style="display:flex;align-items:center;gap:10px;font-size:13px">
-          <span style="font-weight:700;color:var(--success)">${n}</span>
+          <span style="font-weight:700;color:var(--success)">${n}${est}</span>
           <span style="color:var(--text-2);flex:1">${escapeHtml(o.title || o.recommendedAction || 'Oportunidad')}</span>
         </div>`;
       }).join('')}
