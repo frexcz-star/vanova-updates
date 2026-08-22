@@ -237,9 +237,10 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/insight-actions": lambda: _require("insight_actions").load_all(),
                 "/api/data-health": lambda: _require("data_governance").data_health(),
                 "/api/insights": lambda: _require("insight_store").list_insights(),
-                "/api/opportunities": lambda: _require("opportunity_catalog").catalog(),
+                "/api/opportunities": lambda: _opportunities_with_pilot_event(),
                 "/api/recommendations": lambda: _require("recommendation_store").list_recommendations(),
                 "/api/recommendations/impact": lambda: _recommendations_impact(),
+                "/api/pilot/summary": lambda: _require("pilot_events").summary(),
                 "/api/important": lambda: {"items": _require("important_store").list_important()},
                 "/api/integrations/providers": lambda: {"providers": _provider_manifest()},
                 "/api/integrations/test": lambda: {"ok": False, "error": "Usa POST con la configuración"},
@@ -834,6 +835,26 @@ class Handler(BaseHTTPRequestHandler):
                 updated = rec.set_status(rec_id, status)
                 if updated is None:
                     return self._json({"ok": False, "error": "recomendación no encontrada"}, 404)
+                # Registro de eventos del piloto (SPEC 3 §5): recomendación
+                # marcada y medición. Solo eventos reales, nunca inventados.
+                try:
+                    from . import pilot_events
+
+                    pilot_events.record("recommendation.marked", id=rec_id, status=status)
+                    if status == "measured":
+                        pilot_events.record(
+                            "measure.done",
+                            id=rec_id,
+                            outcome=(updated or {}).get("outcome"),
+                            deltaEuro=((updated or {}).get("metricNow") or {}).get("revenue")
+                            and round(
+                                float(((updated or {}).get("metricNow") or {}).get("revenue", 0))
+                                - float((((updated or {}).get("metricBefore") or {}).get("revenue")) or 0),
+                                2,
+                            ),
+                        )
+                except Exception:  # noqa: BLE001 — el log nunca rompe la acción
+                    pass
                 return self._json({"ok": True, "recommendation": updated})
 
             if path == "/api/opportunities/done":
@@ -993,6 +1014,33 @@ def _approvals_with_tasks() -> list[dict[str, Any]]:
             a["taskCreatedAt"] = task.get("createdAt") or ""
         out.append(a)
     return out
+
+
+def _opportunities_with_pilot_event() -> dict[str, Any]:
+    """Catálogo de oportunidades + registro del evento 'opportunity.seen'.
+
+    SPEC 3 §5/§6 — el "aha" del piloto = la 1ª oportunidad con € cuantificado
+    que ve el empresario. Se registra SOLO cuando existe una oportunidad con
+    upsideEuro real (número); nunca se inventa el evento.
+    """
+    catalog = _require("opportunity_catalog").catalog()
+    try:
+        opps = (catalog or {}).get("opportunities") or (catalog or {}).get("items") or []
+        for o in opps:
+            if isinstance(o.get("upsideEuro"), (int, float)) and o["upsideEuro"] > 0:
+                from . import pilot_events
+
+                pilot_events.record(
+                    "opportunity.seen",
+                    id=o.get("id"),
+                    title=o.get("title"),
+                    upsideEuro=o["upsideEuro"],
+                    impactKind=o.get("impactKind"),
+                )
+                break  # solo el primero (el "aha")
+    except Exception:  # noqa: BLE001 — el log nunca rompe el catálogo
+        pass
+    return catalog
 
 
 def _recommendations_impact() -> dict[str, Any]:

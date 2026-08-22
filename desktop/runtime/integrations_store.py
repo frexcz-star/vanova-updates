@@ -327,6 +327,16 @@ def save_config(integration_id: str, body: dict[str, Any]) -> dict[str, Any]:
         if scope_result.get("error") and not scope_result.get("ok"):
             response["scopeWarning"] = True
             response["userMessage"] = scope_result.get("userMessage") or scope_result.get("error")
+        # Registro de eventos del piloto (SPEC 3 §5): fuente de ventas conectada
+        # con éxito = punto de partida real de la métrica "tiempo hasta el €".
+        # Solo se registra si la conexión fue válida (ok y sin error).
+        if response.get("ok") and not response.get("scopeWarning"):
+            try:
+                from . import pilot_events
+
+                pilot_events.record("source.connected", source="shopify", url=payload.get("url", ""))
+            except Exception:  # noqa: BLE001 — nunca romper la conexión por el log
+                pass
         return response
     return {"ok": True, "connected": True, "url": payload.get("url", "")}
 
