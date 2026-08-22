@@ -2503,13 +2503,18 @@ function homeAhaMoneyHTML(){
       </div>`;
     }
     // 2) Hay ventas pero falta el coste → guiar a cargar costes (desbloquea el €).
+    //    Camino más corto al aha: ofrecer el margen global directamente (1 campo),
+    //    además de la importación por SKU. El margen lo declara el usuario.
     return `<div class="dash-card" style="margin-bottom:16px;max-width:820px;border-left:3px solid var(--accent)">
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div style="flex:1;min-width:240px">
           <div style="font-weight:600;font-size:14px">Te falta el dato que desbloquea el dinero</div>
-          <div style="font-size:12.5px;color:var(--text-2);margin-top:2px">Tienes tus ventas. Para decirte cuánto puedes ganar o perder, nos falta el coste de tus productos (lo que pagas al proveedor). Con él, VANOVA calcula el margen real y las oportunidades. Sin él, no te daré cifras inventadas.</div>
+          <div style="font-size:12.5px;color:var(--text-2);margin-top:2px">Tienes tus ventas. Para decirte cuánto puedes ganar o perder, falta el margen de tus productos. Declara tu margen global (lo que de verdad cobras sobre el precio de venta) y verás el € al instante — o carga el coste por producto para más precisión.</div>
         </div>
-        <button class="btn btn-primary btn-sm" data-act="import-costs" style="flex-shrink:0">${ic('tag')} Cargar costes</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0">
+          <button class="btn btn-primary btn-sm" data-act="set-margin-quick" style="flex-shrink:0">${ic('euro')} Declarar mi margen</button>
+          <button class="btn btn-ghost btn-sm" data-act="import-costs" style="flex-shrink:0">${ic('tag')} Costes por producto</button>
+        </div>
       </div>
     </div>`;
   }
@@ -3121,6 +3126,34 @@ async function openCostImportDrawer(){
       }
     });
   });
+}
+
+/* ---- ATAJO MARGEN GLOBAL (camino más corto al aha) ---- */
+async function promptQuickMargin(){
+  const cur = (store.companyProfile && store.companyProfile.preferences && store.companyProfile.preferences.globalMarginPct)
+    ? String(store.companyProfile.preferences.globalMarginPct) : '';
+  const v = await appPrompt(
+    '¿Qué margen global aplicas sobre el precio de venta? (ej: 50 = cobras un 50% de margen).\n\nLo declaras tú — VANOVA nunca lo inventa. Con él calcula el € estimado al instante.',
+    cur || '50'
+  );
+  if (v == null) return;
+  const num = parseFloat(String(v).replace(',', '.'));
+  if (isNaN(num) || num <= 0 || num >= 100){ toast('Indica un margen entre 1 y 99%', true); return; }
+  toast('Guardando margen global ' + num + '%…');
+  const ds = window.DataServices;
+  try {
+    const auth = window.maios?.getRuntimeAuthHeaders ? await window.maios.getRuntimeAuthHeaders() : {};
+    const comp = { preferences: { globalMarginPct: num } };
+    const res = await fetch(runtime + '/api/company/profile', { method:'POST', headers:Object.assign({'Content-Type':'application/json'}, auth), body: JSON.stringify(comp) });
+    if (!res.ok) throw new Error('HTTP '+res.status);
+  } catch(e){
+    toast('No se pudo guardar el margen global: ' + (e.message||String(e)), true);
+    return;
+  }
+  if (ds && ds.analyzeBusiness){ try{ await ds.analyzeBusiness(); }catch(e){} }
+  await loadAppData();
+  render();
+  toast('Margen global ' + num + '% aplicado. Revisa el dinero en juego en la Home.');
 }
 
 /* ---- ACTIVITY ---- */
@@ -7546,6 +7579,8 @@ function onAppClick(e){
     if (importCostsBtn) { openCostImportDrawer(); return; }
     const editMarginBtn = e.target.closest('[data-act="edit-margin"]');
     if (editMarginBtn) { openCostImportDrawer(); return; }
+    const setMarginQuick = e.target.closest('[data-act="set-margin-quick"]');
+    if (setMarginQuick) { promptQuickMargin(); return; }
     const dlBtn = e.target.closest('[data-download-csv]');
     if (dlBtn && store.preparedAction && store.preparedAction.csv) {
       downloadCsv(store.preparedAction.filename || 'vanova.csv', store.preparedAction.csv);
