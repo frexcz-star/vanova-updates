@@ -55,9 +55,22 @@ de Python/Node/Hermes del sistema.
   el límite), y montar una VM de Windows headless con setup de Hermes/Ollama
   no es viable de forma fiable en este entorno. **No se reporta resultado de
   prueba que no se haya hecho.**
-- **Pendiente para el piloto real:** la instalación del `.exe` completo y el
-  primer arranque del wizard en un entorno limpio; el paso Hermes/Ollama es el
-  que más puede fallar en un PC sin prerequisitos (descarga de modelo).
+- **Paso Hermes/Ollama (verificado REAL):** el servicio Hermes arranca sano en
+  el entorno con modelo `:cloud` (deepseek-v4-flash:cloud) — NO descarga un
+  modelo local de Ollama. Confirmado por `GET /api/hermes/status`:
+  `{"installed":true,"running":true,"healthy":true,"launchMode":"ollama-launch","activeModel":"deepseek-v4-flash:cloud","ollamaRunning":true}`.
+  Esto cubre el caso "PC sin prerequisitos": VANOVA degrada con gracia usando
+  modelo cloud por API, sin forzar descarga local de modelo.
+
+## Primer arranque (verificado REAL con el bundle embebido)
+- Runtime (127.0.0.1:8765) → `HTTP 200 {"status":"ok","service":"vanova-desktop-runtime"}`
+- Cloud (127.0.0.1:8000) → `HTTP 200`
+- Hermes service (127.0.0.1:8765/api/hermes/status) → `HTTP 200`, healthy, modelo cloud
+
+## Bloqueo real pendiente (para el piloto)
+La instalación del `.exe` completo en un PC "stock" físico (sin Python/Node) y
+el primer arranque del wizard en ese entorno. Es el último paso y requiere un
+piloto real; no se reporta como hecho porque no se ha ejecutado.
 
 ### Precondiciones del entorno "stock" (a confirmar antes de probar)
 - [ ] Windows 10/11 sin Python en PATH, sin Node, sin Hermes.
