@@ -78,6 +78,12 @@ piloto real; no se reporta como hecho porque no se ha ejecutado.
 
 ### Pasos de verificación y resultado esperado
 
+> **Script automatizable:** tras el primer arranque, ejecutar en el PC del piloto
+> `python tools/verify_end_to_end.py` (con el python-bundle embebido) para
+> confirmar runtime/cloud HTTP 200, Hermes healthy (modelo cloud), Valor
+> Capturado y catálogo con datos. Imprime OK/FALLO por check y un resumen;
+> exit 0 = listo para el piloto.
+
 1. **Instalar**
    - Acción: doble clic en `VANOVA-Setup-3.1.1.exe`, siguiente → instalar.
    - Esperado: se instala en `AppData/Local/Programs/VANOVA`, sin terminales
