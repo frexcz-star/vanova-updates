@@ -204,28 +204,51 @@ def apply(
                 by_ean[e] = p
 
     now = _now()
-    applied = 0
-    for it in plan["items"]:
-        if not it["matched"] or it["action"] == "keep":
-            continue
-        r = it["row"]
-        target = None
-        if r["sku"] and r["sku"].lower() in by_sku:
-            target = by_sku[r["sku"].lower()]
-        elif r["ean"] and r["ean"] in by_ean:
-            target = by_ean[r["ean"]]
-        if target is None:
-            continue
-        target["cost"] = r["cost"]
-        target["costSource"] = cost_source
-        target["costStatus"] = "verified" if cost_source in ("supplier", "erp", "facturascripts", "manual") else "imported"
-        target["sourceReference"] = r["sourceReference"]
-        target["costUpdatedAt"] = now
-        applied += 1
+
+    # Aplicar los costes a los productos del catálogo.
+    # BUG-037 (fix): RMW atómico. Antes se hacía load() → modificar `catalog`
+    # (copia local) → save({"organizedProducts": catalog}) SOBRESCRIBIENDO la
+    # lista completa. Si otro hilo (shopify sync, file_organizer, otro import)
+    # añadía productos entre el load y el save, se perdían (lost-update, patrón
+    # BUG-006/015/019/023/034). Ahora `config_store.update()` hace el RMW dentro
+    # del _config_lock y re-aplica los costes al catálogo ACTUAL.
+    def _apply_cost_to_product(p: dict[str, Any], r: dict[str, Any]) -> bool:
+        sku = str(p.get("sku") or "").strip().lower()
+        ean = str(p.get("barcode") or p.get("ean") or p.get("ean13") or "").strip()
+        if r.get("sku") and sku == str(r["sku"]).strip().lower():
+            return True
+        if r.get("ean") and ean == str(r["ean"]).strip():
+            return True
+        return False
 
     if persist:
         try:
-            config_store.save({"organizedProducts": catalog})
+            applied = 0
+
+            def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+                nonlocal applied
+                catalog = list(cfg.get("organizedProducts") or [])
+                for it in plan["items"]:
+                    if not it["matched"] or it["action"] == "keep":
+                        continue
+                    r = it["row"]
+                    for p in catalog:
+                        if _apply_cost_to_product(p, r):
+                            p["cost"] = r["cost"]
+                            p["costSource"] = cost_source
+                            p["costStatus"] = (
+                                "verified"
+                                if cost_source in ("supplier", "erp", "facturascripts", "manual")
+                                else "imported"
+                            )
+                            p["sourceReference"] = r["sourceReference"]
+                            p["costUpdatedAt"] = now
+                            applied += 1
+                            break
+                cfg["organizedProducts"] = catalog
+                return cfg
+
+            config_store.update(_mutate)
         except Exception as exc:
             return {"ok": False, "error": f"Error al persistir: {exc}", "applied": applied}
 
