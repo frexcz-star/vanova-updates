@@ -2474,6 +2474,13 @@ function homeAhaMoneyHTML(){
   });
   const total = opps.reduce(function(s,o){ return s + o.upsideEuro; }, 0);
   const top = opps.slice().sort(function(a,b){ return b.upsideEuro - a.upsideEuro; }).slice(0,2);
+  // Margen global declarado (transparencia): se muestra en el panel para que
+  // el empresario sepa que su setting está activo.
+  const gmPct = (store.companyProfile && store.companyProfile.preferences && store.companyProfile.preferences.globalMarginPct)
+    ? Number(store.companyProfile.preferences.globalMarginPct) : null;
+  const gmBadge = gmPct != null
+    ? `<span style="font-size:11px;font-weight:600;color:var(--text-2);background:rgba(139,124,246,.12);color:#8b7cf6;padding:3px 8px;border-radius:999px;margin-left:6px">margen global ${gmPct}%</span>`
+    : '';
   if (total <= 0){
     // Empty states honestos y GRADUADOS (SPEC STRATI §3): se guía al dato que
     // falta exacto, nunca se muestra un 0 € ni una demo vacía.
@@ -2510,7 +2517,7 @@ function homeAhaMoneyHTML(){
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <div style="font-size:34px;font-weight:800;color:var(--success)">${fmtEuro(total)}</div>
       <div style="flex:1;min-width:240px">
-        <div style="font-weight:600;font-size:14px">En juego este mes</div>
+        <div style="font-weight:600;font-size:14px">En juego este mes${gmBadge}</div>
         <div style="font-size:12.5px;color:var(--text-2);margin-top:2px">Suma del impacto en € de ${opps.length} oportunidad(es) detectadas con tus datos reales.</div>
       </div>
       <button class="btn btn-ghost btn-sm" data-go="insights" style="flex-shrink:0">${ic('arrowRight')} Ver oportunidades</button>
@@ -9043,7 +9050,7 @@ let store = {
   overview: { revenue:null, revenueChange:null, revenueUp:null, orders:null, ordersChange:null, ordersUp:null,
               grossMargin:null, grossMarginChange:null, grossMarginUp:null, customers:null, customersChange:null, customersUp:null,
               inventoryValue:null, inventoryChange:null, inventoryUp:null },
-  priorities: [], activity: [], agents: [], decisions: [], automations: [], sources: [], products: [], sales: [], customers: [], salesSummary: null, shopifySync: null, files: [], insightActions: {}, importantItems: [], uiPrefs: {}, facturascript: null, drive: null, shopify: null, erp: null, mcp: null, email: null, instagram: null,   guardrails: [], tasks: [], internalTasks: [], pendingApprovals: [], commandCenter: null, autonomy: null, autonomyLevels: [], integrationLifecycle: [], insights: [], recImpact: null, fileCandidates: [], scanStatus: null, hermesActivity: null, recommendations: [], opportunities: []
+  priorities: [], activity: [], agents: [], decisions: [], automations: [], sources: [], products: [], sales: [], customers: [], salesSummary: null, shopifySync: null, files: [], insightActions: {}, importantItems: [], uiPrefs: {}, facturascript: null, drive: null, shopify: null, erp: null, mcp: null, email: null, instagram: null,   guardrails: [], tasks: [], internalTasks: [], pendingApprovals: [], commandCenter: null, autonomy: null, autonomyLevels: [], integrationLifecycle: [], insights: [], recImpact: null, fileCandidates: [], scanStatus: null, hermesActivity: null, recommendations: [], opportunities: [], companyProfile: null
 };
 
 async function loadAppData(opts){
@@ -9192,6 +9199,17 @@ async function loadAppData(opts){
         if (imp) store.recImpact = imp;
       }
     } catch(e){}
+    // Margen global declarado (onboarding simplificado): cargar el perfil de
+    // empresa para saber si el empresario ya declaró su margen y mostrarlo en
+    // la Home (transparencia).
+    try {
+      const auth = window.maios?.getRuntimeAuthHeaders ? await window.maios.getRuntimeAuthHeaders() : {};
+      const pr = await fetch(runtime + '/api/company/profile', { headers: Object.assign({}, auth) });
+      if (pr.ok) {
+        const profile = await pr.json();
+        store.companyProfile = profile && profile.preferences ? profile : (profile || null);
+      }
+    } catch(e){}; 
     // STRATI — Detector de Oportunidades de Crecimiento (vista Oportunidades)
     try {
       if (ds.getOpportunities) {
