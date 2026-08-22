@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from desktop.runtime import api_server
+from desktop.runtime import api_server, config_store
 import unittest
 
 
@@ -72,6 +72,25 @@ class RecommendationImpactTests(unittest.TestCase):
         self.assertEqual(impact["worsenedCount"], 1)
         self.assertEqual(impact["unmeasurableCount"], 2)  # unmeasurable + improved sin delta
         self.assertEqual(impact["total"], 6)
+
+    def test_captured_pct_over_real_revenue(self):
+        """capturedPct = % del el capturado sobre la facturacion REAL del
+        negocio. Honesto: solo si hay el capturado Y facturacion real."""
+        recs = [_recommendation("measured", "improved", 100, 150)]  # +50
+        with patch.object(_store(), "list_recommendations", return_value=recs), \
+             patch.object(config_store, "load", return_value={"organizedSales": [{"total": 1000.0, "date": "2026-01-15"}]}):
+            impact = api_server._recommendations_impact()
+        self.assertEqual(impact["capturedEuro"], 50.0)
+        self.assertEqual(impact["capturedPct"], 5.0)  # 50/1000*100
+
+    def test_captured_pct_none_when_no_revenue(self):
+        """Sin facturacion real -> capturedPct es None (no 0 inventado)."""
+        recs = [_recommendation("measured", "improved", 100, 150)]
+        with patch.object(_store(), "list_recommendations", return_value=recs), \
+             patch.object(config_store, "load", return_value={"organizedSales": []}):
+            impact = api_server._recommendations_impact()
+        self.assertEqual(impact["capturedEuro"], 50.0)
+        self.assertIsNone(impact["capturedPct"])
 
 
 def _store():

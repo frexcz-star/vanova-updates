@@ -1034,8 +1034,18 @@ def _recommendations_impact() -> dict[str, Any]:
         elif outcome == "unmeasurable":
             unmeasurable += 1
         # cualquier otro (sin outcome aún) no cuenta
+    # capturedPct = % del el capturado sobre la facturacion REAL del negocio.
+    captured_pct = None
+    if captured > 0:
+        from . import business_model, config_store
+
+        _data = config_store.load()
+        _rev = business_model.revenue(_data.get("organizedSales") or [])
+        if _rev and _rev > 0:
+            captured_pct = round(captured / _rev * 100.0, 2)
     return {
         "capturedEuro": round(captured, 2),
+        "capturedPct": captured_pct,
         "improvedCount": improved,
         "noChangeCount": no_change,
         "worsenedCount": worsened,

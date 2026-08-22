@@ -2875,6 +2875,7 @@ function viewRecommendations(){
   // revenue comparable en recomendaciones mejoradas; si no, se omite (no 0 €).
   const impact = store.recImpact || null;
   const captured = impact && impact.capturedEuro > 0 ? impact.capturedEuro : null;
+  const capturedPct = impact && impact.capturedPct != null ? impact.capturedPct : null;
   const improved = impact ? impact.improvedCount : 0;
   const noChange = impact ? impact.noChangeCount : 0;
   const worsened = impact ? impact.worsenedCount : 0;
@@ -2891,7 +2892,7 @@ function viewRecommendations(){
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div style="font-size:30px;font-weight:700;color:${captured != null ? 'var(--success)' : 'var(--text-2)'}">${captured != null ? fmtEuro(captured) : '—'}</div>
           <div style="flex:1;min-width:220px">
-            <div style="font-weight:600;font-size:14px">Valor capturado con VANOVA</div>
+            <div style="font-weight:600;font-size:14px">Valor capturado con VANOVA${capturedPct != null ? ' <span style="font-size:12px;font-weight:600;color:var(--accent)">· ' + capturedPct.toLocaleString('es-ES',{maximumFractionDigits:1}) + '% de tu facturación</span>' : ''}</div>
             <div style="font-size:12.5px;color:var(--text-2);margin-top:2px">${improved} recomendación(es) mejoraron con tus datos reales${measuredTotal ? ' · ' + measuredTotal + ' medida(s) en total' : ''}. Nunca se inventa un €: si no hay delta comparable, se cuenta como "sin dato".</div>
           </div>
         </div>
