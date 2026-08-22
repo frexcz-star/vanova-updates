@@ -37,7 +37,7 @@ _SHOP_URL = re.compile(
     r"(?:https?://)?([a-z0-9][a-z0-9\-]*\.myshopify\.com)",
     re.IGNORECASE,
 )
-_TOKEN = re.compile(r"\b(shpat_[a-zA-Z0-9]{10,}|shpua_[a-zA-Z0-9]{10,})\b")
+_TOKEN = re.compile(r"\b(shpat_[a-zA-Z0-9]{10,}|shpua_[a-zA-Z0-9]{10,}|shpss_[a-zA-Z0-9]{10,})\b")
 
 
 def redact_sensitive(text: str) -> str:
@@ -131,8 +131,11 @@ def _parse_token(text: str) -> str | None:
     return m.group(1) if m else None
 
 
-def _finish_with_save(url: str, token: str, *, source_note: str = "") -> dict[str, Any]:
-    save = integrations_store.save_config("shopify", {"url": url, "token": token})
+def _finish_with_save(url: str, token: str, *, source_note: str = "", client_id: str = "") -> dict[str, Any]:
+    body = {"url": url, "token": token}
+    if client_id:
+        body["api_key"] = client_id  # Dev Dashboard Client ID, para canjear shpss_
+    save = integrations_store.save_config("shopify", body)
     if not save.get("ok"):
         return _reply(
             f"No pude guardar la configuración: {save.get('error', 'error desconocido')}. "
@@ -260,13 +263,17 @@ def _ask_token(url: str) -> dict[str, Any]:
     shop = _format_shop_display(url)
     return _reply(
         f"Tienda: **{shop}**\n\n"
-        "**Paso 2/2:** Pega el **Admin API access token** "
-        "(empieza por `shpat_…`).\n\n"
-        "Necesita permisos: read_products, read_orders.",
+        "**Paso 2/2:** Pega el token de acceso de tu app Shopify.\n\n"
+        "Puede ser el **Admin API access token** (`shpat_…`, de una Custom App del admin) "
+        "o el **Client Secret del Dev Dashboard** (`shpss_…`).\n"
+        "→ Si pegas uno que empiece por `shpss_`, dime también el **Client ID** de tu app "
+        "(Dev Dashboard → tu app → Settings), porque con él VANOVA lo canjea por un "
+        "access token real.\n\n"
+        "Permisos necesarios: read_products, read_orders.",
         step="ask_token",
         notification=_notify(
             "Configurar Shopify",
-            f"Paso 2: pega el access token para {shop}",
+            f"Paso 2: pega el token (o Client Secret) para {shop}",
         ),
         quick_replies=[
             {"label": "Cancelar", "message": "cancelar"},
@@ -352,17 +359,46 @@ def _continue_setup(message: str, conversation: dict[str, Any]) -> dict[str, Any
         if not token:
             return _reply(
                 "No encontré un token válido. Debe empezar por `shpat_` "
-                "(Admin API access token de Shopify).",
+                "(Admin API access token) o `shpss_` (Client Secret del Dev Dashboard).",
                 step="ask_token",
                 notification=_notify(
                     "Token no válido",
-                    "Pega el Admin API access token (shpat_…)",
+                    "Pega el Admin API token (shpat_…) o el Client Secret (shpss_…)",
                     level="warn",
                 ),
             )
         url = setup.get("url") or ""
+        # Si es un Client Secret del Dev Dashboard, pedimos el Client ID para
+        # poder canjearlo por un access token real.
+        if token.lower().startswith("shpss_"):
+            setup["token"] = token
+            setup["step"] = "ask_client_id"
+            return _reply(
+                "Perfecto, ese es el **Client Secret** del Dev Dashboard (`shpss_…`).\n\n"
+                "Para que VANOVA lo canjee por un access token real, dime el **Client ID** "
+                "de tu app Shopify (Dev Dashboard → tu app → Settings → Credentials).\n\n"
+                "Es una cadena de letras/números (no empieza por `shpss_`).",
+                step="ask_client_id",
+                notification=_notify(
+                    "Configurar Shopify",
+                    "Pega el Client ID de tu app del Dev Dashboard",
+                ),
+            )
         setup.clear()
         return _finish_with_save(url, token)
+
+    if step == "ask_client_id":
+        token = str(setup.get("token") or "").strip()
+        client_id = str(message or "").strip()
+        if not client_id:
+            return _reply(
+                "Pega el **Client ID** de tu app (Dev Dashboard → tu app → Settings). "
+                "Es la cadena que identifica tu app, distinta del Client Secret.",
+                step="ask_client_id",
+            )
+        url = setup.get("url") or ""
+        setup.clear()
+        return _finish_with_save(url, token, client_id=client_id)
 
     setup.clear()
     return _start_flow(conversation)

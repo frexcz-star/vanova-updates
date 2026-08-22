@@ -26,6 +26,90 @@ _sync_thread: threading.Thread | None = None
 _sync_running = False
 _stop_event = threading.Event()
 
+# --- Dev Dashboard client-credentials support (Shopify 2025+) ---------------
+# Shopify deprecó los "custom apps" del admin y los tokens Admin API `shpat_`
+# ahora se obtienen desde el Dev Dashboard. En el Dev Dashboard el usuario ve:
+#   - Client ID (identifica la app)
+#   - Client Secret (empieza por `shpss_`)  ← NO es un Admin API token usable
+# El Client Secret `shpss_` NO vale como cabecera `X-Shopify-Access-Token`
+# (devuelve 401). Hay que intercambiarlo por un access_token real vía el
+# client credentials grant (POST /admin/oauth/access_token). El access_token
+# dura 24h; se cachea y se refresca. Fuente: docs de Shopify (Dev Dashboard).
+_CC_CACHE: dict[str, tuple[str, float]] = {}  # key -> (token, expira)
+_CC_CACHE_TTL = 23 * 3600  # 23h (el token dura 24h)
+
+
+def _is_client_secret(value: str) -> bool:
+    v = (value or "").strip().lower()
+    # Solo `shpss_` es Client Secret (Dev Dashboard) → requiere intercambio.
+    # `shpat_`/`shpua_`/`shpca_` son tokens de Admin válidos → uso directo.
+    return v.startswith("shpss_")
+
+
+def resolve_admin_token(url: str, token: str) -> str:
+    """Devuelve un token usable como `X-Shopify-Access-Token`.
+
+    - `shpat_*` / `shpua_*` → se usan tal cual (Admin API token).
+    - `shp_*` (Client Secret del Dev Dashboard) → se intercambia por un
+      access_token real vía client credentials grant (cached 24h).
+    Necesita el client_id de la app: se lee de integrations_store. Si falta,
+    lanza RuntimeError con un mensaje claro (no inventa).
+    """
+    t = (token or "").strip()
+    if not _is_client_secret(t):
+        return t  # shpat_/shpua_ directo
+    cache_key = f"{url}|{t}"
+    cached = _CC_CACHE_TTL and _CC_CACHE.get(cache_key)
+    if cached and cached[1] > time.time():
+        return cached[0]
+    from . import integrations_store
+    entry = integrations_store.get_shopify_entry()
+    client_id = str(entry.get("api_key") or entry.get("client_id") or "").strip()
+    if not client_id:
+        raise RuntimeError(
+            "Este es un Client Secret del Dev Dashboard (empieza por `sh_`). "
+            "Necesito también el Client ID de tu app Shopify para canjearlo por "
+            "un access token. Pégalos juntos o usa un token Admin (`shpat_…`)."
+        )
+    access = _exchange_client_credentials(url, client_id, t)
+    if not access:
+        raise RuntimeError(
+            "No pude canjear el Client Secret por un access token de Shopify "
+            "(credenciales inválidas o app no instalada en esta tienda)."
+        )
+    _CC_CACHE[cache_key] = (access, time.time() + _CC_CACHE_TTL)
+    return access
+
+
+def _exchange_client_credentials(url: str, client_id: str, client_secret: str) -> str | None:
+    """POST /admin/oauth/access_token con grant_type=client_credentials."""
+    from urllib.parse import urlencode
+    import urllib.request
+
+    base = (url or "").rstrip("/")
+    token_url = base + "/admin/oauth/access_token"
+    payload = urlencode({
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret,
+    }).encode("utf-8")
+    req = Request(
+        token_url,
+        data=payload,
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return str(data.get("access_token") or "").strip() or None
+    except (HTTPError, URLError, ValueError) as exc:
+        log.warning("Shopify client_credentials exchange failed: %s", exc)
+        return None
+
 
 def sync_status() -> dict[str, Any]:
     st = config_store.load().get("shopifySync") or {}
@@ -565,7 +649,7 @@ def _shopify_get(base_url: str, token: str, path: str) -> dict[str, Any]:
     req = Request(
         base_url + path,
         headers={
-            "X-Shopify-Access-Token": token,
+            "X-Shopify-Access-Token": resolve_admin_token(base_url, token),
             "Accept": "application/json",
             "User-Agent": "VANOVA-Desktop/1.0",
         },
@@ -603,7 +687,7 @@ def _shopify_get_all(base_url: str, token: str, path: str, limit: int = 250) -> 
         req = Request(
             url,
             headers={
-                "X-Shopify-Access-Token": token,
+                "X-Shopify-Access-Token": resolve_admin_token(base_url, token),
                 "Accept": "application/json",
                 "User-Agent": "VANOVA-Desktop/1.0",
             },
