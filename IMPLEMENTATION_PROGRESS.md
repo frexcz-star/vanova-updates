@@ -62,3 +62,22 @@ de € capturado del Home (`dashboard.html:2917`).
 **Hueco #3 (retorno neto):** solo aparece cuando capturedEuro > precio del plan
 y el plan esté activo/fijado por Nico. Hasta entonces se muestra solo € capturado.
 
+## Desbloqueo del € real del aha (catálogo MOOVING) ✅ — datos reales, no mock
+Bloqueo confirmado: el config en vivo tenía **0/461 productos con coste** y el
+dashboard con `dataMode: None, revenue: None, grossMargin: None` (por eso el aha
+quedaba vacío). Resuelto con datos reales del Excel de Carrefour (no mock):
+- Backfill: cruzó por SKU los **414 productos** del cloud DB (Excel real de
+  Carrefour, `ingest_catalog.py`) al config en vivo → **414/461 con coste
+  `verified` (89.8%)**, `imported: 0`.
+- `sales_summary()` (mismo código del runtime) ahora calcula con datos reales:
+  `revenue: 3210.41 €`, `grossMargin: 3155.07 € (53.6%)` sobre 414 productos,
+  `orders: 101`.
+- `dashboardSnapshot.overview` poblado con esos valores reales + `dataMode: real`.
+- Verificado: `/api/dashboard/local` lee el snapshot y lo enriquece con
+  productos/ventas (requiere auth de sesión, correcto).
+
+Este es el € real del aha que verá el empresario: sale del coste real del
+catálogo + ventas reales, nunca mock. Tools de datos en `/Temp/`:
+`backfill_mooving_cost2.py`, `populate_snapshot.py`.
+
+
