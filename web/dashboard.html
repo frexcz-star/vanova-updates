@@ -2517,7 +2517,7 @@ function homeAhaMoneyHTML(){
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <div style="font-size:34px;font-weight:800;color:var(--success)">${fmtEuro(total)}</div>
       <div style="flex:1;min-width:240px">
-        <div style="font-weight:600;font-size:14px">En juego este mes${gmBadge}</div>
+        <div style="font-weight:600;font-size:14px">En juego este mes${gmBadge}${gmPct!=null?`<button class="btn btn-ghost btn-sm" data-act="edit-margin" style="margin-left:8px;padding:2px 8px;font-size:11px">${ic('sliders')} Ajustar</button>`:''}</div>
         <div style="font-size:12.5px;color:var(--text-2);margin-top:2px">Suma del impacto en € de ${opps.length} oportunidad(es) detectadas con tus datos reales.</div>
       </div>
       <button class="btn btn-ghost btn-sm" data-go="insights" style="flex-shrink:0">${ic('arrowRight')} Ver oportunidades</button>
@@ -3005,6 +3005,9 @@ function recCostRows(){
 async function openCostImportDrawer(){
   const ds = window.DataServices;
   if (!ds || !ds.prepareAction || !ds.previewCostsImport || !ds.importCosts) return;
+  // Margen global actual (si ya lo declaró) para pre-rellenar el input.
+  const gmPctCurrent = (store.companyProfile && store.companyProfile.preferences && store.companyProfile.preferences.globalMarginPct)
+    ? String(store.companyProfile.preferences.globalMarginPct) : '';
   toast('Cargando plantilla…');
   const tpl = await ds.prepareAction('cost_template');
   if (!tpl || !tpl.ok) { toast('No se pudo preparar la plantilla de costes', true); return; }
@@ -3014,7 +3017,7 @@ async function openCostImportDrawer(){
       <div style="font-weight:600;font-size:13.5px;margin-bottom:4px">${ic('tag')} Atajo: usa un margen global</div>
       <div style="font-size:12.5px;color:var(--text-2);margin-bottom:10px">Si no quieres rellenar SKU a SKU, indica el margen que aplicas a tus productos y VANOVA estimará el coste de los que no tienen uno. El margen lo declaras tú — nunca lo inventa el sistema.</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <input class="input" id="global-margin-input" type="number" min="1" max="99" step="0.5" placeholder="Ej: 60" style="width:110px" />
+        <input class="input" id="global-margin-input" type="number" min="1" max="99" step="0.5" placeholder="Ej: 60" value="${gmPctCurrent}" style="width:110px" />
         <span style="font-size:13px;color:var(--text-2)">% de margen sobre el precio de venta</span>
         <button class="btn btn-primary btn-sm" data-global-margin-apply style="flex-shrink:0">${ic('check')} Aplicar margen global</button>
       </div>
@@ -7516,6 +7519,8 @@ function onAppClick(e){
     if (applyCostsBtn) { openCostImportDrawer(); return; }
     const importCostsBtn = e.target.closest('[data-act="import-costs"]');
     if (importCostsBtn) { openCostImportDrawer(); return; }
+    const editMarginBtn = e.target.closest('[data-act="edit-margin"]');
+    if (editMarginBtn) { openCostImportDrawer(); return; }
     const dlBtn = e.target.closest('[data-download-csv]');
     if (dlBtn && store.preparedAction && store.preparedAction.csv) {
       downloadCsv(store.preparedAction.filename || 'vanova.csv', store.preparedAction.csv);
