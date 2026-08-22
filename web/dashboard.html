@@ -4206,6 +4206,11 @@ async function pollLiveTaskState(){
     }
     store.activity = buildUnifiedActivity(store.tasks, store.internalTasks, store.insights, store.activity, store.scanStatus);
     if (state.view === 'home' || state.view === 'activity' || state.view === 'tasks' || state.view === 'agents' || state.view === 'agentdetail') render();
+    // BUG-FIX contador de notificaciones: el polling de live sync actualiza
+    // store.insights/pendingApprovals, por lo que el badge de la campana debía
+    // re-calcularse aquí (antes solo se calculaba en loadAppData() y quedaba
+    // obsoleto cuando llegaban insights/insights nuevos en tiempo real).
+    updateBellBadge();
   } catch (e) {}
 }
 let _liveCommerceSignature = '';
