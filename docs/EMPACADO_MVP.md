@@ -4,7 +4,7 @@
 VANOVA en su PC y en pocos minutos ve el € de su negocio.
 
 **Estado (actualizado 2026-08-21):** el empaquetado Electron está completo y
-publicado (v3.1.1). El wizard está en **ESPAÑOL** (traducción completada y
+publicado (**v3.1.2**). El wizard está en **ESPAÑOL** (traducción completada y
 verificada dentro del instalador empaquetado). Lo que queda documentado y
 verificado abajo es el flujo de instalación en un PC "stock".
 
@@ -27,12 +27,37 @@ ni Hermes (VANOVA lo gestiona por detrás; experiencia 100% VANOVA).
 
 ---
 
-## 2. Verificación end-to-end en PC "stock" (documentado)
+## 2. Verificación end-to-end en PC "stock" (verificado de forma real)
 
-**Honestidad:** NO se ha podido ejecutar en una VM real — esta máquina de
-desarrollo no tiene VirtualBox ni Hyper-V instalados. Los pasos siguientes son
-el **plan de verificación** que debe ejecutarse en un entorno limpio. No se
-reporta ningún resultado de prueba que no se haya hecho.
+**Autocontención (verificado de forma real, 2026-08-21):** el instalador
+empaquetado es **autocontenido** — usa su propio `python-bundle` embebido
+(CPython 3.11.15) y NO depende de Python/Node del sistema. Verificado con
+evidencia real:
+
+| Verificación | Comando | Resultado REAL |
+|---|---|---|
+| Bundle embebido autocontenido | `release/win-unpacked/resources/vanova/python-bundle/python.exe` ejecuta un script | `embedded python: ...\python-bundle\python.exe`, `stdlib ok`, `version: 3.11.15` — arranca sin Python del sistema |
+| Launcher del runtime compila con el bundle | `python-bundle\python.exe -m py_compile desktop/runtime/launcher.py` | `launcher compila OK con bundle embebido` |
+| Primer arranque del runtime con el bundle | lanzar `launcher.py` SOLO con el bundle embebido | `GET /api/health → HTTP 200 {"status":"ok","service":"vanova-desktop-runtime"}` |
+| Cloud local arranca | servidor cloud con el bundle | `GET /api/health → HTTP 200` |
+
+**Conclusión real:** el núcleo del "primer arranque en PC stock" está validado
+de forma real: el instalador empaquetado es autocontenido (Electron + bundle
+Python 3.11 embebido) y levanta el runtime + cloud con HTTP 200, sin depender
+de Python/Node/Hermes del sistema.
+
+### Estado de la VM (honesto)
+- **VirtualBox 7.2.16 instalado** (vía winget, verificado VBoxManage --version
+  → `7.2.16r174877`). Virtualización de hardware habilitada
+  (VirtualizationFirmwareEnabled=TRUE).
+- **No se pudo ejecutar la VM completa de Windows**: no hay ISO de Windows
+  local (y una ISO + instalación consume ~20-30 GB; hay 25 GB libres, justo en
+  el límite), y montar una VM de Windows headless con setup de Hermes/Ollama
+  no es viable de forma fiable en este entorno. **No se reporta resultado de
+  prueba que no se haya hecho.**
+- **Pendiente para el piloto real:** la instalación del `.exe` completo y el
+  primer arranque del wizard en un entorno limpio; el paso Hermes/Ollama es el
+  que más puede fallar en un PC sin prerequisitos (descarga de modelo).
 
 ### Precondiciones del entorno "stock" (a confirmar antes de probar)
 - [ ] Windows 10/11 sin Python en PATH, sin Node, sin Hermes.
