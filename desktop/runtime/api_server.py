@@ -1000,26 +1000,46 @@ def _recommendations_impact() -> dict[str, Any]:
 
     Suma el delta € (metricNow.revenue - metricBefore.revenue) de las
     recomendaciones `measured` con `outcome=improved`. Honestidad: solo suma
-    las que tienen revenue comparable; nunca inventa 0 ni cifras.
+    las que tienen revenue comparable; nunca inventa 0 ni cifras. También
+    expone los contadores por outcome (noChange/worsened/unmeasurable) para
+    la pantalla completa de "Valor capturado".
     """
     from . import recommendation_store
 
     recs = recommendation_store.list_recommendations()
     captured = 0.0
-    count = 0
+    improved = 0
+    no_change = 0
+    worsened = 0
+    unmeasurable = 0
     for r in recs:
-        if str(r.get("status") or "") != "measured" or str(r.get("outcome") or "") != "improved":
+        outcome = str(r.get("outcome") or "")
+        status = str(r.get("status") or "")
+        if status != "measured":
             continue
-        before = r.get("metricBefore") or {}
-        now = r.get("metricNow") or {}
-        b = float(before.get("revenue") or 0.0)
-        n = float(now.get("revenue") or 0.0)
-        if b > 0 and n > 0:
-            captured += (n - b)
-            count += 1
+        if outcome == "improved":
+            before = r.get("metricBefore") or {}
+            now = r.get("metricNow") or {}
+            b = float(before.get("revenue") or 0.0)
+            n = float(now.get("revenue") or 0.0)
+            if b > 0 and n > 0:
+                captured += (n - b)
+                improved += 1
+                continue
+            unmeasurable += 1  # improved sin delta comparable → no se suma
+        elif outcome == "no_change":
+            no_change += 1
+        elif outcome == "worsened":
+            worsened += 1
+        elif outcome == "unmeasurable":
+            unmeasurable += 1
+        # cualquier otro (sin outcome aún) no cuenta
     return {
         "capturedEuro": round(captured, 2),
-        "improvedCount": count,
+        "improvedCount": improved,
+        "noChangeCount": no_change,
+        "worsenedCount": worsened,
+        "unmeasurableCount": unmeasurable,
         "total": len(recs),
     }
 

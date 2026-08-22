@@ -53,6 +53,26 @@ class RecommendationImpactTests(unittest.TestCase):
         self.assertEqual(impact["capturedEuro"], 0.0)
         self.assertEqual(impact["improvedCount"], 0)
 
+    def test_breaks_down_outcome_counts(self):
+        """Tarea 3: la pantalla de Valor Capturado necesita los contadores por
+        outcome (noChange/worsened/unmeasurable), no solo improved."""
+        recs = [
+            _recommendation("measured", "improved", 100, 150),   # +50, improved
+            _recommendation("measured", "no_change", 100, 102),  # no_change
+            _recommendation("measured", "worsened", 100, 60),    # worsened
+            _recommendation("measured", "unmeasurable", None, None),  # unmeasurable
+            _recommendation("measured", "improved", 0, 100),     # improved sin delta → unmeasurable
+            _recommendation("done", "improved", 100, 130),       # no measured → no cuenta
+        ]
+        with patch.object(_store(), "list_recommendations", return_value=recs):
+            impact = api_server._recommendations_impact()
+        self.assertEqual(impact["capturedEuro"], 50.0)
+        self.assertEqual(impact["improvedCount"], 1)
+        self.assertEqual(impact["noChangeCount"], 1)
+        self.assertEqual(impact["worsenedCount"], 1)
+        self.assertEqual(impact["unmeasurableCount"], 2)  # unmeasurable + improved sin delta
+        self.assertEqual(impact["total"], 6)
+
 
 def _store():
     from desktop.runtime import recommendation_store
