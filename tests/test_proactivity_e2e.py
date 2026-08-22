@@ -71,6 +71,14 @@ class TestProactivityE2E(unittest.TestCase):
         import desktop.runtime.config_store as cs_mod
         self._patches.append(patch.object(cs_mod, "CONFIG_FILE", Path(config_path)))
 
+        # BUG (aislamiento de tests): insight_actions.ACTIONS_FILE se define a
+        # nivel de módulo en el import con data_dir() REAL. En suite completa,
+        # ese archivo real ya contiene el id del insight y list_insights() lo
+        # filtra como "ya accionado" → 0 insights (order-dependent). Parchear
+        # ACTIONS_FILE al temp del test para hacerlo independiente del orden.
+        import desktop.runtime.insight_actions as ia_mod
+        self._patches.append(patch.object(ia_mod, "ACTIONS_FILE", Path(self.data_dir) / "insight-actions.json"))
+
         for p in self._patches:
             p.start()
 
