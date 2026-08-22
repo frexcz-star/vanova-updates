@@ -45,3 +45,20 @@ cross-sell + margen 60% + 60 pedidos → 36 € estimated.
 ## Bloqueos que dependen de Nico/Mathew (no es código)
 - Piloto físico en PC stock (Tarea 2) — docs/PILOTO_FISICO_NICO.md.
 - Cliente real con ventas+costes para ROI en producción + fijar precio del plan.
+
+## Registro de eventos del piloto (SPEC 3) ✅ — commit cfa44a2
+| Sub-tarea | Estado | Evidencia |
+|---|---|---|
+| Log JSONL con timestamps de eventos del piloto | ✅ | `desktop/runtime/pilot_events.py` → `%LOCALAPPDATA%/VANOVA/logs/pilot_events.jsonl` |
+| Métrica "tiempo hasta el €" (conexión OK → 1ª oportunidad € vista) | ✅ | `metric_time_to_euro()`; sin eventos reales → `unavailable` (nunca inventado); `target_lt_15min` para el Go/No-Go |
+| Hooks en el runtime | ✅ | `source.connected` (Shopify OK), `opportunity.seen` (1ª con upsideEuro real), `recommendation.marked`, `measure.done` |
+| Endpoint expuesto | ✅ | `GET /api/pilot/summary` verificado en vivo: HTTP 200 con recuentos reales |
+| Tests de regresión | ✅ | 5 passed (suite completa 754 passed, 1 skipped) |
+
+**Hueco #2 confirmado ya implementado:** "Recomendaciones" es pestaña propia en
+la nav (`dashboard.html:1505`) con enlace "Ver recomendaciones" desde la tarjeta
+de € capturado del Home (`dashboard.html:2917`).
+
+**Hueco #3 (retorno neto):** solo aparece cuando capturedEuro > precio del plan
+y el plan esté activo/fijado por Nico. Hasta entonces se muestra solo € capturado.
+
