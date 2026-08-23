@@ -1,23 +1,15 @@
-"""CALIDAD DE DATOS (Nico) — 'Dependencia de un solo producto' no debe emitirse
-para productos OBSOLETOS / sin ventas recientes.
+"""BUG-040 / SPEC vitalidad — dependencia de producto obsoleto/muerto.
 
-Reporte real: el dashboard mostraba 'Dependencia de un solo producto' sobre la
-Agenda 2025 (edición del año pasado, ya no se vende). Técnicamente había
-concentración de revenue histórico, pero el producto ya no se comercializa.
-
-Fix: en `detect_products` (detection_engine.py), la oportunidad
-`product_concentration` solo se emite si el producto top tiene ventas recientes
-(revenue30d > 0 o units30d > 0). Si revenue30d == 0 (sin ventas en los últimos
-30 días), el producto es obsoleto y NO se emite la señal (sería una oportunidad
-falsa). Aplica la regla de honestidad: sin datos suficientes, no emitir.
-
-Falla con el código anterior (el fix no existía → emitía la oportunidad incluso
-para productos sin ventas recientes).
+Un producto muerto (sin ventas en 90 días contra la fecha de referencia del
+dataset) no debe emitir 'Dependencia de un solo producto' como riesgo real.
+Según el SPEC, emite la señal DESCARTADA con kind='no_signal' y explicación en €.
+Un producto vivo (con ventas recientes) SÍ emite la dependencia real.
 """
 from __future__ import annotations
 
 import sys
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,71 +18,59 @@ sys.path.insert(0, str(ROOT))
 from desktop.runtime import detection_engine
 
 
-def _prod(sku, revenue, share, revenue30d, units30d=0.0, revenuePrev30d=0.0, revenuePrev60d=0.0):
+REF = datetime(2026, 7, 31, tzinfo=timezone.utc)
+
+
+def _sale(sku, days_ago):
+    return {"sku": sku, "date": (REF - timedelta(days=days_ago)).isoformat(), "total": 100.0, "quantity": 1}
+
+
+def _prod(sku, revenue, share, revenue30d=0.0, units30d=0.0):
     return {
         "sku": sku, "name": sku, "cost": 1.0, "hasCost": True, "marginPct": None, "marginEuro": None,
         "units": 100.0, "revenue": revenue, "revenueShare": share,
         "units30d": units30d, "unitsPrev30d": 0.0,
-        "revenue30d": revenue30d, "revenuePrev30d": revenuePrev30d,
-        "unitsPrev60d": 0.0, "revenuePrev60d": revenuePrev60d,
+        "revenue30d": revenue30d, "revenuePrev30d": 0.0,
+        "unitsPrev60d": 0.0, "revenuePrev60d": 0.0,
     }
 
 
 class ProductConcentrationObsoleteTests(unittest.TestCase):
-    def _detect(self, prods):
+    def _detect(self, prods, sales=None):
         return detection_engine.detect_products(
             prods,
             {"canAnalyzeProducts": True, "canAnalyzeMargin": True, "productCost": "verified"},
             {"current30d": "2026-07", "previous30d": "2026-06"},
+            sales,
         )
 
-    def test_obsolete_product_no_concentration_finding(self):
-        """Un producto top sin ventas recientes (obsoleto) NO genera la
-        oportunidad de dependencia."""
-        prods = [
-            # Producto dominante pero SIN ventas en los últimos 30 días (obsoleto)
-            _prod("AGENDA-2025", 2000.0, 0.60, 0.0, units30d=0.0),
-            # Sustituto activo
-            _prod("AGENDA-2026", 500.0, 0.15, 500.0, units30d=10.0),
-        ]
-        findings = self._detect(prods)
+    def test_obsolete_product_no_risk_finding(self):
+        """Producto obsoleto (sin ventas) NO emite riesgo real de dependencia —
+        emite no_signal descartada."""
+        prods = [_prod("AGENDA-2025", 2000.0, 0.60), _prod("AGENDA-2026", 500.0, 0.15)]
+        sales = [_sale("AGENDA-2026", 10)]
+        findings = self._detect(prods, sales)
         conc = [f for f in findings if f.get("type") == "product_concentration"]
-        self.assertEqual(len(conc), 0, "No debe emitirse dependencia para producto obsoleto")
+        risk = [f for f in conc if f.get("kind") != "no_signal"]
+        self.assertEqual(len(risk), 0, "No debe emitirse dependencia real para producto obsoleto")
+
+    def test_obsolete_emite_no_signal(self):
+        """El producto obsoleto emite la señal descartada (no_signal) con explicación."""
+        prods = [_prod("OBSOLETO", 2000.0, 0.60), _prod("ACTIVO", 500.0, 0.15)]
+        sales = [_sale("ACTIVO", 10)]
+        findings = self._detect(prods, sales)
+        conc = [f for f in findings if f.get("type") == "product_concentration"]
+        no_signal = [f for f in conc if f.get("kind") == "no_signal"]
+        self.assertEqual(len(no_signal), 1, "Debe emitir no_signal explicada")
 
     def test_active_product_still_emits_concentration(self):
-        """Un producto dominante CON ventas recientes SÍ genera la oportunidad."""
-        prods = [
-            _prod("PLANNER-A5", 2000.0, 0.60, 800.0, units30d=20.0),
-            _prod("PLANNER-B", 600.0, 0.20, 300.0, units30d=8.0),
-        ]
-        findings = self._detect(prods)
+        """Producto dominante CON ventas recientes SÍ genera la oportunidad."""
+        prods = [_prod("PLANNER-A5", 2000.0, 0.60, 800.0, units30d=20.0), _prod("PLANNER-B", 600.0, 0.20)]
+        sales = [_sale("PLANNER-A5", 5), _sale("PLANNER-B", 20)]
+        findings = self._detect(prods, sales)
         conc = [f for f in findings if f.get("type") == "product_concentration"]
-        self.assertEqual(len(conc), 1, "Debe emitir dependencia para producto activo")
-
-    def test_ventas_ultimos_90d_no_obsoleto(self):
-        """Regla GENÉRICA de 90 días: un producto que vendió en los últimos 90
-        días (aunque no en los últimos 30) NO es obsoleto → SÍ emite la
-        dependencia. Ej.: agendas que se vendieron en el trimestre anterior."""
-        prods = [
-            # Dominante, sin ventas en los últimos 30 días PERO con ventas en los
-            # 60 previos (dentro de la ventana de 90 días) → NO obsoleto
-            _prod("AGENDA-TRIM", 2000.0, 0.60, 0.0, units30d=0.0, revenuePrev30d=300.0, revenuePrev60d=200.0),
-            _prod("AGENDA-NUEVA", 400.0, 0.15, 400.0, units30d=8.0),
-        ]
-        findings = self._detect(prods)
-        conc = [f for f in findings if f.get("type") == "product_concentration"]
-        self.assertEqual(len(conc), 1, "Producto con ventas en los últimos 90d no es obsoleto")
-
-    def test_obsoleto_90d_no_emite(self):
-        """Producto SIN ventas en los últimos 90 días completos → obsoleto → NO
-        emite dependencia (oportunidad falsa)."""
-        prods = [
-            _prod("OBSOLETO-90", 2000.0, 0.60, 0.0, units30d=0.0, revenuePrev30d=0.0, revenuePrev60d=0.0),
-            _prod("ACTIVO-NUEVO", 500.0, 0.15, 500.0, units30d=10.0),
-        ]
-        findings = self._detect(prods)
-        conc = [f for f in findings if f.get("type") == "product_concentration"]
-        self.assertEqual(len(conc), 0, "Sin ventas en 90 días = obsoleto, no emite")
+        risk = [f for f in conc if f.get("kind") != "no_signal"]
+        self.assertEqual(len(risk), 1, "Debe emitir dependencia para producto activo")
 
 
 if __name__ == "__main__":

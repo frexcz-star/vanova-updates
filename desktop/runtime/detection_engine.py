@@ -47,6 +47,12 @@ COST_COVERAGE_MIN = 0.6          # fracción mínima de SKUs con coste
 STALE_DAYS = 7                   # datos más viejos que esto = desactualizados
 RECON_CRITICAL_MAX = 0           # discrepancias high de reconciliación toleradas
 
+# Capa de vitalidad de producto (SPEC vitalidad). Ventana de vida: un producto
+# es VIVO si tiene ≥1 venta real en los últimos VITALITY_WINDOW_DAYS días,
+# medido contra la fecha de referencia del dataset (no "hoy"). 90 días = 1 trimestre.
+VITALITY_WINDOW_DAYS = 90
+DECLINE_WINDOW_DAYS = 180        # ventana amplia para detectar "producto en declive"
+
 FINDING_STATUSES = ("new", "active", "acknowledged", "resolved", "archived")
 
 
@@ -85,6 +91,57 @@ def _reference_date(rows: list[dict[str, Any]]) -> datetime | None:
         if d is not None and (best is None or d > best):
             best = d
     return best
+
+
+def product_vitality(sku: str, sales: list[dict[str, Any]], *, ref: datetime | None = None) -> dict[str, Any]:
+    """Capa de vitalidad de producto (SPEC vitalidad, P1).
+
+    Un producto es VIVO si tiene ≥1 venta real en los últimos
+    VITALITY_WINDOW_DAYS días, medido contra la fecha de referencia del dataset
+    (no "hoy" inventado). Regla de honestidad: la ventana se mide contra
+    `_reference_date(sales)`; si no hay datos de ventas con fecha, se degrada
+    (no se inventa una vida).
+
+    Devuelve: {es_vivo, ultima_venta_dias, ventas_en_ventana, window_days,
+               decline (ventas en ventana amplia pero no en la corta), calculable}
+    """
+    key = str(sku or "").strip().lower()
+    if not key:
+        return {"es_vivo": False, "ultima_venta_dias": None, "ventas_en_ventana": 0,
+                "window_days": VITALITY_WINDOW_DAYS, "calculable": False}
+    # Fecha de referencia = la más reciente del dataset (no "hoy" inventado).
+    ref_date = ref or _reference_date(sales)
+    if ref_date is None:
+        # Sin datos de ventas con fecha: no se puede calcular vitalidad.
+        return {"es_vivo": False, "ultima_venta_dias": None, "ventas_en_ventana": 0,
+                "window_days": VITALITY_WINDOW_DAYS, "calculable": False}
+    window_start = ref_date - timedelta(days=VITALITY_WINDOW_DAYS)
+    decline_start = ref_date - timedelta(days=DECLINE_WINDOW_DAYS)
+    ventas_sku: list[datetime] = []
+    ventas_decline: list[datetime] = []
+    for s in sales:
+        sk = str((s or {}).get("sku") or "").strip().lower()
+        d = _as_date(s.get("date"))
+        if sk != key or d is None:
+            continue
+        if d >= window_start:
+            ventas_sku.append(d)
+        if d >= decline_start:
+            ventas_decline.append(d)
+    ventas_sku.sort()
+    ventas_decline.sort()
+    ultima = ventas_sku[-1] if ventas_sku else None
+    es_vivo = len(ventas_sku) > 0
+    # Declive: tuvo ventas en 180d pero 0 en 90d (se está muriendo).
+    en_declive = (not es_vivo) and len(ventas_decline) > 0
+    return {
+        "es_vivo": es_vivo,
+        "en_declive": en_declive,
+        "ultima_venta_dias": (ref_date - ultima).days if ultima else None,
+        "ventas_en_ventana": len(ventas_sku),
+        "window_days": VITALITY_WINDOW_DAYS,
+        "calculable": True,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -432,7 +489,7 @@ def make_finding(
 # ---------------------------------------------------------------------------
 
 
-def detect_products(prod: list[dict[str, Any]], quality: dict[str, Any], period: dict[str, Any]) -> list[dict[str, Any]]:
+def detect_products(prod: list[dict[str, Any]], quality: dict[str, Any], period: dict[str, Any], sales: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     """FASE B — detectores de producto sobre las SEÑALES canónicas (una sola
     fuente de verdad, coherente con business_signals): margen de catálogo
     (full history), share de revenue (full history) y tendencia 30d relativa
@@ -526,27 +583,110 @@ def detect_products(prod: list[dict[str, Any]], quality: dict[str, Any], period:
     if with_rev:
         top_prod = max(with_rev, key=lambda i: i["revenueShare"])
         if top_prod["revenueShare"] >= PRODUCT_CONCENTRATION_SHARE and top_prod["revenue"] >= PRODUCT_CONCENTRATION_MIN_REVENUE:
-            # CALIDAD DE DATOS (Nico, regla GENÉRICA para cualquier negocio):
-            # si el producto top NO tiene ventas en un periodo reciente razonable
-            # (últimos 90 días), NO es una dependencia real / oportunidad
-            # accionable — el producto está obsoleto o fuera de catálogo (edición
-            # del año pasado, línea discontinuada, etc.). Funciona para agendas,
-            # zapatos, software — cualquier catálogo. Se detecta con las señales
-            # de ventas por fecha ya disponibles (revenue30d + revenuePrev30d +
-            # revenuePrev60d = revenue de los últimos 90 días). Regla de
-            # honestidad: sin datos suficientes, no emitir la señal falsa.
-            rev_90d = (
-                (top_prod.get("revenue30d") or 0.0)
-                + (top_prod.get("revenuePrev30d") or 0.0)
-                + (top_prod.get("revenuePrev60d") or 0.0)
-            )
-            units_90d = (
-                (top_prod.get("units30d") or 0.0)
-                + (top_prod.get("unitsPrev30d") or 0.0)
-                + (top_prod.get("unitsPrev60d") or 0.0)
-            )
-            is_active = (rev_90d > 0) or (units_90d > 0)
-            if is_active:
+            # CAPA DE VITALIDAD DE PRODUCTO (SPEC vitalidad, P1.2): antes de
+            # emitir una señal de riesgo/oportunidad sobre un producto, se
+            # consulta su vitalidad (ventas reales en los últimos 90 días contra
+            # la fecha de referencia del dataset). Un producto MUERTO (0 ventas
+            # en 90d) no es una señal real: se descarta la dependencia y se
+            # emite como `no_signal` con explicación en €. Si está en declive
+            # (ventas en 180d pero 0 en 90d), se emite como hallazgo informativo
+            # de declive, no como riesgo de dependencia.
+            vitality = product_vitality(top_prod["sku"], sales or [])
+            if not vitality.get("calculable"):
+                # Sin datos de ventas con fecha: no se puede validar vitalidad.
+                # Degradar a estimated (regla de honestidad, no inventar vida).
+                # Se mantiene la lógica normal de concentración (con diversifiers)
+                # pero con kind='estimated' y nota honesta.
+                def _prod_change(item: dict[str, Any]) -> float | None:
+                    if item.get("revenuePrev30d"):
+                        return (item.get("revenue30d", 0.0) - item["revenuePrev30d"]) / item["revenuePrev30d"]
+                    return None
+                top_change = _prod_change(top_prod)
+                candidates = [
+                    i for i in with_rev
+                    if i["sku"] != top_prod["sku"]
+                    and i["revenue30d"] >= top_prod["revenue30d"] * 0.05
+                    and (_prod_change(i) or 0.0) >= 0.0
+                ]
+                candidates.sort(key=lambda i: i["revenue"], reverse=True)
+                declining = top_change is not None and top_change <= -CHANGE_PCT
+                f = make_finding(
+                    finding_type="product_concentration",
+                    severity="high" if declining else "medium",
+                    category="opportunity",
+                    title=f"Dependencia de un solo producto: {top_prod['sku']}",
+                    observation=(
+                        f"El producto {top_prod['sku']} concentra el {round(top_prod['revenueShare']*100,1)}% del revenue "
+                        f"({top_prod['revenue']:.2f}€). No hay suficientes datos de ventas con fecha para validar su vitalidad."
+                    ),
+                    evidence=[
+                        f"Revenue {top_prod['revenue']:.2f}€ = {round(top_prod['revenueShare']*100,1)}% del total",
+                        "No hay suficientes datos de ventas con fecha para validar la vitalidad de este producto.",
+                    ] + ([f"Sustitutos con crecimiento compatible: {', '.join(i['sku'] for i in candidates[:3])}"] if candidates else []),
+                    metrics={"sku": top_prod["sku"], "revenue": top_prod["revenue"], "revenueShare": top_prod["revenueShare"], "changePct": round(top_change * 100, 1) if top_change is not None else None, "diversifiers": [i["sku"] for i in candidates[:3]]},
+                    period={"current": period["current30d"], "previous": period["previous30d"]},
+                    source=["sales_line_items"],
+                    confidence="low",
+                    estimated_impact={"kind": "estimated", "explanation": "No hay suficientes datos de ventas para validar la vitalidad de este producto.", "revenueAtRisk": round(top_prod["revenue"], 2)},
+                    recommended_action="Conecta ventas con fecha para validar la vitalidad de este producto.",
+                )
+                f["kind"] = "estimated"
+                findings.append(f)
+            elif not vitality.get("es_vivo") and vitality.get("en_declive"):
+                # Producto en declive: tuvo ventas en 180d pero 0 en 90d. Se
+                # emite como hallazgo INFORMATIVO de declive, no como riesgo de
+                # dependencia (evita el falso positivo).
+                f = make_finding(
+                    finding_type="product_decline",
+                    severity="low",
+                    category="risk",
+                    title=f"Producto en declive: {top_prod['sku']}",
+                    observation=(
+                        f"El producto {top_prod['sku']} tuvo ventas en el trimestre pero ninguna en los últimos 90 días. "
+                        "Está dejando de venderse — revisar si es una línea que se va a descontinuar."
+                    ),
+                    evidence=[
+                        f"Sin ventas en los últimos {VITALITY_WINDOW_DAYS} días, pero con ventas en la ventana de {DECLINE_WINDOW_DAYS} días",
+                        f"Concentra {round(top_prod['revenueShare']*100,1)}% del revenue histórico ({top_prod['revenue']:.2f}€)",
+                    ],
+                    metrics={"sku": top_prod["sku"], "revenue": top_prod["revenue"], "revenueShare": top_prod["revenueShare"], "vitality": "declining"},
+                    period={"current": period["current30d"], "previous": period["previous30d"]},
+                    source=["sales_line_items"],
+                    confidence="high",
+                    estimated_impact={"kind": "info", "explanation": "Producto en declive — revisar si se descontinúa."},
+                    recommended_action="Revisa si el producto se va a descontinuar o necesita reposición de demanda.",
+                )
+                f["kind"] = "info"
+                findings.append(f)
+            elif not vitality.get("es_vivo"):
+                # Producto MUERTO (0 ventas en 90d, sin declive): descartar la
+                # dependencia como no_signal con explicación honesta en €.
+                ultima = vitality.get("ultima_venta_dias")
+                ultima_txt = f"última venta hace {ultima} días" if ultima is not None else "sin ventas registradas"
+                f = make_finding(
+                    finding_type="product_concentration",
+                    severity="low",
+                    category="product",
+                    title=f"[Descartada] Dependencia de {top_prod['sku']} — no es un riesgo real",
+                    observation=(
+                        f"Este producto no se vende en los últimos {VITALITY_WINDOW_DAYS} días ({ultima_txt}). "
+                        "Concentra revenue histórico, pero de algo que ya no se vende. Sin riesgo real en €."
+                    ),
+                    evidence=[
+                        f"Última venta hace {ultima} días" if ultima is not None else "Sin ventas recientes",
+                        f"Concentra {round(top_prod['revenueShare']*100,1)}% del revenue histórico ({top_prod['revenue']:.2f}€)",
+                        "Producto obsoleto/fuera de catálogo — la dependencia no es una señal real",
+                    ],
+                    metrics={"sku": top_prod["sku"], "revenue": top_prod["revenue"], "revenueShare": top_prod["revenueShare"], "vitality": "dead"},
+                    period={"current": period["current30d"], "previous": period["previous30d"]},
+                    source=["sales_line_items"],
+                    confidence="high",
+                    estimated_impact={"kind": "none", "explanation": "Producto sin ventas en 90 días — sin riesgo real en €."},
+                    recommended_action="No es una oportunidad accionable: el producto ya no se vende.",
+                )
+                f["kind"] = "no_signal"
+                findings.append(f)
+            else:
                 def _prod_change(item: dict[str, Any]) -> float | None:
                     if item.get("revenuePrev30d"):
                         return (item.get("revenue30d", 0.0) - item["revenuePrev30d"]) / item["revenuePrev30d"]
@@ -1576,7 +1716,7 @@ def run_detection(data: dict[str, Any] | None = None, *, persist: bool = True) -
     ref = _reference_date(sales) or _reference_date(invoices) or datetime.now(timezone.utc)
 
     fresh: list[dict[str, Any]] = []
-    fresh += detect_products(signals.get("products") or [], quality, signals.get("period") or {})
+    fresh += detect_products(signals.get("products") or [], quality, signals.get("period") or {}, sales)
     fresh += detect_cross_selling(sales, products, quality, ref)
     fresh += detect_aov(aov, quality, ref, sales)
     fresh += detect_expenses(exp, quality)

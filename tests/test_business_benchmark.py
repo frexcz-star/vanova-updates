@@ -126,6 +126,10 @@ class BusinessBenchmarkTests(unittest.TestCase):
 
     def test_findings_are_actionable(self):
         for f in self.findings:
+            # Los findings kind='no_signal' son DESCARTES informados (producto
+            # muerto, señal no real) — no son accionables por definición.
+            if f.get("kind") == "no_signal":
+                continue
             self.assertTrue(f.get("evidence"), f"finding {f.get('type')} sin evidencia")
             self.assertTrue(f.get("recommendedAction"), f"finding {f.get('type')} sin acción")
             self.assertIn((f.get("estimatedImpact") or {}).get("kind"), ("calculated", "estimated"))
