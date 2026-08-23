@@ -1421,21 +1421,18 @@ button:focus-visible,[data-act]:focus-visible{
 <input type="file" id="hermes-file-picker" style="display:none" accept=".xlsx,.xls,.csv,.pdf,.docx,.doc,.txt,.json,.xml,.ods">
 <div class="status-pop" id="status-pop">
   <h4>Estado del sistema</h4>
-  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-runtime"></span>Runtime<span class="sp-val" id="sp-val-runtime">—</span></div>
-  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-cloud"></span>Cloud<span class="sp-val" id="sp-val-cloud">—</span></div>
-  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-connector"></span>Connector<span class="sp-val" id="sp-val-connector">—</span></div>
-  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-hermes"></span>Hermes<span class="sp-val" id="sp-val-hermes">—</span></div>
-  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-aiProvider"></span>AI Provider<span class="sp-val" id="sp-val-aiProvider">—</span></div>
+  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-runtime"></span>Motor de VANOVA<span class="sp-val" id="sp-val-runtime">—</span></div>
+  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-cloud"></span>Nube de VANOVA<span class="sp-val" id="sp-val-cloud">—</span></div>
+  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-connector"></span>Conexión<span class="sp-val" id="sp-val-connector">—</span></div>
+  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-hermes"></span>Asistente de IA<span class="sp-val" id="sp-val-hermes">—</span></div>
+  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-aiProvider"></span>Proveedor de IA<span class="sp-val" id="sp-val-aiProvider">—</span></div>
   <div class="sp-row"><span class="sp-dot ok" id="sp-dot-maios"></span>VANOVA<span class="sp-val" id="sp-val-maios">—</span></div>
-  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-network"></span>Network<span class="sp-val" id="sp-val-network">—</span></div>
-  <h4 style="margin-top:12px;margin-bottom:8px">Puertos</h4>
-  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-port-runtime"></span>:8765 Runtime<span class="sp-val" id="sp-val-port-runtime">—</span></div>
-  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-port-cloud"></span>:8000 Cloud<span class="sp-val" id="sp-val-port-cloud">—</span></div>
+  <div class="sp-row"><span class="sp-dot ok" id="sp-dot-network"></span>Internet<span class="sp-val" id="sp-val-network">—</span></div>
   <div class="sp-foot" id="sp-foot">Última comprobación: —</div>
   <div class="sp-actions">
-    <button type="button" id="sp-restart-runtime">Reiniciar runtime</button>
+    <button type="button" id="sp-restart-runtime">Reiniciar VANOVA</button>
     <button type="button" id="sp-restart-cloud">Reiniciar servicios</button>
-    <button type="button" id="sp-restart-hermes">Reiniciar Hermes</button>
+    <button type="button" id="sp-restart-hermes">Reiniciar asistente</button>
   </div>
 </div>
 
@@ -4053,7 +4050,7 @@ function hermesOperationalPanelHTML(ctx) {
         <div class="hop-grid">
           <div class="hop-item"><div class="hop-k">Productos organizados</div><div class="hop-v">${p.total || 0} total</div><div style="font-size:11px;color:var(--text-3);margin-top:2px">${p.local || 0} Excel/local · ${p.shopify || 0} Shopify</div></div>
           <div class="hop-item"><div class="hop-k">Catálogo Excel</div><div class="hop-v">${p.catalogExcelRows || 0} filas</div><div style="font-size:11px;color:var(--text-3);margin-top:2px">${p.productFiles || 0} archivos producto</div></div>
-          <div class="hop-item"><div class="hop-k">Pedidos / ventas</div><div class="hop-v">${o.total || 0} total</div><div style="font-size:11px;color:var(--text-3);margin-top:2px">Sync Shopify: ${o.shopifySynced || 0}</div></div>
+          <div class="hop-item"><div class="hop-k">Pedidos / ventas</div><div class="hop-v">${o.total || 0} total</div><div style="font-size:12px;color:var(--text-3);margin-top:2px">Última actualización de la tienda: ${o.shopifySynced || 0}</div></div>
           <div class="hop-item"><div class="hop-k">Archivos importados</div><div class="hop-v">${f.total || 0}</div><div style="font-size:11px;color:var(--text-3);margin-top:2px">${f.productFiles || 0} prod · ${f.salesFiles || 0} ventas</div></div>
           <div class="hop-item"><div class="hop-k">Tienda online</div><div class="hop-v">${escapeHtml(shopLabel)}</div></div>
           <div class="hop-item"><div class="hop-k">Hermes / Cloud / Connector</div><div class="hop-v" style="font-size:11px;font-weight:500;line-height:1.4">${hermes.healthy ? 'Hermes ✓' : 'Hermes ○'} · ${cloud.running ? 'Cloud ✓' : 'Cloud ○'} · ${conn.running ? 'Connector ✓' : 'Connector ○'}</div></div>
@@ -4337,7 +4334,7 @@ function dataQualityHTML(){
         <div class="section-title">${ic('shield')} Calidad de datos</div>
         <div class="section-sub" style="color:${color};font-weight:600">${label}</div>
       </div>
-      <button class="section-link" data-act="prod-recon">Reconciliación de productos →</button>
+      <button class="section-link" data-act="prod-recon">Vincula tus productos →</button>
     </div>
     <div class="grid g-4" style="gap:12px">
       <div class="metric"><div class="metric-top"><span class="metric-label">Coste (por producto)</span></div><div class="metric-value">${prodCoveragePct}</div><div class="metric-foot"><span class="metric-period">${prodWith} de ${prodTot} productos con coste real</span></div></div>
@@ -4405,7 +4402,7 @@ function dataHealthHTML(){
     </div>
     <div style="margin-top:12px;font-size:12px;color:var(--text-3);line-height:1.6">
       <div><b>Productos</b>: ${verifiedFrac(prod)} · <b>Pedidos</b>: ${verifiedFrac(ord)} · <b>Líneas</b>: ${verifiedFrac(lin)} · <b>Clientes</b>: ${verifiedFrac(cus)}</div>
-      <div style="margin-top:4px">Última validación: ${h.lastValidation ? new Date(h.lastValidation).toLocaleString() : 'pendiente'} · Esquema v${h.schemaVersion != null ? h.schemaVersion : '—'}${h.lastMigration ? ' · Última migración: ' + h.lastMigration : ''}</div>
+      <div style="margin-top:4px">Última validación: ${h.lastValidation ? new Date(h.lastValidation).toLocaleString() : 'pendiente'}</div>
       <div style="margin-top:4px">${ic('info')} Un dato sin evidencia se marca y se explica — nunca se trata como verificado ni se borra automáticamente.</div>
     </div>
   </div>`;
@@ -5731,15 +5728,15 @@ function showStaticDiagnosticsFallback(reason) {
   if (host.textContent.indexOf('Cargando diagnóstico') === -1) return;
   const msg = reason || 'Runtime no responde en puerto 8765';
   host.innerHTML =
-    '<div class="diag-banner diag-banner--err">Runtime no disponible — mostrando datos locales</div>' +
+    '<div class="diag-banner diag-banner--err">VANOVA no disponible — mostrando datos locales</div>' +
     '<div class="diag-section"><div class="diag-title">Estado de conexiones</div>' +
-    '<div class="diag-row"><span class="status-dot err"></span><span>Runtime</span><span class="diag-val">' + msg + '</span></div>' +
+    '<div class="diag-row"><span class="status-dot err"></span><span>Motor de VANOVA</span><span class="diag-val">' + msg + '</span></div>' +
     '</div>' +
     '<div class="diag-section"><div class="diag-title">Diagnóstico del sistema</div>' +
-    '<div class="diag-sub">Versión — (datos locales — runtime offline)</div>' +
+    '<div class="diag-sub">Versión — (datos locales — motor sin conexión)</div>' +
     '<div class="diag-row" style="margin-top:8px"><span class="status-dot err"></span><span>' + msg + '</span></div>' +
     '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">' +
-    '<button class="btn btn-primary" style="height:30px;font-size:12px" data-act="diag-restart-runtime">Reiniciar runtime</button>' +
+    '<button class="btn btn-primary" style="height:30px;font-size:12px" data-act="diag-restart-runtime">Reiniciar VANOVA</button>' +
     '<button class="btn btn-ghost" style="height:30px;font-size:12px" data-act="diag-refresh">Reintentar</button></div></div>';
 }
 
@@ -5960,7 +5957,7 @@ function viewSettings(){
   const aiExtStatus = (store.aiProvider && store.aiProvider.configured) ? 'connected' : 'available';
   const extensions = [
     {id:'hermes', name:'Hermes Agent', desc:'Orquestador de IA local — coordina agentes y consultas.', ico:'spark', color:'#dc2626', status: hermesOnline ? 'connected' : 'available'},
-    {id:'mcp', name:'MCP Servers', desc:'Herramientas y agentes externos vía Model Context Protocol.', ico:'plug', color:'#8b5cf6', status: store.mcp && store.mcp.connected ? 'connected' : 'available'},
+    {id:'mcp', name:'Herramientas externas', desc:'Herramientas y agentes externos conectados a VANOVA.', ico:'plug', color:'#8b5cf6', status: store.mcp && store.mcp.connected ? 'connected' : 'available'},
     {id:'ai-provider', name:'Proveedor IA (NVIDIA / Ollama)', desc:'Modelos configurados en el runtime local (NVIDIA NIM, Ollama, etc.).', ico:'cpu', color:'#3b82f6', status: aiExtStatus},
   ];
   const extBadge = s => s==='connected' ? '<span class="ext-badge connected">Conectado</span>'
@@ -6190,7 +6187,7 @@ function viewSales(){
   if (total > sales.length) sub += ' Mostrando las ' + sales.length + ' más recientes.';
   if (summary.revenue != null) sub = 'Ingresos €' + Number(summary.revenue).toFixed(2) + ' · ' + sub;
   if (store.shopifySync && store.shopifySync.lastSync) {
-    sub += ' · Sync Shopify: ' + String(store.shopifySync.lastSync).slice(0, 16).replace('T', ' ');
+    sub += ' · Última actualización de la tienda: ' + String(store.shopifySync.lastSync).slice(0, 16).replace('T', ' ');
   }
   return genericTable('Ventas', sub, ['Pedido','Cliente','Total','Fecha','Estado'], rows);
 }
@@ -6284,7 +6281,7 @@ function viewReconcile(){
   const rec = store.reconciliation || null;
   if (!rec && ds && ds.getProductReconciliation) {
     ds.getProductReconciliation().then(function(r){ if (r && r.ok) { store.reconciliation = r; if (state.view === 'reconcile') render(); } });
-    return `<div class="page"><div class="page-head"><div class="page-title">Reconciliación de productos</div><div class="page-sub">Cargando…</div></div></div>`;
+    return `<div class="page"><div class="page-head"><div class="page-title">Vincula tus productos</div><div class="page-sub">Cargando…</div></div></div>`;
   }
   if (!rec) return noData('Reconciliación','Conciliación de identidad de producto.','Productos de venta con el catálogo','products');
   const s = rec.summary || {};
@@ -6364,7 +6361,7 @@ function viewReconcile(){
   const ignored = (rec.items || []).filter(function(x){ return x.status === 'IGNORED'; });
   return `<div class="page">
     <div class="page-head">
-      <div class="page-title">${ic('link')} Reconciliación de productos</div>
+      <div class="page-title">${ic('link')} Vincula tus productos</div>
       <div class="page-sub">Víncula los productos que vendes (Shopify) con el catálogo. El match manual es una relación de identidad verificada: no modifica el SKU de venta ni el producto del catálogo. Cobertura actual: <b>${s.coveragePct}%</b> (${s.matched} de ${s.shopifySkuCount} SKUs de venta).</div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-ghost" data-act="recon-refresh">${ic('refresh')} Recalcular</button>
@@ -6834,7 +6831,7 @@ function viewIntegrations(){
     {id:'drive', name:'Google Drive', desc:'Documentos y hojas de cálculo compartidos en la nube.', ico:'cloud', color:'#4285f4', status: isApiIntegrationConnected('drive') ? 'connected':'pending', url: (store.drive && store.drive.url) || ''},
     {id:'shopify', name:'Shopify', desc:'Tienda online — pedidos, productos, clientes y analytics.', ico:'sales', color:'#96bf48', status: isApiIntegrationConnected('shopify') ? 'connected':'pending', url: (store.shopify && store.shopify.url) || '', syncAt: (store.shopifySync && store.shopifySync.lastSync) || ''},
     {id:'erp', name:'ERP / SAP', desc:'Sistema de planificación — pedidos, stock, contabilidad y RRHH.', ico:'factory', color:'#f59e0b', status: isApiIntegrationConnected('erp') ? 'connected':'pending', url: (store.erp && store.erp.url) || ''},
-    {id:'mcp', name:'MCP Servers', desc:'Herramientas y agentes externos conectados vía MCP.', ico:'plug', color:'#8b5cf6', status: isApiIntegrationConnected('mcp') ? 'connected':'pending'},
+    {id:'mcp', name:'Herramientas externas', desc:'Herramientas y agentes externos conectados a VANOVA.', ico:'plug', color:'#8b5cf6', status: isApiIntegrationConnected('mcp') ? 'connected':'pending'},
     {id:'email', name:'Email / WhatsApp', desc:'Correo y mensajería — facturas, pedidos y comunicación.', ico:'send', color:'#10b981', status: isApiIntegrationConnected('email') ? 'connected':'pending'},
     {id:'instagram', name:'Instagram', desc:'Redes sociales — contenido, engagement y tendencias.', ico:'megaphone', color:'#e1306c', status: isApiIntegrationConnected('instagram') ? 'connected':'pending'},
   ];
@@ -7991,7 +7988,7 @@ function onAppClick(e){
         toast('Sincronizando Shopify…');
         if (ds && ds.syncShopifyNow) {
           ds.syncShopifyNow().then(r=>{
-            if (r && r.ok !== false) { toast('Sync Shopify completada.'); loadAppData().then(()=>render()); }
+            if (r && r.ok !== false) { toast('Tienda online actualizada.'); loadAppData().then(()=>render()); }
             else toast((r && r.error) || 'No se pudo sincronizar Shopify.', true);
           });
         }
@@ -8043,7 +8040,7 @@ function onAppClick(e){
         }
       }
       else if(a==='int-mcp'){
-        appModalOpen('MCP Servers', 'Los MCP servers requieren configurarse a nivel del Connector/Hermes en el PC del propietario. Desde aquí se muestran cuando están conectados.', false);
+        appModalOpen('Herramientas externas', 'Las herramientas externas (agentes, conexiones) requieren configurarse en el equipo donde está instalado VANOVA. Desde aquí se muestran cuando están conectadas.', false);
       }
       else if(a==='int-email'){
         appModalOpen('Email / WhatsApp', 'Conecta tu correo o WhatsApp en el PC del propietario. VANOVA detectará facturas, pedidos y comunicación. Esta integración requiere configuración del Connector.', false);
@@ -8138,7 +8135,7 @@ function onAppClick(e){
             refreshHermesSettingsUI();
             refreshAiProviderPanel();
             if (state.view !== 'settings') loadAppData().then(()=>render());
-          }).catch(()=>toast('Runtime no disponible — usa Reiniciar runtime en Diagnóstico'));
+          }).catch(()=>toast('VANOVA no disponible — usa Reiniciar VANOVA en Diagnóstico'));
         } else {
           toast('Runtime no disponible — puerto 8765');
         }
@@ -8395,8 +8392,8 @@ const SETUP_PHASES = [
   {id:'welcome',  label:'Bienvenida', title:'Bienvenido a VANOVA', sub:'Tu sistema operativo de IA para la empresa. Te guiamos en unos minutos.'},
   {id:'company',  label:'Empresa',    title:'¿Qué empresa estás configurando?', sub:'Contamos con plantillas para MOOVING PAPER y BlisArtPaper. O configura la tuya.'},
   {id:'people',   label:'Contacto',   title:'Sobre ti', sub:'Quién eres y tu rol — esto personaliza el dashboard.'},
-  {id:'sources',  label:'Fuentes',    title:'Conecta tus fuentes de datos', sub:'Archivos, MCP, ERP, tienda... Todo lo que alimenta a VANOVA.'},
-  {id:'hermes',   label:'Hermes',     title:'Orquestador de IA', sub:'VANOVA usa Hermes como cerebro. Detectamos tu instalación.'},
+  {id:'sources',  label:'Fuentes',    title:'Conecta tus fuentes de datos', sub:'Archivos, herramientas externas, tu programa de gestión (ERP), tienda... Todo lo que alimenta a VANOVA.'},
+  {id:'hermes',   label:'Hermes',     title:'Asistente de IA de VANOVA', sub:'VANOVA usa un asistente de IA como cerebro para analizar tus datos. Detectamos su instalación.'},
   {id:'autonomy', label:'Autonomía',  title:'Nivel de autonomía', sub:'Define cuánto puede hacer VANOVA sin tu confirmación.'},
   {id:'review',   label:'Resumen',    title:'Revisa y listo', sub:'Confirma que todo está correcto para terminar.'}
 ];
@@ -8455,7 +8452,7 @@ function renderSetupPhase(){
     html = `<div style="text-align:center;padding:8px 0">
       <p style="font-size:15px;color:var(--text-2);max-width:480px;margin:0 auto;line-height:1.6">VANOVA convierte los datos de tu empresa en decisiones. Primero conéctalos.</p>
       <div class="s-opt-grid" style="grid-template-columns:1fr 1fr;max-width:560px;margin:22px auto 0">
-        <div class="s-opt s-welcome-card" data-act="sw-go" data-target="sources" style="cursor:pointer;text-align:center;padding:22px 14px"><div class="sw-icon">${ic('plug')}</div><div class="s-ot">Fuentes</div><div class="s-od">Archivos, MCP, ERP, tienda</div><div class="sw-go">Conectar →</div></div>
+        <div class="s-opt s-welcome-card" data-act="sw-go" data-target="sources" style="cursor:pointer;text-align:center;padding:22px 14px"><div class="sw-icon">${ic('plug')}</div><div class="s-ot">Fuentes</div><div class="s-od">Archivos, herramientas externas, tu gestión, tienda</div><div class="sw-go">Conectar →</div></div>
         <div class="s-opt s-welcome-card" data-act="sw-go" data-target="hermes" style="cursor:pointer;text-align:center;padding:22px 14px"><div class="sw-icon">${ic('robot')}</div><div class="s-ot">Hermes</div><div class="s-od">El cerebro que analiza</div><div class="sw-go">Configurar →</div></div>
         <div class="s-opt s-welcome-card" data-act="sw-go" data-target="review" style="cursor:pointer;text-align:center;padding:22px 14px"><div class="sw-icon">${ic('chart')}</div><div class="s-ot">Insights</div><div class="s-od">Decisiones accionables</div><div class="sw-go">Ver →</div></div>
         <div class="s-opt s-welcome-card" data-act="sw-go" data-target="review" style="cursor:pointer;text-align:center;padding:22px 14px"><div class="sw-icon">${ic('zap')}</div><div class="s-ot">Agentes</div><div class="s-od">Automatizan tu negocio</div><div class="sw-go">Ver →</div></div>
@@ -8488,7 +8485,7 @@ function renderSetupPhase(){
       <div class="s-hint" style="font-size:12px;color:var(--text-3);margin-top:6px">Indica la carpeta donde están los archivos de tu negocio (Excel, PDF, CSV...). Si la dejas vacía, VANOVA escaneará tus carpetas habituales (Documentos, Descargas, Escritorio). Es más rápido y preciso si indicas la carpeta correcta.</div>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      ${sConn('mcp','MCP Servers','Conecta herramientas externas vía MCP','layers', setupData.sources.mcp?'ok':'', setupData.sources.mcp)}
+      ${sConn('mcp','Herramientas externas','Conecta herramientas y agentes externos que ayudan a VANOVA','layers', setupData.sources.mcp?'ok':'', setupData.sources.mcp)}
       ${sConn('files','Archivos del PC','Excel, CSV, PDF en tu disco','file', 'ok', true)}
       ${sConn('shopify','Tienda online','Shopify — pedidos, productos, clientes','box', '', setupData.sources.shopify)}
       ${sConn('erp','ERP / SAP','Planificación, stock y contabilidad','factory', '', setupData.sources.erp)}
@@ -8917,7 +8914,7 @@ function renderTaskDetail(firstLoad){
         kvItem('Tipo', escapeHtml(t.type || '—')) +
         kvItem('Progreso', progress + '%') +
       '</div>' +
-      '<div class="task-section-title">Payload (lo que pidió el usuario)</div>' +
+      '<div class="task-section-title">Instrucción (lo que pidió el usuario)</div>' +
       '<div class="task-raw">' + escapeHtml(payload) + '</div>' +
       (result ? '<div class="task-section-title">Resultado</div><div class="task-raw report-raw">' + formatAgentReport(result) + '</div>' : '') +
       (error ? '<div class="task-section-title" style="color:var(--danger)">Error</div><div class="task-raw" style="color:var(--danger)">' + escapeHtml(error) + '</div>' : '') +

@@ -112,7 +112,9 @@ class CommerceLiveSyncContractTests(unittest.TestCase):
         self.assertIn("dataQualityHTML", html)
         self.assertIn("Calidad de datos", html)
         self.assertIn("function viewReconcile", html)
-        self.assertIn("Reconciliación de productos", html)
+        # COPY (Nico, 2026-08-23): "Reconciliación de productos" → "Vincula tus productos"
+        # (lenguaje empresarial llano para no-técnicos).
+        self.assertIn("Vincula tus productos", html)
         self.assertIn("data-act=\"recon-save\"", html)
         self.assertIn("data-act=\"prod-recon\"", html)
 
@@ -276,6 +278,45 @@ class NotificationsBadgeRefreshContractTests(unittest.TestCase):
         reject_block = html.split("DataServices.decide(card.dataset.did,'reject')")[1].split("const pcard")[0]
         self.assertIn("loadAppData().then", reject_block)
         self.assertIn("updateBellBadge();", reject_block)
+
+
+class NonTechnicalCopyTests(unittest.TestCase):
+    """UX/usabilidad para no-técnicos (Nico): la UI debe usar lenguaje
+    empresarial llano en español, no jerga técnica. Root cause = jerga técnica
+    (Runtime, Cloud, MCP, Payload, Sync) confundía a un empresario normal.
+
+    Falla con el código anterior (la jerga técnica estaba en la UI visible).
+    """
+
+    def test_jerga_tecnica_eliminada_de_la_ui(self):
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # Jerga técnica que no debe aparecer en la UI visible al usuario.
+        for jargon in [
+            ">Runtime<",
+            ">Cloud<",
+            ">Connector<",
+            ">MCP Servers<",
+            "Reiniciar runtime",
+            "Sync Shopify",
+            "Reconciliación de productos",
+            ">Payload<",
+        ]:
+            self.assertNotIn(jargon, html, f"jerga técnica visible en UI: {jargon}")
+
+    def test_textos_empresariales_presentes(self):
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # Los textos en lenguaje empresarial llano deben estar presentes.
+        for good in [
+            "Motor de VANOVA",
+            "Nube de VANOVA",
+            "Conexión",
+            "Herramientas externas",
+            "Vincula tus productos",
+            "Reiniciar VANOVA",
+            "Última actualización de la tienda",
+            "Instrucción (lo que pidió el usuario)",
+        ]:
+            self.assertIn(good, html, f"texto empresarial ausente en UI: {good}")
 
 
 class HermesContextSalesSummaryTests(unittest.TestCase):
