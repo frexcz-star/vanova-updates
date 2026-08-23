@@ -6879,11 +6879,18 @@ function updateBellBadge(){
   if (!bell) return;
   const badge = bell.querySelector('.badge');
   if (!badge) return;
-  // VANOVA 3.0.1 — el badge de la campana solo refleja lo NUEVO sin leer:
-  // aprobaciones pendientes + hallazgos del motor (kind === 'finding') en
-  // estado "new" posteriores a notifSeenAt. Los informes de rutina de agentes
-  // NO cuentan: son actividad técnica, tienen su propio feed y nunca deben
-  // generar una notificación fantasma al arrancar.
+  // VANOVA 3.0.1 / BUG-036 — el badge de la campana debe reflejar lo MISMO que
+  // muestra el drawer de notificaciones (buildNotificationsBody): aprobaciones
+  // pendientes (guardrails), riesgos (priorities type=risk), decisiones y
+  // archivos sugeridos. Antes contaba store.pendingApprovals (approval_store),
+  // que es un sistema DISTINTO al que el drawer pinta (guardrails) -> el badge
+  // y el contenido del drawer divergían (contador "mal" o "no se actualiza").
+  const gr = (store.guardrails || []).length;
+  const risks = (store.priorities || []).filter(function(p){ return p.type === 'risk'; }).length;
+  const decisions = (store.decisions || []).length;
+  const files = (store.fileCandidates || []).length;
+  // newInsights: hallazgos nuevos del motor posteriores a notifSeenAt (solo
+  // los que el usuario no ha leído aún; al abrir el drawer se marcan vistos).
   const seen = store.uiPrefs && store.uiPrefs.notifSeenAt ? new Date(store.uiPrefs.notifSeenAt).getTime() : 0;
   const now = Date.now();
   const newInsights = (store.insights || []).filter(function(i){
@@ -6891,7 +6898,7 @@ function updateBellBadge(){
     const t = i.createdAt ? new Date(i.createdAt).getTime() : 0;
     return !isNaN(t) && t > seen && t <= now;
   }).length;
-  const pending = (store.pendingApprovals||[]).length + newInsights;
+  const pending = gr + risks + decisions + files + newInsights;
   badge.style.opacity = pending > 0 ? '1' : '0';
   badge.textContent = pending > 0 ? String(pending) : '';
 }
