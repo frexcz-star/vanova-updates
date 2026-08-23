@@ -526,52 +526,67 @@ def detect_products(prod: list[dict[str, Any]], quality: dict[str, Any], period:
     if with_rev:
         top_prod = max(with_rev, key=lambda i: i["revenueShare"])
         if top_prod["revenueShare"] >= PRODUCT_CONCENTRATION_SHARE and top_prod["revenue"] >= PRODUCT_CONCENTRATION_MIN_REVENUE:
-            def _prod_change(item: dict[str, Any]) -> float | None:
-                if item.get("revenuePrev30d"):
-                    return (item.get("revenue30d", 0.0) - item["revenuePrev30d"]) / item["revenuePrev30d"]
-                return None
+            # CALIDAD DE DATOS (Nico): si el producto top NO tiene ventas
+            # recientes (obsoleto / fuera de catálogo / edición del año pasado),
+            # la 'dependencia de un solo producto' NO es una oportunidad real:
+            # concentra revenue histórico de algo que ya no se vende. Aplicando
+            # la regla de honestidad (UNKNOWN ≠ 0), NO se emite la señal como
+            # accionable para no crear una oportunidad falsa. Se detecta con
+            # revenue30d == 0 (sin ventas en los últimos 30 días).
+            recents = top_prod.get("revenue30d")
+            recent_units = top_prod.get("units30d")
+            is_active = (
+                isinstance(recents, (int, float)) and recents > 0
+            ) or (
+                isinstance(recent_units, (int, float)) and recent_units > 0
+            )
+            if is_active:
+                def _prod_change(item: dict[str, Any]) -> float | None:
+                    if item.get("revenuePrev30d"):
+                        return (item.get("revenue30d", 0.0) - item["revenuePrev30d"]) / item["revenuePrev30d"]
+                    return None
 
-            top_change = _prod_change(top_prod)
-            candidates = [
-                i for i in with_rev
-                if i["sku"] != top_prod["sku"]
-                and i["revenue30d"] >= top_prod["revenue30d"] * 0.05
-                and (_prod_change(i) or 0.0) >= 0.0
-            ]
-            candidates.sort(key=lambda i: i["revenue"], reverse=True)
-            declining = top_change is not None and top_change <= -CHANGE_PCT
-            findings.append(make_finding(
-                finding_type="product_concentration",
-                severity="high" if declining else "medium",
-                category="opportunity",
-                title=f"Dependencia de un solo producto: {top_prod['sku']}",
-                observation=(
-                    f"El producto {top_prod['sku']} concentra el {round(top_prod['revenueShare']*100,1)}% del revenue "
-                    f"({top_prod['revenue']:.2f}€). "
-                    + (
-                        f"Además, su revenue cae {round(top_change*100,1)}% en 30d — el riesgo se está materializando."
+                top_change = _prod_change(top_prod)
+                candidates = [
+                    i for i in with_rev
+                    if i["sku"] != top_prod["sku"]
+                    and i["revenue30d"] >= top_prod["revenue30d"] * 0.05
+                    and (_prod_change(i) or 0.0) >= 0.0
+                ]
+                candidates.sort(key=lambda i: i["revenue"], reverse=True)
+                declining = top_change is not None and top_change <= -CHANGE_PCT
+                findings.append(make_finding(
+                    finding_type="product_concentration",
+                    severity="high" if declining else "medium",
+                    category="opportunity",
+                    title=f"Dependencia de un solo producto: {top_prod['sku']}",
+                    observation=(
+                        f"El producto {top_prod['sku']} concentra el {round(top_prod['revenueShare']*100,1)}% del revenue "
+                        f"({top_prod['revenue']:.2f}€). "
+                        + (
+                            f"Además, su revenue cae {round(top_change*100,1)}% en 30d — el riesgo se está materializando."
+                            if declining
+                            else "Si pierde demanda, una parte importante de los ingresos queda expuesta."
+                        )
+                    ),
+                    evidence=[
+                        f"Revenue {top_prod['revenue']:.2f}€ = {round(top_prod['revenueShare']*100,1)}% del total",
+                    ] + (
+                        [f"Sustitutos con crecimiento compatible: {', '.join(i['sku'] for i in candidates[:3])}"]
+                        if candidates
+                        else ["Sin sustitutos con crecimiento compatible en el catálogo todavía"]
+                    ),
+                    metrics={"sku": top_prod["sku"], "revenue": top_prod["revenue"], "revenueShare": top_prod["revenueShare"], "changePct": round(top_change * 100, 1) if top_change is not None else None, "diversifiers": [i["sku"] for i in candidates[:3]]},
+                    period={"current": period["current30d"], "previous": period["previous30d"]},
+                    source=["sales_line_items"],
+                    confidence="high",
+                    estimated_impact={"kind": "estimated", "explanation": "Diversificar la base de revenue reduce el riesgo de dependencia", "revenueAtRisk": round(top_prod["revenue"], 2)},
+                    recommended_action=(
+                        "El producto dominante está cayendo: investiga la causa y acelera la diversificación del catálogo."
                         if declining
-                        else "Si pierde demanda, una parte importante de los ingresos queda expuesta."
-                    )
-                ),
-                evidence=[
-                    f"Revenue {top_prod['revenue']:.2f}€ = {round(top_prod['revenueShare']*100,1)}% del total",
-                ] + (
-                    [f"Sustitutos con crecimiento compatible: {', '.join(i['sku'] for i in candidates[:3])}"]
-                    if candidates
-                    else ["Sin sustitutos con crecimiento compatible en el catálogo todavía"]
-                ),
-                metrics={"sku": top_prod["sku"], "revenue": top_prod["revenue"], "revenueShare": top_prod["revenueShare"], "changePct": round(top_change * 100, 1) if top_change is not None else None, "diversifiers": [i["sku"] for i in candidates[:3]]},
-                period={"current": period["current30d"], "previous": period["previous30d"]},
-                source=["sales_line_items"],
-                confidence="high",
-                estimated_impact={"kind": "estimated", "explanation": "Diversificar la base de revenue reduce el riesgo de dependencia", "revenueAtRisk": round(top_prod["revenue"], 2)},
-                recommended_action=(
-                    "El producto dominante está cayendo: investiga la causa y acelera la diversificación del catálogo."
-                    if declining
-                    else "Prioriza la diversificación: impulsa los sustitutos con crecimiento compatible antes de que el producto dominante pierda demanda."
-                ),
-            ))
+                        else "Prioriza la diversificación: impulsa los sustitutos con crecimiento compatible antes de que el producto dominante pierda demanda."
+                    ),
+                ))
 
     # FASE B (anti-inundación): "alto margen pero poco revenue" es ubicuo en
     # catálogos con cola larga (Zipf): casi todo producto de la cola tiene share
