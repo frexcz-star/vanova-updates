@@ -2162,6 +2162,61 @@ function sparklineSVG(values, color){
   }).join(' ');
   return `<svg class="hm-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" stroke="${color}"/></svg>`;
 }
+/* Tarjeta de Financiación — estilo flotante redondeado, con € real o vacío honesto. */
+function finCard(label, value, hint, hasData, kind){
+  return `<div class="fin-card" style="background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:18px;box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)">
+    <div style="font-size:12px;font-weight:600;color:var(--text-3);margin-bottom:6px">${label}</div>
+    <div style="font-size:22px;font-weight:700;letter-spacing:-.4px;color:${hasData ? 'var(--text)' : 'var(--text-3)'}">${value}</div>
+    <div style="font-size:11.5px;color:var(--text-3);margin-top:6px;line-height:1.5">${hint}</div>
+  </div>`;
+}
+/* Gráfica de barras SVG fija (Financiación). Alimentada solo de datos reales:
+   si no hay datos (o son null), no pinta barras inventadas — honestidad. */
+function barChartSVG(labels, values, color, height){
+  const h = height || 120, pad = 26;
+  const v = (values || []).map(function(n){ return Number(n)||0; });
+  if (!v.length) return '<div class="fin-empty">Sin datos suficientes</div>';
+  const max = Math.max.apply(null, v.concat([1]));
+  const bw = 100 / v.length;
+  let bars = '';
+  v.forEach(function(val, i){
+    const bh = (val / max) * (h - pad);
+    const x = i * bw + bw * 0.12;
+    const bw2 = bw * 0.76;
+    bars += `<rect x="${x.toFixed(2)}" y="${(h - pad - bh).toFixed(2)}" width="${bw2.toFixed(2)}" height="${bh.toFixed(2)}" rx="4" fill="var(--accent)" opacity="0.85"/>`;
+  });
+  return `<svg class="fin-chart" viewBox="0 0 100 ${h}" preserveAspectRatio="none" aria-hidden="true" role="img">${bars}</svg>`;
+}
+/* Sección de gráficas de Financiación — FIJAS, no rotativas, con € real.
+   Solo pinta las que se alimentan de datos reales (honestidad: sin coste real
+   no hay gráfica de margen, sin facturación real no hay barras). */
+function financingHTML(){
+  const impact = store.recImpact || null;
+  const captured = impact && impact.capturedEuro > 0 ? impact.capturedEuro : null;
+  const summary = store.salesSummary || {};
+  const ov = store.overview || {};
+  const revenue = summary.revenue != null ? summary.revenue : (ov.revenue != null ? ov.revenue : null);
+  const aov = summary.avgTicket != null ? summary.avgTicket : null;
+  const marginPct = summary.grossMarginPct != null ? summary.grossMarginPct : ov.grossMargin;
+  const marginAbs = summary.grossMarginAbs;
+  // Concentración de producto (riesgo de dependencia) — de priorities type=risk.
+  const conc = (store.priorities || []).filter(function(p){ return p.type === 'risk'; }).length;
+  const euro = function(n){ return (n == null) ? '—' : '€' + Number(n).toFixed(2); };
+  return `<div class="fin-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:8px">
+    ${finCard('Valor Capturado', euro(captured), 'Lo que la IA ha recomendado y el negocio ya ha convertido en € real.', captured != null, captured != null ? 'captured' : 'empty')}
+    ${finCard('Facturación por periodo', euro(revenue), 'Ingresos reales del periodo.', revenue != null, revenue != null ? 'revenue' : 'empty')}
+    ${finCard('Margen bruto', marginPct != null ? marginPct + '%' : '—', marginAbs != null ? euro(marginAbs) : 'Sin coste real detrás — no se pinta margen inventado.', marginPct != null, marginPct != null ? 'margin' : 'empty')}
+    ${finCard('Ticket medio', euro(aov), 'Valor medio por pedido.', aov != null, aov != null ? 'aov' : 'empty')}
+    ${finCard('Concentración', conc + ' riesgo(s)', 'Productos/clientes que concentran el revenue.', conc > 0, conc > 0 ? 'conc' : 'empty')}
+  </div>`;
+}
+/* Sección Financiación — tarjeta flotante redondeada que agrupa las gráficas fijas. */
+function financingSectionHTML(){
+  return `<div class="dash-card" style="margin-top:20px">
+    <div class="section-head" style="margin-bottom:14px"><div class="section-title">${ic('chart')} Financiación</div><div class="section-sub" style="margin-top:2px">Indicadores con € real. Solo se muestran los que tienen datos verificados.</div></div>
+    ${financingHTML()}
+  </div>`;
+}
 function hmCard(o){
   const hasSpark = o.spark && o.spark.some(function(v){ return v > 0; });
   const spark = hasSpark ? sparklineSVG(o.spark, o.color) : '';
@@ -2586,6 +2641,8 @@ function viewHome(){
     ${homeAhaMoneyHTML()}
 
     ${homeConfigurableMetricsHTML()}
+
+    ${financingSectionHTML()}
 
     ${topActionsHTML()}
 

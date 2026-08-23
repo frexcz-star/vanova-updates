@@ -341,6 +341,31 @@ class FloatingRoundedCardsStyleTests(unittest.TestCase):
         self.assertIn("border-radius:var(--radius-xl)", html, "las tarjetas no usan radio amplio")
 
 
+class FinancingSectionTests(unittest.TestCase):
+    """Sección de gráficas de Financiación (Nico/Strati). FIJAS, no rotativas,
+    con € real. Solo se pintan indicadores con datos verificados (honestidad:
+    sin coste real no se pinta margen inventado, sin facturación no hay barras).
+    Prioriza Valor Capturado (defiende el precio).
+
+    Falla con el código anterior (la sección de Financiación no existía).
+    """
+
+    def test_seccion_financiacion_existe_y_usa_datos_reales(self):
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # La sección de Financiación debe existir y estar en la home.
+        self.assertIn("function financingHTML", html, "financingHTML ausente")
+        self.assertIn("function financingSectionHTML", html, "sección Financiación ausente")
+        self.assertIn("financingSectionHTML()", html, "sección no insertada en la home")
+        # Fija, no rotativa: gráficas de € real.
+        self.assertIn("Valor Capturado", html, "Valor Capturado ausente (prioridad)")
+        self.assertIn("Facturación por periodo", html)
+        # Honestidad: si no hay datos, muestra vacío, no inventa.
+        self.assertIn("Sin datos suficientes", html)
+        self.assertIn("Sin coste real detrás", html)
+        # Estilo flotante redondeado coherente.
+        self.assertIn("border-radius:var(--radius-xl)", html)
+
+
 class HermesContextSalesSummaryTests(unittest.TestCase):
     """FASE 10 (H19): el contexto operacional debe incluir los agregados de
     ventas (revenue total, ticket medio, evolución mensual) para que Hermes
