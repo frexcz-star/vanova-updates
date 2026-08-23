@@ -4181,13 +4181,16 @@ async function pollLiveTaskState(){
     const userTasks = ts.userTasks || ts.tasks || [];
     const internalTasks = ts.internalTasks || [];
     const insights = ds.loadInsights ? await ds.loadInsights() : store.insights;
+    const approvals = ds.loadApprovals ? await ds.loadApprovals() : store.pendingApprovals;
     const hermesActivity = ds.getHermesActivity ? await ds.getHermesActivity() : store.hermesActivity;
     const cc = ds.loadCommandCenter ? await ds.loadCommandCenter() : store.commandCenter;
     const nextInsights = Array.isArray(insights) ? insights : store.insights;
+    const nextApprovals = Array.isArray(approvals) ? approvals : store.pendingApprovals;
     const signature = JSON.stringify({
       tasks: userTasks.map(function(t){ return [t.id,t.status,t.progress,t.updatedAt,t.completedAt,t.result,t.error]; }),
       internal: internalTasks.map(function(t){ return [t.id,t.status,t.progress,t.updatedAt,t.completedAt,t.result,t.error]; }),
       insights: (nextInsights || []).map(function(i){ return [i.id,i.createdAt,i.updatedAt,i.status,i.summary]; }),
+      approvals: (nextApprovals || []).map(function(a){ return [a.id,a.status,a.updatedAt]; }),
       current: hermesActivity && hermesActivity.current,
       queue: cc && cc.runningNow
     });
@@ -4196,6 +4199,7 @@ async function pollLiveTaskState(){
     store.tasks = userTasks;
     store.internalTasks = internalTasks;
     store.insights = nextInsights || [];
+    store.pendingApprovals = nextApprovals || [];
     if (hermesActivity) store.hermesActivity = hermesActivity;
     if (cc) store.commandCenter = cc;
     // VANOVA PRODUCT 8 — prioridades REALES del motor (findings activos con
