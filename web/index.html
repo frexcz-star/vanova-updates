@@ -6945,7 +6945,7 @@ function guardrailNotifCard(g){
 function buildNotificationsBody(){
   const gr = store.guardrails || [];
   const n = store.priorities.filter(p=>p.type==='risk').length;
-  const d = store.decisions.length;
+  const d = (store.decisions || []).filter(function(dc){ return (dc.status||'pending') === 'pending'; }).length;
   const candCount = (store.fileCandidates||[]).length;
   const parts = [];
   if (candCount>0) parts.push(`<div class="drawer-sec"><div class="ds-label" style="color:var(--accent)">Archivos sugeridos</div><div class="ds-val muted">Hermes encontró ${candCount} archivo(s) que podrían ser de tu empresa · <button class="btn btn-ghost" style="height:26px;font-size:11px;padding:0 8px;margin-top:6px" data-act="notif-go-files">Revisar</button></div></div>`);
@@ -6976,7 +6976,7 @@ function updateBellBadge(){
   // y el contenido del drawer divergían (contador "mal" o "no se actualiza").
   const gr = (store.guardrails || []).length;
   const risks = (store.priorities || []).filter(function(p){ return p.type === 'risk'; }).length;
-  const decisions = (store.decisions || []).length;
+  const decisions = (store.decisions || []).filter(function(dc){ return (dc.status||'pending') === 'pending'; }).length;
   const files = (store.fileCandidates || []).length;
   // BUG-036 (no duplicar findings): los insights kind='finding' del motor se
   // convierten en priorities type='risk' (prioritization.build_priorities) que

@@ -200,7 +200,9 @@ class NotificationsBadgeRefreshContractTests(unittest.TestCase):
         # (que el drawer lista como "Riesgos detectados").
         self.assertIn("const gr = (store.guardrails || []).length;", html)
         self.assertIn("const risks = (store.priorities || []).filter(function(p){ return p.type === 'risk'; }).length;", html)
-        self.assertIn("const decisions = (store.decisions || []).length;", html)
+        # BUG-047 (causa raíz contador): decisions ahora cuentan SOLO las pendientes
+        # (status='pending'), no todas (aprobadas/rechazadas/resueltas).
+        self.assertIn("store.decisions || []).filter(function(dc){ return (dc.status||'pending') === 'pending'; }).length;", html)
         self.assertIn("const files = (store.fileCandidates || []).length;", html)
         self.assertIn("const pending = gr + risks + decisions + files;", html)
         # No debe sumar newInsights en el cálculo del badge (evita duplicar findings).

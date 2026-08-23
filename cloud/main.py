@@ -412,7 +412,24 @@ class CloudDataSource(DataSource):
         ).fetchone()
         conn.close()
         if row:
-            return json.loads(row["data"])
+            data = json.loads(row["data"])
+            # CAUSA RAÍZ CONTADOR (BUG-036 residual): el snapshot del Connector
+            # puede traer decisions=[] aunque haya decisiones reales pendientes
+            # en la tabla 'decisions' del cloud. El badge y el drawer cuentan
+            # store.decisions, que salía siempre vacío -> el contador no
+            # reflejaba las decisiones pendientes reales. Enriquecer con las
+            # decisiones reales del workspace (no solo las del snapshot).
+            try:
+                c2 = get_db()
+                drows = c2.execute(
+                    "SELECT * FROM decisions WHERE workspace_id=? ORDER BY rowid DESC",
+                    (self.workspace_id,),
+                ).fetchall()
+                c2.close()
+                data["decisions"] = [dict(r) for r in drows]
+            except Exception:
+                pass
+            return data
         return {"dataMode": "empty", "overview": {}, "priorities": [], "activity": [], "agents": [], "decisions": [], "sources": []}
 
 
