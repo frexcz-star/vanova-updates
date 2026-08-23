@@ -6894,16 +6894,13 @@ function updateBellBadge(){
   const risks = (store.priorities || []).filter(function(p){ return p.type === 'risk'; }).length;
   const decisions = (store.decisions || []).length;
   const files = (store.fileCandidates || []).length;
-  // newInsights: hallazgos nuevos del motor posteriores a notifSeenAt (solo
-  // los que el usuario no ha leído aún; al abrir el drawer se marcan vistos).
-  const seen = store.uiPrefs && store.uiPrefs.notifSeenAt ? new Date(store.uiPrefs.notifSeenAt).getTime() : 0;
-  const now = Date.now();
-  const newInsights = (store.insights || []).filter(function(i){
-    if (i.kind !== 'finding' || i.status !== 'new') return false;
-    const t = i.createdAt ? new Date(i.createdAt).getTime() : 0;
-    return !isNaN(t) && t > seen && t <= now;
-  }).length;
-  const pending = gr + risks + decisions + files + newInsights;
+  // BUG-036 (no duplicar findings): los insights kind='finding' del motor se
+  // convierten en priorities type='risk' (prioritization.build_priorities) que
+  // el drawer SÍ lista como "Riesgos detectados". Contar además newInsights
+  // (findings kind='finding' status='new') duplicaba cada riesgo en el badge
+  // (badge > drawer). El badge cuenta SOLO lo que el drawer lista, por lo que
+  // newInsights NO se suma: los risks ya los representan.
+  const pending = gr + risks + decisions + files;
   badge.style.opacity = pending > 0 ? '1' : '0';
   badge.textContent = pending > 0 ? String(pending) : '';
 }

@@ -193,12 +193,18 @@ class NotificationsBadgeRefreshContractTests(unittest.TestCase):
     def test_badge_counts_what_drawer_shows(self):
         html = DASHBOARD.read_text(encoding="utf-8")
         # El badge DEBE contar guardrails + risks + decisions + fileCandidates
-        # (lo que buildNotificationsBody muestra), no solo pendingApprovals.
+        # (lo que buildNotificationsBody muestra), y NO duplicar los findings:
+        # los insights kind='finding' ya se representan en priorities type='risk'
+        # (que el drawer lista como "Riesgos detectados").
         self.assertIn("const gr = (store.guardrails || []).length;", html)
         self.assertIn("const risks = (store.priorities || []).filter(function(p){ return p.type === 'risk'; }).length;", html)
         self.assertIn("const decisions = (store.decisions || []).length;", html)
         self.assertIn("const files = (store.fileCandidates || []).length;", html)
-        self.assertIn("const pending = gr + risks + decisions + files + newInsights;", html)
+        self.assertIn("const pending = gr + risks + decisions + files;", html)
+        # No debe sumar newInsights en el cálculo del badge (evita duplicar findings).
+        badge_block = html.split("function updateBellBadge()")[1].split("function openNotificationsDrawer")[0]
+        self.assertNotIn("+ newInsights", badge_block)
+        self.assertNotIn("files + newInsights", badge_block)
 
     def test_badge_refreshes_on_any_render(self):
         html = DASHBOARD.read_text(encoding="utf-8")
