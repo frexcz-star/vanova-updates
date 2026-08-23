@@ -181,6 +181,46 @@ class PreferencesAndInsightContractTests(unittest.TestCase):
 
 
 
+class NotificationsBadgeRefreshContractTests(unittest.TestCase):
+    """BUG-036 — el badge de la campana debe re-calcudarse tras CUALQUIER
+    mutación de notificaciones (render()) y contar lo MISMO que el drawer.
+
+    Falla con el código anterior a 16fa6c8/e59850b:
+    - Antes contaba store.pendingApprovals (no guardrails/risks/decisions/files).
+    - Antes solo se llamaba en loadAppData/drawer/decisión, no al final de render.
+    """
+
+    def test_badge_counts_what_drawer_shows(self):
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # El badge DEBE contar guardrails + risks + decisions + fileCandidates
+        # (lo que buildNotificationsBody muestra), no solo pendingApprovals.
+        self.assertIn("const gr = (store.guardrails || []).length;", html)
+        self.assertIn("const risks = (store.priorities || []).filter(function(p){ return p.type === 'risk'; }).length;", html)
+        self.assertIn("const decisions = (store.decisions || []).length;", html)
+        self.assertIn("const files = (store.fileCandidates || []).length;", html)
+        self.assertIn("const pending = gr + risks + decisions + files + newInsights;", html)
+
+    def test_badge_refreshes_on_any_render(self):
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # updateBellBadge se debe llamar al final de render() (tras la mutación),
+        # además de en loadAppData/poll, para que el badge nunca quede stale tras
+        # una decisión/insight/guardrail/fileCandidate.
+        # Localizar el cuerpo de render() y verificar que termina llamando updateBellBadge.
+        start = html.index("function render(){")
+        end = html.index("/* ---- HOME / COMMAND CENTER ---- */", start)
+        render_body = html[start:end]
+        self.assertIn("updateBellBadge();", render_body)
+        # Debe estar tras el manejo de hermes polling (final del render).
+        self.assertLess(render_body.index("stopHermesActivityPolling"), render_body.index("updateBellBadge();"))
+
+    def test_badge_refreshes_in_live_sync_poll(self):
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # El polling de live sync (pollLiveTaskState) debe recargar approvals e
+        # insights y re-calcular el badge.
+        self.assertIn("ds.loadApprovals", html)
+        self.assertIn("updateBellBadge();", html)
+
+
 class HermesContextSalesSummaryTests(unittest.TestCase):
     """FASE 10 (H19): el contexto operacional debe incluir los agregados de
     ventas (revenue total, ticket medio, evolución mensual) para que Hermes
