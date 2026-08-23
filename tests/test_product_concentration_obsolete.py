@@ -67,6 +67,31 @@ class ProductConcentrationObsoleteTests(unittest.TestCase):
         conc = [f for f in findings if f.get("type") == "product_concentration"]
         self.assertEqual(len(conc), 1, "Debe emitir dependencia para producto activo")
 
+    def test_ventas_ultimos_90d_no_obsoleto(self):
+        """Regla GENÉRICA de 90 días: un producto que vendió en los últimos 90
+        días (aunque no en los últimos 30) NO es obsoleto → SÍ emite la
+        dependencia. Ej.: agendas que se vendieron en el trimestre anterior."""
+        prods = [
+            # Dominante, sin ventas en los últimos 30 días PERO con ventas en los
+            # 60 previos (dentro de la ventana de 90 días) → NO obsoleto
+            _prod("AGENDA-TRIM", 2000.0, 0.60, 0.0, units30d=0.0, revenuePrev30d=300.0, revenuePrev60d=200.0),
+            _prod("AGENDA-NUEVA", 400.0, 0.15, 400.0, units30d=8.0),
+        ]
+        findings = self._detect(prods)
+        conc = [f for f in findings if f.get("type") == "product_concentration"]
+        self.assertEqual(len(conc), 1, "Producto con ventas en los últimos 90d no es obsoleto")
+
+    def test_obsoleto_90d_no_emite(self):
+        """Producto SIN ventas en los últimos 90 días completos → obsoleto → NO
+        emite dependencia (oportunidad falsa)."""
+        prods = [
+            _prod("OBSOLETO-90", 2000.0, 0.60, 0.0, units30d=0.0, revenuePrev30d=0.0, revenuePrev60d=0.0),
+            _prod("ACTIVO-NUEVO", 500.0, 0.15, 500.0, units30d=10.0),
+        ]
+        findings = self._detect(prods)
+        conc = [f for f in findings if f.get("type") == "product_concentration"]
+        self.assertEqual(len(conc), 0, "Sin ventas en 90 días = obsoleto, no emite")
+
 
 if __name__ == "__main__":
     unittest.main()

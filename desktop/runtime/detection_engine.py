@@ -526,20 +526,26 @@ def detect_products(prod: list[dict[str, Any]], quality: dict[str, Any], period:
     if with_rev:
         top_prod = max(with_rev, key=lambda i: i["revenueShare"])
         if top_prod["revenueShare"] >= PRODUCT_CONCENTRATION_SHARE and top_prod["revenue"] >= PRODUCT_CONCENTRATION_MIN_REVENUE:
-            # CALIDAD DE DATOS (Nico): si el producto top NO tiene ventas
-            # recientes (obsoleto / fuera de catálogo / edición del año pasado),
-            # la 'dependencia de un solo producto' NO es una oportunidad real:
-            # concentra revenue histórico de algo que ya no se vende. Aplicando
-            # la regla de honestidad (UNKNOWN ≠ 0), NO se emite la señal como
-            # accionable para no crear una oportunidad falsa. Se detecta con
-            # revenue30d == 0 (sin ventas en los últimos 30 días).
-            recents = top_prod.get("revenue30d")
-            recent_units = top_prod.get("units30d")
-            is_active = (
-                isinstance(recents, (int, float)) and recents > 0
-            ) or (
-                isinstance(recent_units, (int, float)) and recent_units > 0
+            # CALIDAD DE DATOS (Nico, regla GENÉRICA para cualquier negocio):
+            # si el producto top NO tiene ventas en un periodo reciente razonable
+            # (últimos 90 días), NO es una dependencia real / oportunidad
+            # accionable — el producto está obsoleto o fuera de catálogo (edición
+            # del año pasado, línea discontinuada, etc.). Funciona para agendas,
+            # zapatos, software — cualquier catálogo. Se detecta con las señales
+            # de ventas por fecha ya disponibles (revenue30d + revenuePrev30d +
+            # revenuePrev60d = revenue de los últimos 90 días). Regla de
+            # honestidad: sin datos suficientes, no emitir la señal falsa.
+            rev_90d = (
+                (top_prod.get("revenue30d") or 0.0)
+                + (top_prod.get("revenuePrev30d") or 0.0)
+                + (top_prod.get("revenuePrev60d") or 0.0)
             )
+            units_90d = (
+                (top_prod.get("units30d") or 0.0)
+                + (top_prod.get("unitsPrev30d") or 0.0)
+                + (top_prod.get("unitsPrev60d") or 0.0)
+            )
+            is_active = (rev_90d > 0) or (units_90d > 0)
             if is_active:
                 def _prod_change(item: dict[str, Any]) -> float | None:
                     if item.get("revenuePrev30d"):
