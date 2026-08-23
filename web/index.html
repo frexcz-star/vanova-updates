@@ -8277,6 +8277,16 @@ function onAppClick(e){
       else if(a==='notif-go-files'){ closeDrawer(); go('files'); }
       else if(a==='notif-go-insights'){ closeDrawer(); go('insights'); }
       else if(a==='notif-go-decisions'){ closeDrawer(); go('decisions'); }
+      else if(a==='notif-dismiss'){
+        // BUG-036: el boton 'Marcar como leidas' no tenia handler -> no hacia nada.
+        // Marca notifSeenAt (persistente) para ocultar los insights nuevos ya
+        // vistos y re-calcula el badge. Las aprobaciones/decisiones/archivos
+        // pendientes SIGUEN contando (son pendientes reales que requieren
+        // decision), asi badge y drawer siguen coincidiendo.
+        closeDrawer();
+        if (window.persistUiPrefs) persistUiPrefs({ notifSeenAt: new Date().toISOString() });
+        updateBellBadge();
+      }
     }
 }
 function doLogin(){

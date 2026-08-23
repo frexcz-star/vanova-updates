@@ -248,6 +248,20 @@ class NotificationsBadgeRefreshContractTests(unittest.TestCase):
         # Y el badge se re-calcula al final del poll.
         self.assertIn("updateBellBadge();", poll)
 
+    def test_notif_dismiss_boton_tiene_handler(self):
+        """BUG-036: el botón 'Marcar como leídas' (data-act='notif-dismiss') debe
+        tener un handler en el dispatcher que marque notifSeenAt y re-calcule el
+        badge. Falla con el código anterior (el botón no tenía handler -> no
+        hacía nada al pulsarlo, el badge no se aclaraba)."""
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # El botón se define con data-act="notif-dismiss"
+        self.assertIn('data-act="notif-dismiss"', html)
+        # El dispatcher debe manejar notif-dismiss (marcar leídas + re-calcudar badge)
+        self.assertIn("a==='notif-dismiss'", html)
+        # Debe persistir notifSeenAt y re-calcular el badge
+        self.assertIn("persistUiPrefs({ notifSeenAt: new Date().toISOString() })", html)
+        self.assertIn("updateBellBadge();", html)
+
 
 class HermesContextSalesSummaryTests(unittest.TestCase):
     """FASE 10 (H19): el contexto operacional debe incluir los agregados de
