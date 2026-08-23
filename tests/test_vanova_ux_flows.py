@@ -226,6 +226,28 @@ class NotificationsBadgeRefreshContractTests(unittest.TestCase):
         self.assertIn("ds.loadApprovals", html)
         self.assertIn("updateBellBadge();", html)
 
+    def test_live_poll_recarga_guardrails_decisions_candidates(self):
+        """BUG-036 (causa raíz real): el poll de 3s debe recargar guardrails,
+        decisions y fileCandidates (que el badge cuenta), no solo insights y
+        approvals. Sin esto, el badge quedaba stale cuando estas llegaban o
+        desaparecían en el backend (solo se cargaban en loadAppData inicial).
+        Falla con el código anterior a esta corrección (el poll no las recargaba)."""
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # Localizar el cuerpo de pollLiveTaskState
+        start = html.index("async function pollLiveTaskState()")
+        end = html.index("let _liveCommerceSignature = ''", start)
+        poll = html[start:end]
+        # Debe recargar guardrails, fileCandidates y decisions (vía dashboard).
+        self.assertIn("ds.getGuardrails", poll)
+        self.assertIn("ds.loadFileCandidates", poll)
+        self.assertIn("ds.loadDashboard", poll)
+        # Debe actualizar los stores que el badge cuenta.
+        self.assertIn("store.guardrails = nextGuardrails", poll)
+        self.assertIn("store.decisions = nextDecisions", poll)
+        self.assertIn("store.fileCandidates = nextCandidates", poll)
+        # Y el badge se re-calcula al final del poll.
+        self.assertIn("updateBellBadge();", poll)
+
 
 class HermesContextSalesSummaryTests(unittest.TestCase):
     """FASE 10 (H19): el contexto operacional debe incluir los agregados de

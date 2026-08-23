@@ -4189,6 +4189,18 @@ async function pollLiveTaskState(){
     const approvals = ds.loadApprovals ? await ds.loadApprovals() : store.pendingApprovals;
     const hermesActivity = ds.getHermesActivity ? await ds.getHermesActivity() : store.hermesActivity;
     const cc = ds.loadCommandCenter ? await ds.loadCommandCenter() : store.commandCenter;
+    // BUG-036 (fix refresh real): el badge cuenta guardrails + risks + decisions
+    // + fileCandidates, pero el poll solo recargaba insights/approvals/priorities.
+    // guardrails/decisions/fileCandidates solo se cargaban en loadAppData (inicial)
+    // -> el badge quedaba stale cuando llegaban o desaparecían en el backend.
+    // Se recargan aquí también (métodos existentes), incluidas en el signature.
+    const gr = ds.getGuardrails ? await ds.getGuardrails() : store.guardrails;
+    const cand = ds.loadFileCandidates ? await ds.loadFileCandidates() : { files: store.fileCandidates };
+    const dashRes = ds.loadDashboard ? await ds.loadDashboard() : null;
+    const nextGuardrails = Array.isArray(gr) ? gr : store.guardrails;
+    const nextCandidates = Array.isArray(cand && cand.files) ? cand.files : store.fileCandidates;
+    const nextDecisions = (dashRes && dashRes.data && Array.isArray(dashRes.data.decisions))
+      ? dashRes.data.decisions : store.decisions;
     const nextInsights = Array.isArray(insights) ? insights : store.insights;
     const nextApprovals = Array.isArray(approvals) ? approvals : store.pendingApprovals;
     const signature = JSON.stringify({
@@ -4196,6 +4208,9 @@ async function pollLiveTaskState(){
       internal: internalTasks.map(function(t){ return [t.id,t.status,t.progress,t.updatedAt,t.completedAt,t.result,t.error]; }),
       insights: (nextInsights || []).map(function(i){ return [i.id,i.createdAt,i.updatedAt,i.status,i.summary]; }),
       approvals: (nextApprovals || []).map(function(a){ return [a.id,a.status,a.updatedAt]; }),
+      guardrails: (nextGuardrails || []).map(function(g){ return [g.id,g.status,g.updatedAt]; }),
+      decisions: (nextDecisions || []).map(function(dc){ return [dc.id,dc.status,dc.updatedAt]; }),
+      candidates: (nextCandidates || []).map(function(c){ return [c.path,c.status,c.foundAt]; }),
       current: hermesActivity && hermesActivity.current,
       queue: cc && cc.runningNow
     });
@@ -4205,6 +4220,9 @@ async function pollLiveTaskState(){
     store.internalTasks = internalTasks;
     store.insights = nextInsights || [];
     store.pendingApprovals = nextApprovals || [];
+    store.guardrails = nextGuardrails || [];
+    store.decisions = nextDecisions || [];
+    store.fileCandidates = nextCandidates || [];
     if (hermesActivity) store.hermesActivity = hermesActivity;
     if (cc) store.commandCenter = cc;
     // VANOVA PRODUCT 8 — prioridades REALES del motor (findings activos con
