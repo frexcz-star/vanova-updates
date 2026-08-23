@@ -4652,7 +4652,17 @@ function topActionsHTML(){
 // MEGA UPDATE (A8): agrupados por categoría, ORDENADOS por impacto económico,
 // con badge de € visible y expansor "+N más" — sin lista interminable.
 function businessFindingsHTML(){
-  const all = (store.businessFindings || []).filter(function(x){ return x.status !== 'resolved' && x.status !== 'archived'; });
+  // BUG-DUP (Mathew): "Qué hacer hoy" (store.actionPlan) y "Hallazgos del motor"
+  // se alimentan del MISMO endpoint /api/business/findings. El actionPlan es un
+  // subconjunto priorizado (top N por impacto) de los hallazgos. Para no
+  // duplicar, "Hallazgos del motor" EXCLUYE los findings que ya aparecen en
+  // "Qué hacer hoy" (mismo id en store.actionPlan).
+  const planIds = new Set((store.actionPlan || []).map(function(a){ return a.id; }));
+  // BUG-RECON (Mathew): "Reconocer" setea status 'acknowledged' en el backend,
+  // pero el filtro solo excluía 'resolved'/'archived' → el hallazgo reconocido
+  // seguía visible. Ahora también se excluye 'acknowledged' (reconocido = visto
+  // por el usuario, no debe seguir en el motor).
+  const all = (store.businessFindings || []).filter(function(x){ return x.status !== 'resolved' && x.status !== 'archived' && x.status !== 'acknowledged' && !planIds.has(x.id); });
   if (!all.length) return '';
   const groups = [
     { key:'problem', ico:'alert',  label:'Problemas',     color:'#f87171', list: all.filter(function(f){return f.category==='problem';}) },

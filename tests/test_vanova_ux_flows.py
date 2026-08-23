@@ -366,6 +366,26 @@ class FinancingSectionTests(unittest.TestCase):
         self.assertIn("border-radius:var(--radius-xl)", html)
 
 
+class BusinessFindingsDedupAndAckTests(unittest.TestCase):
+    """BUG-DUP y BUG-RECON (Mathew):
+    1. "Qué hacer hoy" (store.actionPlan) y "Hallazgos del motor"
+       (store.businessFindings) se alimentan del MISMO endpoint → duplican.
+       "Hallazgos del motor" debe excluir los del actionPlan.
+    2. "Reconocer" (status=acknowledged) no filtraba el hallazgo → seguía
+       visible. Debe excluirse acknowledged.
+
+    Falla con el código anterior (duplicación + acknowledged visible).
+    """
+
+    def test_hallazgos_excluyen_actionplan_y_acknowledged(self):
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # "Hallazgos del motor" debe excluir los del actionPlan (dedup).
+        self.assertIn("planIds", html, "dedup con actionPlan ausente")
+        self.assertIn("!planIds.has(x.id)", html, "no excluye findings del actionPlan")
+        # "Reconocer" (acknowledged) debe excluirse del motor.
+        self.assertIn("x.status !== 'acknowledged'", html, "acknowledged no se filtra")
+
+
 class HermesContextSalesSummaryTests(unittest.TestCase):
     """FASE 10 (H19): el contexto operacional debe incluir los agregados de
     ventas (revenue total, ticket medio, evolución mensual) para que Hermes
