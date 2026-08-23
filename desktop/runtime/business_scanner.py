@@ -550,42 +550,63 @@ def _scan_files(started: float) -> list[dict[str, Any]]:
 
 
 def _save_scan_files(found: list[dict[str, Any]]) -> None:
-    """Persist scanFiles, preserving manual imports and approved candidates."""
-    existing = config_store.load().get("scanFiles") or []
-    if not isinstance(existing, list):
-        existing = []
-    preserved = [
-        e
-        for e in existing
-        if isinstance(e, dict)
-        and (str(e.get("source") or "") in ("import", "approved") or e.get("userAdded"))
-    ]
-    by_path = {str(e.get("path") or "").lower(): e for e in found}
-    merged = []
-    for e in preserved:
-        if str(e.get("path") or "").lower() not in by_path:
-            merged.append(e)
-    merged.extend(found)
-    config_store.save({"scanFiles": merged})
+    """Persist scanFiles, preserving manual imports and approved candidates.
+
+    BUG-038 (fix): RMW atómico. Antes hacía load() → construir `merged` →
+    config_store.save({"scanFiles": merged}) SOBRESCRIBIENDO la lista completa.
+    Si otro hilo (scan concurrente, import) modificaba scanFiles entre el load y
+    el save, se perdían (lost-update, patrón BUG-006/015/019/023/034/037).
+    """
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        existing = cfg.get("scanFiles") or []
+        if not isinstance(existing, list):
+            existing = []
+        preserved = [
+            e
+            for e in existing
+            if isinstance(e, dict)
+            and (str(e.get("source") or "") in ("import", "approved") or e.get("userAdded"))
+        ]
+        by_path = {str(e.get("path") or "").lower(): e for e in found}
+        merged = []
+        for e in preserved:
+            if str(e.get("path") or "").lower() not in by_path:
+                merged.append(e)
+        merged.extend(found)
+        cfg["scanFiles"] = merged
+        return cfg
+    config_store.update(_mutate)
 
 
 def _save_candidates(candidates: list[dict[str, Any]]) -> None:
-    """Persist pending file candidates (for the approval flow)."""
-    existing = config_store.load().get("fileCandidates") or []
-    if not isinstance(existing, list):
-        existing = []
-    # Fresh candidate list each scan, but never re-surface a path already decided.
-    state_by_path = {str(c.get("path") or "").lower(): c.get("decision") for c in existing if isinstance(c, dict)}
-    merged = []
-    for c in candidates:
-        row = dict(c)
-        decision = state_by_path.get(str(c.get("path") or "").lower())
-        if decision:
-            continue  # already decided (approved/rejected)
-        row["status"] = "pending"
-        row["foundAt"] = _now()
-        merged.append(row)
-    config_store.save({"fileCandidates": merged})
+    """Persist pending file candidates (for the approval flow).
+
+    BUG-038 (fix): RMW atómico. Antes hacía load() → construir `merged` →
+    config_store.save({"fileCandidates": merged}) SOBRESCRIBIENDO la lista
+    completa. Si un `decideFileCandidate` (usuario) o otro scan corría entre el
+    load y el save (ThreadingHTTPServer), la decisión del usuario o los
+    candidatos concurrentes se perdían (lost-update, patrón
+    BUG-006/015/019/023/034/037). Ahora `config_store.update()` hace el RMW
+    dentro del _config_lock.
+    """
+    def _mutate(cfg: dict[str, Any]) -> dict[str, Any]:
+        existing = cfg.get("fileCandidates") or []
+        if not isinstance(existing, list):
+            existing = []
+        # Fresh candidate list each scan, but never re-surface a path already decided.
+        state_by_path = {str(c.get("path") or "").lower(): c.get("decision") for c in existing if isinstance(c, dict)}
+        merged = []
+        for c in candidates:
+            row = dict(c)
+            decision = state_by_path.get(str(c.get("path") or "").lower())
+            if decision:
+                continue  # already decided (approved/rejected)
+            row["status"] = "pending"
+            row["foundAt"] = _now()
+            merged.append(row)
+        cfg["fileCandidates"] = merged
+        return cfg
+    config_store.update(_mutate)
 
 
 def _read_content_snippet(path: Path, ext: str, max_bytes: int = 8192) -> str:
