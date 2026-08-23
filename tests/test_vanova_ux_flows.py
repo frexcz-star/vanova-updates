@@ -262,6 +262,21 @@ class NotificationsBadgeRefreshContractTests(unittest.TestCase):
         self.assertIn("persistUiPrefs({ notifSeenAt: new Date().toISOString() })", html)
         self.assertIn("updateBellBadge();", html)
 
+    def test_decidir_decision_recarga_badge(self):
+        """BUG-036: al aprobar/rechazar una decisión, el badge debe re-calcudarse
+        (recargar decisions + updateBellBadge), no quedarse stale hasta el poll.
+        Falla con el código anterior (los handlers approve/reject solo hacían
+        toast, sin reload ni updateBellBadge)."""
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # El handler approve de decisión debe recargar y re-calcudar el badge.
+        approve_block = html.split("DataServices.decide(card.dataset.did,'approve')")[1].split("const pcard")[0]
+        self.assertIn("loadAppData().then", approve_block)
+        self.assertIn("updateBellBadge();", approve_block)
+        # El handler reject de decisión también.
+        reject_block = html.split("DataServices.decide(card.dataset.did,'reject')")[1].split("const pcard")[0]
+        self.assertIn("loadAppData().then", reject_block)
+        self.assertIn("updateBellBadge();", reject_block)
+
 
 class HermesContextSalesSummaryTests(unittest.TestCase):
     """FASE 10 (H19): el contexto operacional debe incluir los agregados de

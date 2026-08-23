@@ -7747,7 +7747,11 @@ function onAppClick(e){
       if(a==='approve'){
         const card=act.closest('[data-did]');
         if(card && card.dataset.did && window.DataServices){
-          DataServices.decide(card.dataset.did,'approve').then(r=>{ if(r&&r.ok) toast('Decisión aprobada.'); });
+          DataServices.decide(card.dataset.did,'approve').then(r=>{
+            if(r&&r.ok) toast('Decisión aprobada.');
+            // BUG-036: al resolver la decisión, recargar decisions y re-calcudar el badge
+            loadAppData().then(()=>{ render(); updateBellBadge(); });
+          });
         }
         const pcard=act.closest('[data-priority-id]');
         if(pcard && pcard.dataset.priorityId){
@@ -7775,7 +7779,11 @@ function onAppClick(e){
       else if(a==='reject'){
         const card=act.closest('[data-did]');
         if(card && card.dataset.did && window.DataServices){
-          DataServices.decide(card.dataset.did,'reject').then(r=>{ if(r&&r.ok) toast('Decisión rechazada.'); });
+          DataServices.decide(card.dataset.did,'reject').then(r=>{
+            if(r&&r.ok) toast('Decisión rechazada.');
+            // BUG-036: al resolver la decisión, recargar decisions y re-calcudar el badge
+            loadAppData().then(()=>{ render(); updateBellBadge(); });
+          });
         }
         const pcard=act.closest('[data-priority-id]');
         if(pcard && pcard.dataset.priorityId){
