@@ -53,7 +53,9 @@
   --shadow-sm:0 1px 2px rgba(26,26,28,.04);
   --shadow-md:0 4px 20px rgba(26,26,28,.06);
   --shadow-lg:0 12px 40px rgba(26,26,28,.08);
-  --radius-xs:8px; --radius-sm:12px; --radius-md:20px; --radius-lg:28px; --radius-xl:32px; --radius-pill:999px;
+  --shadow-float:0 2px 8px rgba(26,26,28,.05), 0 16px 40px rgba(26,26,28,.09), 0 2px 20px rgba(220,38,38,.03);
+  --shadow-float-hover:0 4px 12px rgba(26,26,28,.07), 0 24px 56px rgba(26,26,28,.12), 0 4px 24px rgba(220,38,38,.05);
+  --radius-xs:8px; --radius-sm:12px; --radius-md:20px; --radius-lg:28px; --radius-xl:36px; --radius-2xl:44px; --radius-pill:999px;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --space-6:32px; --space-7:48px;
   --surface-solid:var(--surface);
   --surface-glass:rgba(255,255,255,.82);
@@ -286,8 +288,8 @@ body.sidebar-collapsed .sp-meta,body.sidebar-collapsed .sp-more{display:none}
 @media(max-width:600px){.g-5,.g-4,.g-3,.g-2{grid-template-columns:1fr}}
 
 /* Metric — calm, not giant KPI */
-.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5);transition:var(--trans);position:relative}
-.metric:hover{border-color:var(--border-strong)}
+.metric{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-5);transition:var(--trans);position:relative;box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)}
+.metric:hover{border-color:var(--border-strong);transform:translateY(-2px);box-shadow:var(--shadow-float-hover)}
 .metric[data-finance-metric]{cursor:pointer}
 .metric[data-finance-metric]:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
 .metric[data-finance-metric]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -318,11 +320,11 @@ body.sidebar-collapsed .sp-meta,body.sidebar-collapsed .sp-more{display:none}
 .section-link:hover{text-decoration:underline}
 
 /* Card — large radius, minimal shadow */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);transition:var(--trans)}
+.card{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);transition:var(--trans);box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)}
 .card:hover{border-color:var(--border-strong)}
 .card-pad{padding:var(--space-5)}
 .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px}
+.dash-card{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:18px;box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)}
 .dash-card--yellow{background:var(--pastel-yellow)}
 .dash-card--pink{background:var(--pastel-pink)}
 .dash-card--green{background:var(--pastel-green)}
@@ -352,7 +354,7 @@ body.sidebar-collapsed .sp-meta,body.sidebar-collapsed .sp-more{display:none}
 .badge-neutral .bdot{background:var(--text-3)}
 
 /* Priority card — flat, no nested boxes */
-.priority{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5);transition:var(--trans)}
+.priority{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-5);transition:var(--trans);box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)}
 .priority:hover{border-color:var(--border-strong)}
 .priority.high{border-left:3px solid var(--danger)}
 .priority.opp{border-left:3px solid var(--success)}
@@ -408,7 +410,7 @@ body.sidebar-collapsed .sp-meta,body.sidebar-collapsed .sp-more{display:none}
 .aut-example{font-size:11px;color:var(--text-3);background:var(--surface-2);padding:3px 9px;border-radius:6px;border:1px solid var(--border)}
 
 /* Agent card — name, purpose, status first */
-.agent-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5);cursor:pointer;transition:var(--trans);display:flex;flex-direction:column;gap:12px}
+.agent-card{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-5);cursor:pointer;transition:var(--trans);display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)}
 .agent-card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm)}
 .agent-top{display:flex;align-items:flex-start;gap:14px}
 .agent-avatar{width:40px;height:40px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0}

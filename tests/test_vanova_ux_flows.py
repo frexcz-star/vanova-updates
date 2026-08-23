@@ -319,6 +319,28 @@ class NonTechnicalCopyTests(unittest.TestCase):
             self.assertIn(good, html, f"texto empresarial ausente en UI: {good}")
 
 
+class FloatingRoundedCardsStyleTests(unittest.TestCase):
+    """Estilo de UI (Nico): las secciones/tarjetas del dashboard deben verse como
+    tarjetas FLOTANTES REDONDEADAS (glassmorphism flotante), no bloques rectos
+    planos. Root cause: las tarjetas usaban fondo sólido plano con radio medio.
+
+    Falla con el código anterior (tarjetas planas sin glassmorphism ni sombra
+    flotante ni radio amplio).
+    """
+
+    def test_tarjetas_usan_estilo_flotante_redondeado(self):
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # Las tarjetas principales deben usar fondo glass, radio amplio y sombra flotante.
+        for card in [".metric{", ".card{", ".dash-card{", ".priority{", ".agent-card{"]:
+            self.assertIn(card, html, f"clase de tarjeta ausente: {card}")
+        # Estilo flotante: fondo translúcido (glassmorphism) + sombra de elevación + radio amplio.
+        self.assertIn("--surface-glass", html, "fondo glass ausente")
+        self.assertIn("--shadow-float", html, "sombra flotante ausente")
+        self.assertIn("--radius-xl", html, "radio amplio ausente")
+        self.assertIn("backdrop-filter:blur", html, "glassmorphism (blur) ausente")
+        self.assertIn("border-radius:var(--radius-xl)", html, "las tarjetas no usan radio amplio")
+
+
 class HermesContextSalesSummaryTests(unittest.TestCase):
     """FASE 10 (H19): el contexto operacional debe incluir los agregados de
     ventas (revenue total, ticket medio, evolución mensual) para que Hermes
