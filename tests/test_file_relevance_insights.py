@@ -128,6 +128,10 @@ class SelectiveScanTests(unittest.TestCase):
             ), patch.object(business_scanner, "config_store") as mock_store:
                 mock_store.load.return_value = stored
                 mock_store.save.side_effect = lambda data: stored.update(data)
+                # BUG-038: _save_scan_files/_save_candidates ahora usan update()
+                # (RMW atómico) en vez de save(). El mutator recibe el config y lo
+                # muta in-place devolviéndolo; el mock solo lo expone y lo persiste.
+                mock_store.update.side_effect = lambda mutator: mutator(stored)
                 found = business_scanner._scan_files(time.monotonic())
                 candidates = stored.get("fileCandidates") or []
 
