@@ -1931,6 +1931,11 @@ function render(){
   } else {
     stopHermesActivityPolling();
   }
+  // BUG-036 (fix de refresh): cualquier mutación de notificaciones que dispare
+  // render() (aprobar/rechazar decisión, insight, guardrail, fileCandidate)
+  // también debe re-calcular el badge de la campana para que SIEMPRE coincida
+  // con lo que el drawer muestra. updateBellBadge() es barato (solo lee store).
+  updateBellBadge();
 }
 
 /* ---- HOME / COMMAND CENTER ---- */
