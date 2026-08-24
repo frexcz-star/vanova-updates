@@ -22,6 +22,28 @@ PRIORITIES_KEY = "priorities"
 _SEVERITY_WEIGHT = {"high": 3.0, "medium": 2.0, "low": 1.0}
 _CONFIDENCE_WEIGHT = {"high": 1.0, "medium": 0.7, "low": 0.4}
 
+# Mapeo category -> type que el frontend (updateBellBadge / buildNotificationsBody)
+# usa para filtrar las prioridades que cuentan como "Riesgos detectados" en el
+# contador de la campana (store.priorities.filter(p.type === 'risk')). BUG-054:
+# sin este campo, el badge y el drawer contaban SIEMPRE 0 riesgos (sub-conteo).
+_CATEGORY_TO_TYPE = {
+    "risk": "risk",
+    "problem": "risk",
+    "anomaly": "risk",
+    "prediction": "risk",
+    "opportunity": "opportunity",
+}
+
+
+def _priority_type(f: dict[str, Any]) -> str:
+    """Tipo que el frontend usa para el contador de notificaciones.
+
+    Un finding category='risk'/'problem' es un riesgo; category='opportunity'
+    es una oportunidad. Cualquier otra cosa se trata conservadoramente como
+    riesgo (un hallazgo sin clasificar requiere atención)."""
+    cat = str(f.get("category") or "problem").lower()
+    return _CATEGORY_TO_TYPE.get(cat, "risk")
+
 
 def _impact_euro(f: dict[str, Any]) -> float | None:
     """Importe económico cuantificado del finding (todas las fuentes del motor).
@@ -95,6 +117,7 @@ def build_priorities(findings: list[dict[str, Any]] | None, *, top: int = 3) -> 
             "findingId": f.get("id"),
             "findingSignature": f.get("signature"),
             "findingType": f.get("type") or f.get("finding_type") or "",
+            "type": _priority_type(f),
             "category": f.get("category") or "problem",
             "severity": f.get("severity") or "",
             "confidence": f.get("confidence") or "",
