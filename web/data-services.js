@@ -203,13 +203,36 @@
       options.headers || {}
     );
     const timeoutMs = options.timeoutMs || 8000;
-    const res = await fetch(
+    let res = await fetch(
       RUNTIME + path,
       Object.assign({}, options, {
         headers,
         signal: AbortSignal.timeout(timeoutMs),
       })
     );
+    // BUG real (Nico, logs): el runtime devolvía 401 persistente ("Unauthorized
+    // read GET /api/files" x16758) porque el frontend adjuntaba un token que ya
+    // no coincidía con el runtimeToken del secrets (p.ej. tras un reinicio del
+    // runtime que rotó/regeneró credenciales, o desajuste de instalación). Sin
+    // reintento, la sesión quedaba rota: los datos (files/products/sales) nunca
+    // se cargaban y el catálogo no se actualizaba. Reintento UNA vez releyendo
+    // la auth (el main process lee el token actual del secrets en cada llamada).
+    if (res.status === 401 && !options._retried) {
+      const auth2 = await runtimeAuthHeaders();
+      const headers2 = Object.assign(
+        { "Content-Type": "application/json", Accept: "application/json" },
+        auth2,
+        options.headers || {}
+      );
+      res = await fetch(
+        RUNTIME + path,
+        Object.assign({}, options, {
+          headers: headers2,
+          _retried: true,
+          signal: AbortSignal.timeout(timeoutMs),
+        })
+      );
+    }
     let body = null;
     const ct = res.headers.get("content-type") || "";
     if (ct.includes("json")) {

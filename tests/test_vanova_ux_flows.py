@@ -383,6 +383,25 @@ class ThemeToggleParTests(unittest.TestCase):
         self.assertIn("graphite:'ember'", html, "graphite debe tener par claro 'ember' en autoPairs")
 
 
+class RuntimeApiRetry401Tests(unittest.TestCase):
+    """BUG real (Nico, logs): el runtime devolvía 401 persistente ('Unauthorized
+    read GET /api/files' x16758) porque el frontend adjuntaba un token que ya no
+    coincidía con el runtimeToken del secrets tras un reinicio/rotación. Sin
+    reintento, la sesión quedaba rota y los datos (files/products/sales) no se
+    cargaban → el catálogo no se actualizaba. Fix: runtimeApi reintenta UNA vez
+    tras un 401, releyendo la auth (el main process lee el token actual)."""
+
+    DS = ROOT / "web" / "data-services.js"
+
+    def test_runtime_api_reintenta_tras_401(self):
+        js = self.DS.read_text(encoding="utf-8")
+        # Debe reintentar tras 401, releyendo la auth
+        self.assertIn("res.status === 401 && !options._retried", js,
+                      "runtimeApi debe reintentar tras un 401")
+        self.assertIn("const auth2 = await runtimeAuthHeaders();", js,
+                      "el reintento debe re-leer la auth (token actual del secrets)")
+
+
 class BusinessFindingsDedupAndAckTests(unittest.TestCase):
     """BUG-DUP y BUG-RECON (Mathew):
     1. "Qué hacer hoy" (store.actionPlan) y "Hallazgos del motor"
