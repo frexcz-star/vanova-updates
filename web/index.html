@@ -4250,13 +4250,19 @@ async function pollLiveTaskState(){
     // guardrails/decisions/fileCandidates solo se cargaban en loadAppData (inicial)
     // -> el badge quedaba stale cuando llegaban o desaparecían en el backend.
     // Se recargan aquí también (métodos existentes), incluidas en el signature.
-    const gr = ds.getGuardrails ? await ds.getGuardrails() : store.guardrails;
-    const cand = ds.loadFileCandidates ? await ds.loadFileCandidates() : { files: store.fileCandidates };
-    const dashRes = ds.loadDashboard ? await ds.loadDashboard() : null;
-    const nextGuardrails = Array.isArray(gr) ? gr : store.guardrails;
-    const nextCandidates = Array.isArray(cand && cand.files) ? cand.files : store.fileCandidates;
-    const nextDecisions = (dashRes && dashRes.data && Array.isArray(dashRes.data.decisions))
-      ? dashRes.data.decisions : store.decisions;
+    // BUG-053 robustez: cada carga va en su propio try/catch para que un endpoint
+    // que falle (backend caído, 401 puntual) NO rompa la actualización del badge
+    // (antes un fallo en getGuardrails/loadDashboard abortaba el poll y el badge
+    // no se recalculaba hasta el siguiente tick).
+    let nextGuardrails = store.guardrails;
+    let nextCandidates = store.fileCandidates;
+    let nextDecisions = store.decisions;
+    try { const gr = ds.getGuardrails ? await ds.getGuardrails() : store.guardrails; if (Array.isArray(gr)) nextGuardrails = gr; } catch (e) {}
+    try { const cand = ds.loadFileCandidates ? await ds.loadFileCandidates() : null; if (cand && Array.isArray(cand.files)) nextCandidates = cand.files; } catch (e) {}
+    try {
+      const dashRes = ds.loadDashboard ? await ds.loadDashboard() : null;
+      if (dashRes && dashRes.data && Array.isArray(dashRes.data.decisions)) nextDecisions = dashRes.data.decisions;
+    } catch (e) {}
     const nextInsights = Array.isArray(insights) ? insights : store.insights;
     const nextApprovals = Array.isArray(approvals) ? approvals : store.pendingApprovals;
     const signature = JSON.stringify({
