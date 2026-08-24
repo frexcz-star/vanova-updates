@@ -9593,7 +9593,7 @@ function CAP(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 function toggleTheme(){
   const root=document.documentElement;
   const current = window.VANOVAThemes && window.VANOVAThemes.getCurrent ? window.VANOVAThemes.getCurrent() : (root.getAttribute('data-theme') || 'ember');
-  const autoPairs = { ember:'ember-night', 'ember-night':'ember', ocean:'ocean-night', 'ocean-night':'ocean', forest:'forest-night', 'forest-night':'forest', mono:'mono-night', 'mono-night':'mono' };
+  const autoPairs = { ember:'ember-night', 'ember-night':'ember', ocean:'ocean-night', 'ocean-night':'ocean', forest:'forest-night', 'forest-night':'forest', mono:'mono-night', 'mono-night':'mono', midnight:'ember', graphite:'ember' };
   const next = autoPairs[current] || (current === 'midnight' ? 'ember' : 'midnight');
   if (window.VANOVAThemes && window.VANOVAThemes.setTheme) window.VANOVAThemes.setTheme(next, {pin:true});
   else {

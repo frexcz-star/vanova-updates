@@ -368,6 +368,21 @@ class FinancingSectionTests(unittest.TestCase):
         self.assertIn("border-radius:var(--radius-xl)", html)
 
 
+class ThemeToggleParTests(unittest.TestCase):
+    """BUG real (Nico): al estar en tema 'medianoche' (midnight) y pulsar el toggle
+    sol/luna, iba a 'ember' de forma no determinista (sin par claro explícito en
+    autoPairs). Fix: 'midnight' y 'graphite' ahora tienen par claro ('ember') en
+    autoPairs, así el toggle va a un tema claro real y predecible."""
+
+    DASH = ROOT / "web" / "dashboard.html"
+
+    def test_midnight_y_graphite_tienen_par_claro(self):
+        html = self.DASH.read_text(encoding="utf-8")
+        # autoPairs debe incluir midnight->ember y graphite->ember
+        self.assertIn("midnight:'ember'", html, "midnight debe tener par claro 'ember' en autoPairs")
+        self.assertIn("graphite:'ember'", html, "graphite debe tener par claro 'ember' en autoPairs")
+
+
 class BusinessFindingsDedupAndAckTests(unittest.TestCase):
     """BUG-DUP y BUG-RECON (Mathew):
     1. "Qué hacer hoy" (store.actionPlan) y "Hallazgos del motor"
