@@ -821,6 +821,37 @@ async def connector_push(request: Request):
     for domain in ["hermes", "sources", "priorities", "automations"]:
         if domain in body:
             merged[domain] = body[domain]
+    # BUG-057 (contador): el cloud DESCARTA las decisiones del snapshot (no
+    # estaban en la lista de dominios a mergear), y nadie inserta en la tabla
+    # 'decisions' del cloud (no hay INSERT en todo el repo). Resultado: la tabla
+    # decisions del cloud quedaba vacía, el snapshot cloud (BUG-047) enriquecía
+    # con decisions=[] y el badge del dashboard cloud contaba SIEMPRE 0
+    # decisiones aunque existieran decisiones reales pendientes en el runtime
+    # local. Fix: persistir las decisiones del snapshot en la tabla decisions
+    # del cloud (upsert por id) para que el contador las cuente.
+    if isinstance(body.get("decisions"), list):
+        for dc in body["decisions"]:
+            if not isinstance(dc, dict) or not dc.get("id"):
+                continue
+            c3 = get_db()
+            c3.execute(
+                "INSERT INTO decisions (id, workspace_id, title, recommendation, impact, confidence, status, agent, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?) "
+                "ON CONFLICT(id) DO UPDATE SET status=excluded.status",
+                (
+                    str(dc.get("id")),
+                    dev["workspace_id"],
+                    str(dc.get("title") or dc.get("summary") or "Decisión"),
+                    str(dc.get("recommendation") or dc.get("action") or ""),
+                    str(dc.get("impact") or dc.get("summary") or ""),
+                    str(dc.get("confidence") or "medium"),
+                    str(dc.get("status") or "pending"),
+                    str(dc.get("agent") or ""),
+                    str(dc.get("created_at") or datetime.now(timezone.utc).isoformat()),
+                ),
+            )
+            c3.commit()
+            c3.close()
     # overview is only updated when the connector truly reports business metrics
     # (a heartbeat-only snapshot has empty overview and must not wipe real data).
     if "overview" in body and body["overview"]:
