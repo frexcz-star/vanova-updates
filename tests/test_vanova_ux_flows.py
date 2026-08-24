@@ -462,6 +462,33 @@ class DiagnosticsBackupRestoreTests(unittest.TestCase):
         self.assertIn("loadDiagBackups()", block, "loadDiagBackups debe llamarse al abrir el diagnóstico")
 
 
+class MarginSaveRuntimeFetchTests(unittest.TestCase):
+    """BUG real (Nico, post-3.1.6): declarar el margen (pone 50) daba error del
+    runtime. Root cause: promptQuickMargin (y el guardado del margen del drawer)
+    usaban fetch() DIRECTO al runtime sin el reintento 401 (solo en runtimeApi).
+    Si el token del secrets fallaba/rotaba (patrón BUG-051), el POST daba 401 y
+    el margen no se guardaba, mientras el diagnóstico decía 'todo correcto'.
+    Fix: se añadió runtimeFetch (auth + reintento 401) y se usa para guardar el
+    margen."""
+
+    DASH = ROOT / "web" / "dashboard.html"
+
+    def test_existe_helper_runtime_fetch_con_retry_401(self):
+        html = self.DASH.read_text(encoding="utf-8")
+        self.assertIn("async function runtimeFetch", html, "debe existir el helper runtimeFetch")
+        self.assertIn("res.status === 401 && !options._retried", html,
+                      "runtimeFetch debe reintentar tras un 401")
+
+    def test_guardado_margen_usa_runtime_fetch(self):
+        html = self.DASH.read_text(encoding="utf-8")
+        # El guardado del margen debe usar runtimeFetch, no fetch() directo al runtime
+        idx = html.find("function promptQuickMargin")
+        self.assertNotEqual(idx, -1)
+        block = html[idx:idx + 1100]
+        self.assertIn("runtimeFetch('/api/company/profile'", block,
+                      "promptQuickMargin debe usar runtimeFetch para guardar el margen")
+
+
 class BusinessFindingsDedupAndAckTests(unittest.TestCase):
     """BUG-DUP y BUG-RECON (Mathew):
     1. "Qué hacer hoy" (store.actionPlan) y "Hallazgos del motor"

@@ -3136,9 +3136,10 @@ async function openCostImportDrawer(){
     toast('Guardando margen global…');
     // Guardar el margen global declarado en companyProfile.preferences
     try {
-      const auth = window.maios?.getRuntimeAuthHeaders ? await window.maios.getRuntimeAuthHeaders() : {};
       const comp = { preferences: { globalMarginPct: v } };
-      const res = await fetch(runtime + '/api/company/profile', { method:'POST', headers:Object.assign({'Content-Type':'application/json'}, auth), body: JSON.stringify(comp) });
+      // BUG real (Nico): runtimeFetch (auth + reintento 401) para que el margen
+      // se guarde aunque el token falle/rote.
+      const res = await runtimeFetch('/api/company/profile', { method:'POST', body: JSON.stringify(comp) });
       if (!res.ok) throw new Error('HTTP '+res.status);
     } catch(e){
       toast('No se pudo guardar el margen global: ' + (e.message||String(e)), true);
@@ -3192,6 +3193,30 @@ async function openCostImportDrawer(){
 }
 
 /* ---- ATAJO MARGEN GLOBAL (camino más corto al aha) ---- */
+/* Fetch al runtime con auth + reintento 401. BUG real (Nico, post-3.1.6):
+   declarar el margen daba error del runtime porque este POST usaba fetch() DIRECTO
+   sin el reintento 401 (que solo estaba en DataServices.runtimeApi). Si el token
+   del secrets fallaba/rotaba (patrón BUG-051), el POST devolvía 401 y el margen no
+   se guardaba, mientras el diagnóstico no lo reflejaba. Este helper unifica el
+   manejo de auth + reintento para los fetch al runtime. */
+async function runtimeFetch(path, options){
+  options = options || {};
+  const auth = (window.maios && window.maios.getRuntimeAuthHeaders)
+    ? await window.maios.getRuntimeAuthHeaders() : {};
+  const runtime = window.__MAIOS_RUNTIME__ || 'http://127.0.0.1:8765';
+  const headers = Object.assign({'Content-Type':'application/json'}, auth, options.headers || {});
+  let res = await fetch(runtime + path, Object.assign({}, options, { headers }));
+  if (res.status === 401 && !options._retried) {
+    const auth2 = (window.maios && window.maios.getRuntimeAuthHeaders)
+      ? await window.maios.getRuntimeAuthHeaders() : {};
+    res = await fetch(runtime + path, Object.assign({}, options, {
+      headers: Object.assign({'Content-Type':'application/json'}, auth2, options.headers || {}),
+      _retried: true,
+    }));
+  }
+  return res;
+}
+
 async function promptQuickMargin(){
   const cur = (store.companyProfile && store.companyProfile.preferences && store.companyProfile.preferences.globalMarginPct)
     ? String(store.companyProfile.preferences.globalMarginPct) : '';
@@ -3205,9 +3230,10 @@ async function promptQuickMargin(){
   toast('Guardando margen global ' + num + '%…');
   const ds = window.DataServices;
   try {
-    const auth = window.maios?.getRuntimeAuthHeaders ? await window.maios.getRuntimeAuthHeaders() : {};
     const comp = { preferences: { globalMarginPct: num } };
-    const res = await fetch(runtime + '/api/company/profile', { method:'POST', headers:Object.assign({'Content-Type':'application/json'}, auth), body: JSON.stringify(comp) });
+    // BUG real (Nico): usar runtimeFetch (con auth + reintento 401) en vez de
+    // fetch() directo para que el margen se guarde aunque el token falle/rote.
+    const res = await runtimeFetch('/api/company/profile', { method:'POST', body: JSON.stringify(comp) });
     if (!res.ok) throw new Error('HTTP '+res.status);
   } catch(e){
     toast('No se pudo guardar el margen global: ' + (e.message||String(e)), true);
