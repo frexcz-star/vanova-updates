@@ -104,7 +104,25 @@ def _hermes_cli() -> list[str] | None:
     except Exception:  # noqa: BLE001
         pass
     exe = shutil.which("hermes")
-    return [exe] if exe else None
+    if exe:
+        return [exe]
+    # BUG-001 real (Nico): el CLI de Hermes vive en el venv de la instalación
+    # (LOCALAPPDATA/hermes/hermes-agent/venv/Scripts/hermes) que NO está en el
+    # PATH. Si no está en el PATH, buscarlo en las rutas de la instalación local
+    # para poder crear/verificar los perfiles (antes devolvía None y el perfil
+    # de ventas nunca se creaba -> chat a Hermes fallaba con 'profile does not
+    # exist').
+    if os.name == "nt":
+        local = Path(os.getenv("LOCALAPPDATA", "")) / "hermes"
+        candidates = [
+            local / "hermes-agent" / "venv" / "Scripts" / "hermes.exe",
+            local / "hermes-agent" / "venv" / "Scripts" / "hermes",
+            local / "venv" / "Scripts" / "hermes.exe",
+        ]
+        for c in candidates:
+            if c.exists():
+                return [str(c)]
+    return None
 
 
 def _profile_dir(slug: str) -> Path | None:
