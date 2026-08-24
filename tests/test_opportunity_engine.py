@@ -174,7 +174,9 @@ class ActionCenterTests(unittest.TestCase):
         r = action_center.prepare_cost_template(self._data())
         self.assertTrue(r["ok"])
         self.assertEqual(r["kind"], "cost_template")
-        self.assertEqual(r["count"], 2)  # SKU-2 y Producto 3 no tienen coste
+        # BUG-052: la plantilla de costes EXCLUYE productos sin SKU (no tienen
+        # identidad para vincular el coste). Solo SKU-2 tiene SKU y sin coste.
+        self.assertEqual(r["count"], 1)  # solo SKU-2 (Producto 3 no tiene SKU -> excluido)
         self.assertIn("SKU-2", r["csv"])
         self.assertIn("cost", r["csv"].splitlines()[0])
 

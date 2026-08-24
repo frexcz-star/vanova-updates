@@ -60,6 +60,10 @@ def prepare_cost_template(data: dict[str, Any] | None = None) -> dict[str, Any]:
         missing = [p for p in products if product_identity.resolve_cost(p).get("costStatus") == "missing"]
     except Exception:  # noqa: BLE001
         missing = [p for p in products if not (p.get("cost") or p.get("unitCost") or p.get("costPrice"))]
+    # BUG real (Nico, audit.jsonl): la plantilla incluía productos SIN SKU (sku="").
+    # Un producto sin SKU no tiene identidad para vincular el coste al importar la
+    # plantilla -> fila inútil/rota. Se excluyen de la plantilla de costes por SKU.
+    missing = [p for p in missing if str(p.get("sku") or "").strip()]
     rows = [
         {
             "sku": str(p.get("sku") or ""),
