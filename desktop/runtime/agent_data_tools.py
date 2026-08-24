@@ -100,6 +100,25 @@ def _products() -> list[dict[str, Any]]:
     return [p for p in rows if _is_product_entity(p)][:MAX_DATA_ROWS]
 
 
+def _unique_products() -> list[dict[str, Any]]:
+    """Productos ÚNICOS por SKU (o nombre). BUG real (Nico): el importador marca
+    duplicados como 'needs_review' pero los MANTIENE todos en organizedProducts,
+    inflando el conteo (p.ej. 4000 filas vs 400 SKU reales). El catálogo y el
+    conteo que ve el empresario deben reflejar el producto ÚNICO, no las filas
+    brutas. Los duplicados marcados se conservan (no se destruyen) para la vista
+    de revisión 'Vincula tus productos'.
+    """
+    seen: dict[str, dict[str, Any]] = {}
+    for p in _products():
+        sku = str(p.get("sku") or "").strip().lower()
+        key = sku or ("name:" + str(p.get("name") or "").strip().lower())
+        if not key.strip("name:"):
+            continue
+        if key not in seen:
+            seen[key] = p
+    return list(seen.values())
+
+
 def _sales() -> list[dict[str, Any]]:
     rows = config_store.load().get("organizedSales") or []
     if not isinstance(rows, list):
@@ -124,7 +143,9 @@ def _customers() -> list[dict[str, Any]]:
 # --------------------------------------------------------------------------
 
 def availability() -> dict[str, Any]:
-    products = _products()
+    # BUG real (Nico): usar productos ÚNICOS (no filas brutas con duplicados
+    # marcados needs_review) para que el conteo refleje el catálogo real.
+    products = _unique_products()
     sales = _sales()
     customers = _customers()
     files = _files()
@@ -169,7 +190,7 @@ def availability() -> dict[str, Any]:
 
 
 def get_products() -> dict[str, Any]:
-    rows = _products()
+    rows = _unique_products()
     return {"ok": True, "count": len(rows), "products": rows}
 
 

@@ -82,6 +82,19 @@ def get_products() -> dict[str, Any]:
     if not isinstance(products, list):
         products = []
     products = [p for p in products if _is_product_entity(p) and not _is_legacy_entity(p)]
+    # BUG real (Nico): el catálogo debe mostrar productos ÚNICOS (colapsar
+    # duplicados marcados 'needs_review' por SKU/nombre), no las filas brutas
+    # (p.ej. 4000 filas vs 400 SKU reales). Los duplicados marcados se conservan
+    # en organizedProducts para la vista de revisión 'Vincula tus productos'.
+    unique: dict[str, dict[str, Any]] = {}
+    for p in products:
+        sku = str(p.get("sku") or "").strip().lower()
+        key = sku or ("name:" + str(p.get("name") or "").strip().lower())
+        if not key.strip("name:"):
+            continue
+        if key not in unique:
+            unique[key] = p
+    products = list(unique.values())
     return {"products": products, "count": len(products), "source": "local"}
 
 
