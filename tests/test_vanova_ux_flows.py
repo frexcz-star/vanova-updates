@@ -429,6 +429,39 @@ class LiveSyncPollAllViewsTests(unittest.TestCase):
         self.assertIn("pollLiveTaskState();", block)
 
 
+class DiagnosticsBackupRestoreTests(unittest.TestCase):
+    """BUG-008 real (Nico): la UI de restaurar copias no existía — los handlers
+    diag-restore-backup no tenían botones que los invocaran (no había lista de
+    backups en el diagnóstico). Fix: se añadió la sección 'Copias de seguridad'
+    al diagnóstico con botón 'Restaurar' (data-backup-id) por cada backup y
+    botón 'Crear copia'."""
+
+    DASH = ROOT / "web" / "dashboard.html"
+
+    def test_diagnostico_tiene_seccion_de_copias(self):
+        html = self.DASH.read_text(encoding="utf-8")
+        # El diagnóstico debe tener la sección de copias de seguridad
+        self.assertIn("Copias de seguridad", html)
+        self.assertIn("diag-backups-panel", html, "debe existir el panel de copias en el diagnóstico")
+
+    def test_boton_restaurar_tiene_data_backup_id(self):
+        html = self.DASH.read_text(encoding="utf-8")
+        # El botón de restaurar debe llevar data-backup-id (que el handler usa)
+        self.assertIn("data-act=\"diag-restore-backup\"", html)
+        self.assertIn("data-backup-id=\"${escAttr(b.id||'')}\"", html,
+                      "el botón de restaurar debe llevar data-backup-id")
+
+    def test_load_diag_backups_se_ejecuta_al_abrir_diagnostico(self):
+        html = self.DASH.read_text(encoding="utf-8")
+        # Al renderizar el diagnóstico debe llamarse loadDiagBackups
+        self.assertIn("loadDiagBackups()", html)
+        # Buscar el bloque del if del render de diagnostics (el último)
+        idx = html.rfind("state.view === 'diagnostics'")
+        self.assertNotEqual(idx, -1)
+        block = html[idx:idx + 400]
+        self.assertIn("loadDiagBackups()", block, "loadDiagBackups debe llamarse al abrir el diagnóstico")
+
+
 class BusinessFindingsDedupAndAckTests(unittest.TestCase):
     """BUG-DUP y BUG-RECON (Mathew):
     1. "Qué hacer hoy" (store.actionPlan) y "Hallazgos del motor"

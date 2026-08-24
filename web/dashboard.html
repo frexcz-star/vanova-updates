@@ -1901,6 +1901,8 @@ function render(){
         MAIOSSystemStatus.setDiagnosticsViewActive(true);
       }
       loadDiagnosticsGuarded(false);
+      // BUG-008: cargar la lista de copias de seguridad al abrir el diagnóstico.
+      loadDiagBackups();
     });
   } else {
     if (window.MAIOSSystemStatus) {
@@ -4273,6 +4275,11 @@ async function pollLiveTaskState(){
       guardrails: (nextGuardrails || []).map(function(g){ return [g.id,g.status,g.updatedAt]; }),
       decisions: (nextDecisions || []).map(function(dc){ return [dc.id,dc.status,dc.updatedAt]; }),
       candidates: (nextCandidates || []).map(function(c){ return [c.path,c.status,c.foundAt]; }),
+      // BUG-054 (contador): la signature DEBE incluir cc.priorities. Sin ella,
+      // si cambian los riesgos (priorities del command center) pero el resto de
+      // campos queda igual, el poll retorna pronto (early return) y
+      // store.priorities queda stale -> el badge no se actualiza en tiempo real.
+      priorities: (cc && cc.priorities || []).map(function(p){ return [p.id,p.findingSignature,p.type,p.category,p.score,p.status]; }),
       current: hermesActivity && hermesActivity.current,
       queue: cc && cc.runningNow
     });
@@ -4479,13 +4486,41 @@ function activeFindingCount(category){
     return x.status !== 'resolved' && x.status !== 'archived' && (!category || x.category === category);
   }).length;
 }
+// BUG-054 (contador): deriva store.priorities desde los businessFindings activos
+// con category de riesgo (risk/problem/anomaly/prediction). El badge y el drawer
+// filtran store.priorities.filter(p.type==='risk'), así que estas prioridades
+// llevan type:'risk' para que los riesgos reales del motor se cuenten. Sin esto,
+// si el command center no expone cc.priorities, store.priorities queda vacío y
+// el contador de "Riesgos detectados" es siempre 0 aunque haya hallazgos.
+var _RISK_CATEGORIES = { risk: true, problem: true, anomaly: true, prediction: true };
+function prioritiesFromFindings(findings){
+  const active = (findings || []).filter(function(x){
+    return x.status !== 'resolved' && x.status !== 'archived';
+  });
+  const risks = active.filter(function(x){ return _RISK_CATEGORIES[x.category]; });
+  return risks.map(function(x, i){
+    return {
+      id: 'priority:' + (x.id || x.signature || i),
+      findingId: x.id,
+      findingSignature: x.signature,
+      type: 'risk',
+      category: x.category || 'problem',
+      severity: x.severity || '',
+      confidence: x.confidence || '',
+      title: x.title || 'Hallazgo detectado',
+      score: x.score != null ? x.score : 0,
+      rank: i + 1,
+      impactKind: (x.estimatedImpact && x.estimatedImpact.kind) || 'estimated',
+    };
+  });
+}
 function pollBusinessNow(){
   const ds = window.DataServices;
   if (!ds || !ds.getBusinessFindings) return;
   ds.getBusinessFindings('').then(function(f){
     if (!f || !f.ok) return;
     const active = (f.findings || []).filter(function(x){ return x.status !== 'resolved' && x.status !== 'archived'; });
-    const sig = JSON.stringify(active.map(function(x){ return [x.signature, x.timesSeen, x.status, x.severity]; }));
+    const sig = JSON.stringify(active.map(function(x){ return [x.signature, x.timesSeen, x.status, x.severity, x.category]; }));
     const fresh = active.filter(function(x){ return x.timesSeen === 1 && x.status === 'new' && !_notifiedFindingIds[x.id]; });
     if (fresh.length && typeof toast === 'function') {
       fresh.slice(0, 2).forEach(function(x){ _notifiedFindingIds[x.id] = true; });
@@ -4500,8 +4535,21 @@ function pollBusinessNow(){
     store.businessQuality = f.quality || null;
     store.healthScores = f.healthScores || null;
     store.executiveBrief = f.executiveBrief || null;
+    // BUG-054 (contador): refresca store.priorities desde los findings activos
+    // de riesgo para que el badge (y el drawer) cuenten los riesgos reales en
+    // tiempo real, incluso cuando el command center no los expone.
+    const riskPriorities = prioritiesFromFindings(store.businessFindings);
+    // Solo pisa store.priorities con los riesgos derivados si hay alguno o si
+    // no hay prioridades del command center que las cubran (evita borrar las
+    // prioridades completas del cc por un fallo puntual en /api/command-center).
+    if (riskPriorities.length || !(store.commandCenter && store.commandCenter.priorities && store.commandCenter.priorities.length)) {
+      store.priorities = riskPriorities;
+    }
     if (state.view === 'home') render();
     if (typeof updateNavBadges === 'function') updateNavBadges();
+    // BUG-054 (contador): recalcula el badge de la campana tras refrescar los
+    // riesgos, para que suba/baje en ≤3s cuando llegan o se resuelven hallazgos.
+    updateBellBadge();
   }).catch(function(){});
 }
 function updateNavBadges(){
@@ -6153,7 +6201,52 @@ function viewDiagnostics(){
       </div>
       <div id="diag-panel"><div class="diag-empty">Cargando diagnóstico…</div></div>
     </div>
+    <div class="dash-card" style="margin-top:16px">
+      <div class="row" style="margin-bottom:12px">
+        <div class="section-title" style="margin-bottom:0">${ic('archive')} Copias de seguridad</div>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost" style="height:30px;font-size:12px" data-act="diag-backup">${ic('plus')} Crear copia</button>
+      </div>
+      <div id="diag-backups-panel"><div class="diag-empty">Cargando copias…</div></div>
+    </div>
   </div>`;
+}
+/* Carga y pinta la lista de copias de seguridad (diarias + pre-update) en el
+   diagnóstico. BUG-008 real (Nico): la UI de restaurar copias no existia (los
+   handlers diag-restore-backup no tenian botones que los invocaran). */
+function loadDiagBackups(){
+  const panel = document.getElementById('diag-backups-panel');
+  if (!panel) return;
+  const ds = window.DataServices;
+  if (!ds || !ds.getBackupStatus) { panel.innerHTML = '<div class="diag-empty">Copias no disponibles.</div>'; return; }
+  ds.getBackupStatus().then(function(status){
+    // El runtime devuelve backups diarios en 'backups' y los de pre-update en
+    // 'preUpdateBackups'. Se muestran juntos (los de pre-update primero, que
+    // son los recuperables tras una release fallida).
+    const pre = (status && status.preUpdateBackups) || [];
+    const daily = (status && status.backups) || [];
+    const all = pre.concat(daily);
+    if (!all.length) {
+      panel.innerHTML = '<div class="diag-empty">No hay copias de seguridad todavía. Pulsa «Crear copia» para hacer una.</div>';
+      return;
+    }
+    const rows = all.map(function(b){
+      const created = b.createdAt ? new Date(b.createdAt).toLocaleString() : (b.id || '—');
+      const summary = b.dataSummary || {};
+      const desc = [summary.products != null ? summary.products + ' productos' : null,
+                    summary.sales != null ? summary.sales + ' ventas' : null].filter(Boolean).join(' · ');
+      return `<div class="cand-row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:600">${escapeHtml(String(created))}</div>
+          <div style="font-size:12px;color:var(--text-3)">${escapeHtml(b.id || '')}${desc ? ' · ' + escapeHtml(desc) : ''}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" data-act="diag-restore-backup" data-backup-id="${escAttr(b.id||'')}">Restaurar</button>
+      </div>`;
+    }).join('');
+    panel.innerHTML = rows;
+  }).catch(function(){
+    panel.innerHTML = '<div class="diag-empty">No se pudieron cargar las copias.</div>';
+  });
 }
 
 /* ---- Generic business views ---- */
