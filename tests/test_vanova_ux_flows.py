@@ -402,6 +402,33 @@ class RuntimeApiRetry401Tests(unittest.TestCase):
                       "el reintento debe re-leer la auth (token actual del secrets)")
 
 
+class LiveSyncPollAllViewsTests(unittest.TestCase):
+    """BUG-053 (Mathew): el poll de 3s que recalcula el badge (updateBellBadge)
+    estaba condicionado a la whitelist home/activity/tasks/agents/agentdetail.
+    En cualquier otra vista (Ventas, Finanzas, Productos, Insights, Clientes,
+    Archivos, Ajustes...) el poll NO corría → el badge no se actualizaba aunque
+    llegaran decisiones/guardrails nuevos al backend. Fix: pollLiveTaskState
+    corre en TODAS las vistas (el badge es global)."""
+
+    DASH = ROOT / "web" / "dashboard.html"
+
+    def test_poll_3s_no_condicionado_a_whitelist(self):
+        html = self.DASH.read_text(encoding="utf-8")
+        # El intervalo de 3s NO debe tener el condicional de whitelist; debe llamar
+        # pollLiveTaskState incondicionalmente para que el badge se recalcule en
+        # todas las vistas.
+        # Extraer el bloque del setInterval de 3s dentro de startLiveSyncPolling
+        idx = html.find("function startLiveSyncPolling")
+        self.assertNotEqual(idx, -1, "debe existir startLiveSyncPolling")
+        block = html[idx:idx + 900]
+        # El condicional whitelisted debe haber desaparecido
+        self.assertNotIn("state.view === 'home' || state.view === 'activity'", block,
+                         "el poll NO debe estar condicionado a la whitelist de vistas")
+        # Debe llamar pollLiveTaskState en el intervalo de 3s
+        self.assertIn("setInterval(function()", block)
+        self.assertIn("pollLiveTaskState();", block)
+
+
 class BusinessFindingsDedupAndAckTests(unittest.TestCase):
     """BUG-DUP y BUG-RECON (Mathew):
     1. "Qué hacer hoy" (store.actionPlan) y "Hallazgos del motor"

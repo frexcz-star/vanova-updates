@@ -4803,9 +4803,15 @@ function startLiveSyncPolling(){
   if (state._liveTaskPollTimer) return;
   pollLiveTaskState();
   state._liveTaskPollTimer = setInterval(function(){
-    if (state.view === 'home' || state.view === 'activity' || state.view === 'tasks' || state.view === 'agents' || state.view === 'agentdetail') {
-      pollLiveTaskState();
-    }
+    // BUG-053 (Mathew): el poll de 3s estaba condicionado a la whitelist
+    // home/activity/tasks/agents/agentdetail. En cualquier otra vista (Ventas,
+    // Finanzas, Productos, Insights, Clientes, Archivos, Ajustes...) el poll NO
+    // corría -> si llegaban decisiones/guardrails/aprobaciones nuevas al backend
+    // mientras el usuario estaba en esa vista, el badge (elemento global del
+    // header) NO se actualizaba hasta navegar a una vista whitelisted o hacer
+    // una acción manual. Fix: pollLiveTaskState corre en TODAS las vistas (el
+    // badge es global y debe recalcarse ≤3s siempre).
+    pollLiveTaskState();
   }, 3000);
 }
 function stopLiveSyncPolling(){
