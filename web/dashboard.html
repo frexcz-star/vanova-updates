@@ -4893,6 +4893,14 @@ function startLiveSyncPolling(){
     // badge es global y debe recalcarse ≤3s siempre).
     pollLiveTaskState();
   }, 3000);
+  // BUG real (Nico): el navegador THROTTLE los setInterval cuando la pestaña
+  // está en background (tab oculta) — el poll de 3s puede pausarse o ralentizarse
+  // a ~1/min. Al volver al tab visible, el badge podía quedar STALE hasta que el
+  // throttle liberaba el interval (hasta ~1 min). Fix: recargar el badge (poll)
+  // INMEDIATAMENTE al volver el tab a visible, para que nunca quede desactualizado.
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) pollLiveTaskState();
+  });
 }
 function stopLiveSyncPolling(){
   stopCommercePolling();

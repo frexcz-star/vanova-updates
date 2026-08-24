@@ -489,6 +489,26 @@ class MarginSaveRuntimeFetchTests(unittest.TestCase):
                       "promptQuickMargin debe usar runtimeFetch para guardar el margen")
 
 
+class BadgeBackgroundRefreshTests(unittest.TestCase):
+    """BUG real (Nico): el navegador THROTTLE los setInterval cuando la pestaña
+    está en background (tab oculta), pausando o ralentizando el poll de 3s del
+    badge a ~1/min. Al volver al tab visible, el badge podía quedar STALE hasta
+    que el throttle liberaba el interval. Fix: listener de 'visibilitychange'
+    que recarga pollLiveTaskState (y el badge) INMEDIATAMENTE al volver visible."""
+
+    DASH = ROOT / "web" / "dashboard.html"
+
+    def test_existe_listener_visibilitychange(self):
+        html = self.DASH.read_text(encoding="utf-8")
+        self.assertIn("visibilitychange", html, "debe existir listener de visibilitychange")
+
+    def test_recarga_poll_al_volver_visible(self):
+        html = self.DASH.read_text(encoding="utf-8")
+        # Al volver visible (no hidden), debe llamar pollLiveTaskState
+        self.assertIn("if (!document.hidden) pollLiveTaskState();", html,
+                      "al volver el tab visible debe recargar el poll del badge")
+
+
 class BusinessFindingsDedupAndAckTests(unittest.TestCase):
     """BUG-DUP y BUG-RECON (Mathew):
     1. "Qué hacer hoy" (store.actionPlan) y "Hallazgos del motor"
