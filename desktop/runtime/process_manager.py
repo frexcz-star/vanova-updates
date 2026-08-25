@@ -420,9 +420,21 @@ def _force_restart_cloud() -> bool:
 
 
 def _sync_owner_password_in_db() -> bool:
-    """Align Cloud SQLite owner password with cloud.env (fixes post-update drift)."""
-    import bcrypt
+    """Align Cloud SQLite owner password with cloud.env (fixes post-update drift).
+
+    BUG-060 (Mathew): 'import bcrypt' lanzaba ModuleNotFoundError cuando bcrypt no
+    está en el bundle de Python del runtime. Al dispararse en cada login local sin
+    try/except, la excepción no capturada tiraba el proceso del runtime -> runtime
+    cae recurrente -> badge del contador stale (síntoma que Nico reporta).
+    Fix: try/except + import condicional de bcrypt con fallback a hashlib.scrypt
+    (nunca crashea el runtime; si no hay bcrypt se usa scrypt y se loguea).
+    """
+    try:
+        import bcrypt  # noqa: F401
+    except Exception:  # noqa: BLE001
+        bcrypt = None
     import sqlite3
+    import hashlib
 
     cloud_env = _load_env_file(config_dir() / "cloud.env")
     username = cloud_env.get("MAIOS_DEMO_USER", "ceo")
@@ -432,7 +444,14 @@ def _sync_owner_password_in_db() -> bool:
     db_path = Path(cloud_env.get("MAIOS_DB") or str(config_dir() / "maios_cloud.db"))
     if not db_path.exists():
         return False
-    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    if bcrypt is not None:
+        hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    else:
+        # Fallback: bcrypt no está en el bundle. Usar scrypt (stdlib) para no
+        # crashear el runtime ni dejar el password sin hash.
+        salt = hashlib.sha256(password.encode("utf-8")).hexdigest().encode("utf-8")
+        hashed = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=2**14, r=8, p=1).hex()
+        log.warning("bcrypt no disponible — usando fallback scrypt para _sync_owner_password_in_db")
     conn = sqlite3.connect(str(db_path), timeout=10)
     try:
         row = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
@@ -449,13 +468,19 @@ def _sync_owner_password_in_db() -> bool:
 
 def _ensure_owner_auth_sync() -> bool:
     """Ensure cloud.env owner credentials authenticate against the running Cloud."""
-    _sync_owner_password_in_db()
+    try:
+        _sync_owner_password_in_db()
+    except Exception as exc:  # noqa: BLE001 — BUG-060: nunca debe tirar el runtime
+        log.warning("Owner password sync error (non-fatal): %s", exc)
     if _refresh_owner_token():
         return True
     log.warning("Owner auth sync failed — restarting Cloud to apply cloud.env credentials")
     if not _force_restart_cloud():
         return False
-    _sync_owner_password_in_db()
+    try:
+        _sync_owner_password_in_db()
+    except Exception as exc:  # noqa: BLE001 — BUG-060
+        log.warning("Owner password sync error (non-fatal): %s", exc)
     return _refresh_owner_token()
 
 
