@@ -931,12 +931,15 @@ def _load_env(path: Path) -> dict[str, str]:
 
 
 def _organize_after_scan() -> None:
-    try:
-        from . import file_organizer
+    # BUG-058 (Mathew): antes envolvía file_organizer.organize_files() en
+    # try/except Exception que solo logueaba warning -> cualquier fallo del
+    # organizador quedaba SILENCIADO: el scan reportaba éxito pero el catálogo
+    # NO se actualizaba (bug 3 de Nico: "archivos escaneados no actualizan el
+    # catálogo"). Fix: el error se PROPAGA (sin silenciarlo) para que el scan
+    # (_run) lo marque como 'error' y se exponga en la UI / scanStatus.
+    from . import file_organizer
 
-        file_organizer.organize_files()
-    except Exception as exc:
-        log.warning("Post-scan file organization failed: %s", exc)
+    file_organizer.organize_files()
 
 
 def _now() -> str:
