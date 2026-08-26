@@ -5483,6 +5483,10 @@ function escapeHtml(s){
    a bold summary up top, section lines as subtitles, and key data
    (€/%, PICO, CLAVE, RECOMENDACIÓN…) highlighted in bold. Always escapes
    the source text first so the only tags emitted are ours. */
+function formatCurrency(n){
+  if (n == null || isNaN(n)) return '--';
+  return '€' + Number(n).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+}
 function formatAgentReport(text, maxLen){
   const src = String(text || '').trim();
   if (!src) return '';
