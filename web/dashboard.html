@@ -1323,15 +1323,42 @@ button:focus-visible,[data-act]:focus-visible{
       <div class="hdr-status sys-checking" id="ai-status" title="Click for system status">
         <span class="dot checking"></span><span class="live">Comprobando estado…</span>
       </div>
-      <button class="hdr-icon" id="hdr-hermes" title="Hablar con Hermes" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;height:34px;display:flex;align-items:center;gap:6px;color:var(--text-2);font-size:12px;font-weight:500">
+      <button class="hdr-icon" id="hdr-hermes" title="Hablar con el Asistente VANOVA" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;height:34px;display:flex;align-items:center;gap:6px;color:var(--text-2);font-size:12px;font-weight:500">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/></svg>
-        Hermes
+        Asistente
       </button>
       <div class="hdr-user">
         <div class="hdr-avatar" id="hdr-avatar">PA</div>
         <span class="u-name" id="hdr-uname">Pablo</span>
       </div>
     </header>
+
+    <!-- HERO: Valor Capturado (Paso 1 del rediseño) -->
+    <div id="hero-valor-capturado" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:24px 28px;margin:16px 20px 0;position:relative;overflow:hidden">
+      <div style="text-align:center;padding:12px 0">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Valor Capturado por VANOVA</div>
+        <div id="valor-capturado-num" style="font-size:42px;font-weight:700;color:var(--accent);line-height:1">--</div>
+        <div style="font-size:13px;color:var(--text-2);margin-top:8px">Estimado de beneficio neto generado</div>
+        <div id="valor-capturado-change" style="font-size:12px;color:var(--success);margin-top:4px"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:16px;justify-content:center">
+        <div style="flex:1;padding:14px;border-radius:var(--radius-sm);background:var(--surface-2);border:1px solid var(--border);text-align:center;position:relative;overflow:hidden;max-width:160px">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--danger)"></div>
+          <div id="hero-riesgos" style="font-size:28px;font-weight:700;color:var(--danger);line-height:1">--</div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px">Riesgos activos</div>
+        </div>
+        <div style="flex:1;padding:14px;border-radius:var(--radius-sm);background:var(--surface-2);border:1px solid var(--border);text-align:center;position:relative;overflow:hidden;max-width:160px">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--warning)"></div>
+          <div id="hero-decisiones" style="font-size:28px;font-weight:700;color:var(--warning);line-height:1">--</div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px">Decisiones pendientes</div>
+        </div>
+        <div style="flex:1;padding:14px;border-radius:var(--radius-sm);background:var(--surface-2);border:1px solid var(--border);text-align:center;position:relative;overflow:hidden;max-width:160px">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--success)"></div>
+          <div id="hero-oportunidades" style="font-size:28px;font-weight:700;color:var(--success);line-height:1">--</div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px">Oportunidades</div>
+        </div>
+      </div>
+    </div>
 
     <main class="content" id="content"></main>
   </div>
@@ -7126,6 +7153,34 @@ function updateBellBadge(){
   const pending = gr + risks + decisions + files;
   badge.style.opacity = pending > 0 ? '1' : '0';
   badge.textContent = pending > 0 ? String(pending) : '';
+  // PASO 1: Actualizar hero Valor Capturado (rediseño dashboard)
+  updateHeroValorCapturado(gr, risks, decisions, files);
+}
+function updateHeroValorCapturado(gr, risks, decisions, files){
+  const hero = document.getElementById('hero-valor-capturado');
+  if (!hero) return;
+  // Mostrar hero solo si hay datos reales
+  const total = gr + risks + decisions + files;
+  if (total > 0 || isRealDataMode(store.dataMode)) {
+    hero.style.display = 'block';
+    document.getElementById('hero-riesgos').textContent = String(risks);
+    document.getElementById('hero-decisiones').textContent = String(decisions);
+    document.getElementById('hero-oportunidades').textContent = String(files);
+    // Valor capturado: intentar obtener de la API, si no hay mostrar --
+    if (store.valorCapturado != null) {
+      document.getElementById('valor-capturado-num').textContent = formatCurrency(store.valorCapturado);
+      if (store.valorCapturadoChange != null) {
+        const changeEl = document.getElementById('valor-capturado-change');
+        changeEl.textContent = (store.valorCapturadoChange >= 0 ? '+' : '') + store.valorCapturadoChange + '% vs mes anterior';
+        changeEl.style.color = store.valorCapturadoChange >= 0 ? 'var(--success)' : 'var(--danger)';
+      }
+    } else {
+      document.getElementById('valor-capturado-num').textContent = '--';
+      document.getElementById('valor-capturado-change').textContent = '';
+    }
+  } else {
+    hero.style.display = 'none';
+  }
 }
 function openNotificationsDrawer(){
   openDrawer('Notificaciones', 'Centro de alertas de VANOVA', buildNotificationsBody(),
