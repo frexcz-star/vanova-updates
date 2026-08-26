@@ -134,9 +134,20 @@ def _profile_region(slug: str) -> Path | None:
     return _profile_dir(slug)
 
 
+# Mapa de compatibilidad: IDs de agente del catálogo → perfiles Hermes existentes.
+# BUG-061 (Mathew): evita que el scheduler lance perfiles inexistentes cuando
+# el catálogo usa un ID distinto al nombre del perfil ya creado en disco.
+_AGENT_ID_TO_PROFILE: dict[str, str] = {
+    "sales-analyst": "vanova-agente-de-ventas",
+}
+
+
 def agent_slug(agent: dict[str, Any]) -> str:
     """Nombre de perfil Hermes para un agente VANOVA (namespaced)."""
     aid = str(agent.get("id") or "").strip()
+    # BUG-061: si el ID tiene un perfil mapeado explícito, usarlo directamente.
+    if aid and aid in _AGENT_ID_TO_PROFILE:
+        return _AGENT_ID_TO_PROFILE[aid]
     if aid:
         base = aid.replace("custom-", "")
     else:
