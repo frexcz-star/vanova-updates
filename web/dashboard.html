@@ -1477,7 +1477,7 @@ button:focus-visible,[data-act]:focus-visible{
     </div>
     <div class="sl-steps" id="sl-steps">
       <div class="sl-item active" data-sl="connector"><span class="sl-spin"></span><span class="sl-txt">Cloud / Connector</span><span class="sl-check"></span></div>
-      <div class="sl-item" data-sl="hermes"><span class="sl-spin"></span><span class="sl-txt">Hermes</span><span class="sl-check"></span></div>
+      <div class="sl-item" data-sl="hermes"><span class="sl-spin"></span><span class="sl-txt">Asistente</span><span class="sl-check"></span></div>
       <div class="sl-item" data-sl="data"><span class="sl-spin"></span><span class="sl-txt">Datos de negocio</span><span class="sl-check"></span></div>
       <div class="sl-item" data-sl="agents"><span class="sl-spin"></span><span class="sl-txt">Agentes de IA</span><span class="sl-check"></span></div>
       <div class="sl-item" data-sl="done"><span class="sl-spin"></span><span class="sl-txt">Finalizar</span><span class="sl-check"></span></div>
@@ -1789,9 +1789,9 @@ function buildNav(){
         ${g.items.map(it=>{
           const approvalBadge = it.k==='approvals' && (store.pendingApprovals||[]).length
             ? `<span class="nav-badge">${(store.pendingApprovals||[]).length}</span>` : '';
-          // FASE 9 — proactividad: badge de problemas activos en Inicio
-          const problemCount = it.k==='home' ? activeFindingCount('problem') : 0;
-          const problemBadge = problemCount ? `<span class="nav-badge" style="background:var(--danger)" title="${problemCount} problema(s) activo(s) detectados">${problemCount}</span>` : '';
+          // FASE 9 / BUG-067 — badge de riesgos activos en Inicio (misma fuente que el drawer)
+          const problemCount = it.k==='home' ? activeRiskCount() : 0;
+          const problemBadge = problemCount ? `<span class="nav-badge" style="background:var(--danger)" title="${problemCount} riesgo(s) activo(s) detectados">${problemCount}</span>` : '';
           return `
           <button class="nav-item" data-view="${it.k}"${it.k==='settings'?' data-nav="settings"':''} title="${it.label}">
             <span class="n-ico">${ic(it.ico)}</span><span class="txt">${it.label}</span>${approvalBadge}${problemBadge}
@@ -1834,7 +1834,7 @@ const TITLES = {
   inventory:'Inventario', production:'Producción', procurement:'Compras', logistics:'Logística',
   studio:'Marketing Studio', campaigns:'Campañas', content:'Contenido', trends:'Tendencias',
   agents:'Agentes de IA', sources:'Fuentes de datos', integrations:'Integraciones', files:'Archivos del PC', approvals:'Aprobaciones', map:'Mapa del sistema', diagnostics:'Diagnóstico',
-  automation:'Automatización', hermes:'Hermes', ceobrief:'Informe CEO', settings:'Ajustes', agentdetail:'Agente'
+  automation:'Automatización', hermes:'Asistente', ceobrief:'Informe CEO', settings:'Ajustes', agentdetail:'Agente'
 };
 function go(v){
   if (v === 'map') { v = 'home'; }
@@ -2047,7 +2047,7 @@ function homeRunningNowHTML(){
   </div>`).join('');
   const empty = !agentRows && !taskRows;
   const body = empty
-    ? `<div class="state-box" style="padding:18px;text-align:center;position:relative">${ic('pulse')}<div class="sb-title" style="font-size:13px;margin-top:6px">Ningún agente ni tarea en ejecución.</div><div style="font-size:11.5px;color:var(--text-3);margin-top:2px">Todo en calma. Ejecuta un agente o pide algo a Hermes.</div></div>`
+    ? `<div class="state-box" style="padding:18px;text-align:center;position:relative">${ic('pulse')}<div class="sb-title" style="font-size:13px;margin-top:6px">Ningún agente ni tarea en ejecución.</div><div style="font-size:11.5px;color:var(--text-3);margin-top:2px">Todo en calma. Ejecuta un agente o pide algo al Asistente.</div></div>`
     : `<div style="position:relative">${agentRows ? `<div style="margin-bottom:8px">${agentRows}</div>` : ''}${taskRows}</div>`;
   return `<div class="dash-card cosmic">
     <div class="cosmic-orbit" aria-hidden="true"></div>
@@ -2762,12 +2762,12 @@ function agentStatusHTML(status, reason){
 }
 /* Live per-agent block: current activity, progress bar and stats chips. */
 function agentBotBadge(a){
-  // FASE B, PASO 4 — indicador de "Bot de Hermes activo". Honesto: se muestra
+  // FASE B, PASO 4 — indicador de "Bot del Asistente activo". Honesto: se muestra
   // solo si el agente tiene su perfil Hermes sincronizado (campo hermesBot).
   const botName = a.hermesBot || a.hermes_bot;
   if (!botName) return '';
-  return `<div class="bot-badge" title="Este agente es un bot persistente de Hermes (perfil ${escapeHtml(botName)})">
-    <span class="bot-dot"></span>Bot de Hermes activo
+  return `<div class="bot-badge" title="Este agente es un bot persistente del Asistente (perfil ${escapeHtml(botName)})">
+    <span class="bot-dot"></span>Bot del Asistente activo
   </div>`;
 }
 
@@ -3281,7 +3281,7 @@ function viewActivity(){
     <div class="task-progress" style="margin-top:10px"><div class="task-progress-fill" style="width:${Math.min(100, scan.percent||0)}%"></div></div>
   </div>` : '';
   return `<div class="page">
-    <div class="page-head"><div class="page-title">Actividad</div><div class="page-sub">Línea de tiempo de Hermes, los agentes y el escáner.</div></div>
+    <div class="page-head"><div class="page-title">Actividad</div><div class="page-sub">Línea de tiempo del Asistente, los agentes y el escáner.</div></div>
     ${scanBox}
     <div class="dash-card dash-card--blue" style="max-width:800px">
       <div class="activity">
@@ -3329,7 +3329,7 @@ function viewDecisions(){
 /* ---- TASKS ---- */
 function agentTaskLabel(agentId){
   const id = String(agentId || '').toLowerCase();
-  if (id === 'hermes') return 'Hermes';
+  if (id === 'hermes') return 'Asistente';
   const ag = AGENTS.find(function(a){ return a.id === agentId; });
   return ag ? ag.name : (agentId || 'agente');
 }
@@ -3424,7 +3424,7 @@ function buildUnifiedActivity(userTasks, internalTasks, insights, snapshot, scan
   const internalRows = buildActivityFromTasks(internalTasks || []).map(function(row){
     return Object.assign({}, row, {
       kind: 'internal',
-      agent: row.agent === 'Hermes' ? 'Hermes' : 'VANOVA',
+      agent: row.agent === 'Hermes' || row.agent === 'Asistente' ? 'Asistente' : 'VANOVA',
       action: row.action || 'Actividad interna de VANOVA'
     });
   });
@@ -3543,7 +3543,7 @@ function openNewAgentModal(){
         <label class="nt-label">Descripción (opcional)</label>
         <textarea id="na-desc" class="nt-input" rows="3" placeholder="Qué debe vigilar o hacer este agente…"></textarea>
       </div>
-      <div style="font-size:12px;color:var(--text-3)">El agente se ejecuta con datos reales de tu negocio y permiso de solo lectura según su área. Hermes lo coordina por detrás.</div>
+      <div style="font-size:12px;color:var(--text-3)">El agente se ejecuta con datos reales de tu negocio y permiso de solo lectura según su área. El Asistente lo coordina por detrás.</div>
     </div>
     <div class="task-modal-foot">
       <button class="btn btn-ghost" data-nt-close>Cancelar</button>
@@ -3707,7 +3707,7 @@ function openNewTaskModal(){
       sel.innerHTML = agents.map(function(a){ return `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name || a.id)}</option>`; }).join('');
     } else {
       const fallback = (window.__MAIOS_AGENTS__ || AGENTS || []).filter(function(a){ return a.status && a.status !== 'Unknown'; });
-      sel.innerHTML = (fallback.length ? fallback : [{ id:'hermes', name:'Hermes' }]).map(function(a){ return `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name || a.id)}</option>`; }).join('');
+      sel.innerHTML = (fallback.length ? fallback : [{ id:'hermes', name:'Asistente' }]).map(function(a){ return `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name || a.id)}</option>`; }).join('');
     }
   }).catch(function(){});
 
@@ -3769,8 +3769,8 @@ function viewTasks(){
   if (!tasks.length) {
     const empty = window.MAIOSUx ? MAIOSUx.emptyState({
       title: 'Sin tareas todavía',
-      why: 'Ejecuta un agente o pide a Hermes que cree una tarea.',
-      actionLabel: 'Ir a Hermes',
+      why: 'Ejecuta un agente o pide al Asistente que cree una tarea.',
+      actionLabel: 'Ir al Asistente',
       actionGo: 'hermes',
       icon: 'clock'
     }) : `<div class="card card-pad">${ic('clock')} No hay tareas todavía.</div>`;
@@ -3869,7 +3869,7 @@ function viewAgents(){
       </div>`
     : '';
   return `<div class="page">
-    <div class="page-head"><div class="page-title">Agentes de IA</div><div class="page-sub">${AGENTS.length} agente(s) activo(s) coordinados por Hermes. Ejecútalos cuando quieras o deja que sigan su programación automática.</div>
+    <div class="page-head"><div class="page-title">Agentes de IA</div><div class="page-sub">${AGENTS.length} agente(s) activo(s) coordinados por el Asistente. Ejecútalos cuando quieras o deja que sigan su programación automática.</div>
       <button class="btn btn-primary btn-sm" data-act="new-agent" style="margin-left:auto">${ic('plus')} Crear agente</button>
     </div>
     ${srcBanner}
@@ -3921,7 +3921,7 @@ function viewAgentDetail(){
         </div>
         ${agentStatusHTML(a.status, a.current)}
         <span class="autonomy-tag ${AUTONOMY_TXT[a.autonomy]}">${a.autonomy==='auto'?'Auto':a.autonomy==='approval'?'Aprobación':'Humano'}</span>
-        <button class="btn btn-primary" data-act="askhermes">${ic('spark')} Consultar Hermes</button>
+        <button class="btn btn-primary" data-act="askhermes">${ic('spark')} Consultar al Asistente</button>
       </div>
     </div>
     <div class="grid g-3" style="margin-bottom:var(--space-5)">
@@ -4082,10 +4082,10 @@ function viewHermes(){
   const hr = store.hermes || {};
   const ready = isHermesChatReady();
   const readyMsg = ready
-    ? ('Hermes listo — conexión local' + (hr.latencyMs ? (' (' + hr.latencyMs + ' ms)') : ''))
-    : (hr.message || 'Preparando Hermes…');
+    ? ('Asistente listo — conexión local' + (hr.latencyMs ? (' (' + hr.latencyMs + ' ms)') : ''))
+    : (hr.message || 'Preparando el Asistente…');
   return `<div class="page">
-    <div class="page-head"><div class="page-title">Hermes — Interfaz de Comando IA</div><div class="page-sub">Hermes es el orquestador transversal. Consulta, coordina agentes y consolida el resultado.</div></div>
+    <div class="page-head"><div class="page-title">Asistente — Interfaz de Comando IA</div><div class="page-sub">El Asistente es el orquestador transversal. Consulta, coordina agentes y consolida el resultado.</div></div>
     <div id="hermes-ready-strip" class="conn-banner ${ready ? 'conn-banner--ok' : 'conn-banner--warn'}${ready ? '' : ''}" style="margin-bottom:16px">
       <span class="status-dot ${ready ? 'ok' : 'warn'}"></span>
       <div class="conn-banner-body"><strong>${ready ? 'Chat listo' : 'Conectando…'}</strong><span>${readyMsg}</span></div>
@@ -4093,7 +4093,7 @@ function viewHermes(){
     <div class="grid g-2" style="align-items:start">
       <div>
         <div class="card card-pad" style="margin-bottom:16px">
-          <div class="section-title" style="margin-bottom:12px">${ic('send')} Pregunta a Hermes</div>
+          <div class="section-title" style="margin-bottom:12px">${ic('send')} Pregunta a VANOVA</div>
           <div class="field">
             <input id="hermes-q" placeholder="Escribe tu pregunta…" style="height:48px" value="">
           </div>
@@ -4105,7 +4105,7 @@ function viewHermes(){
           <div class="row" style="gap:8px;margin-top:8px">
             ${['Hola','¿Cómo está la empresa?','¿Qué necesita mi atención?','¿Por qué bajó el margen?'].map(s=>`<button class="btn btn-ghost" style="height:30px;font-size:12px" data-act="hermes-suggest" data-suggest="${s}">${s}</button>`).join('')}
           </div>
-          <button class="btn btn-primary mt-16" data-act="run-orchestration">${ic('robot')} Enviar a Hermes</button>
+          <button class="btn btn-primary mt-16" data-act="run-orchestration">${ic('robot')} Enviar al Asistente</button>
           <button class="btn btn-ghost mt-16" data-act="hermes-history" style="margin-left:8px">${ic('clock')} Conversaciones anteriores</button>
         </div>
         ${state.architectureDismissed ? '' : `<div class="card card-pad" id="hermes-arch-card">
@@ -4114,8 +4114,8 @@ function viewHermes(){
             <button class="btn btn-ghost" style="height:28px;width:28px;padding:0;font-size:14px;line-height:1" data-act="dismiss-architecture" title="Ocultar">${ic('x')}</button>
           </div>
           <div style="font-size:13px;color:var(--text-2);line-height:1.6">
-            <p style="margin-bottom:10px"><b style="color:var(--text)">Hermes = Orquestador.</b> Recibe órdenes, entiende objetivos, decide qué agentes necesita y supervisa la ejecución.</p>
-            <p style="margin-bottom:10px"><b style="color:var(--text)">Agents = Especialistas.</b> Cada agente ejecuta una tarea concreta y devuelve su resultado a Hermes.</p>
+            <p style="margin-bottom:10px"><b style="color:var(--text)">Asistente = Orquestador.</b> Recibe órdenes, entiende objetivos, decide qué agentes necesita y supervisa la ejecución.</p>
+            <p style="margin-bottom:10px"><b style="color:var(--text)">Agents = Especialistas.</b> Cada agente ejecuta una tarea concreta y devuelve su resultado al Asistente.</p>
             <p><b style="color:var(--text)">Human = Autoridad final.</b> Las decisiones importantes requieren aprobación humana.</p>
           </div>
         </div>`}
@@ -4600,9 +4600,15 @@ function pollBusinessNow(){
   }).catch(function(){});
 }
 function updateNavBadges(){
-  // Actualiza el badge de problemas activos del nav sin reconstruir todo el menú
+  // Actualiza el badge de problemas activos del nav sin reconstruir todo el menú.
+  // BUG-067: usa la MISMA fuente que el drawer y el badge de la campana
+  // (store.priorities con type 'risk') para que "Inicio" no muestre un número
+  // distinto al contenido del drawer. Antes usaba activeFindingCount('problem')
+  // (solo businessFindings category='problem'), que divergía del drawer
+  // (gr+risks+decisions+files con risks de store.priorities type='risk') →
+  // "Inicio 7" vs "0 pendientes" (desincronización del contador).
   const items = document.querySelectorAll('.nav-item[data-view="home"]');
-  const n = activeFindingCount('problem');
+  const n = activeRiskCount();
   items.forEach(function(el){
     let b = el.querySelector('.nav-badge');
     if (n) {
@@ -4613,11 +4619,16 @@ function updateNavBadges(){
         el.appendChild(b);
       }
       b.textContent = n;
-      b.title = n + ' problema(s) activo(s) detectados';
+      b.title = n + ' riesgo(s) activo(s) detectados';
     } else if (b) {
       b.remove();
     }
   });
+}
+// BUG-067: único conteo de riesgos del badge/drawer. Coincide con
+// buildNotificationsBody y updateBellBadge (store.priorities.filter(p.type==='risk')).
+function activeRiskCount(){
+  return (store.priorities || []).filter(function(p){ return p.type === 'risk'; }).length;
 }
 
 // MEGA UPDATE (A10) — semáforo de salud empresarial por dimensión (servidor).
@@ -4806,7 +4817,7 @@ function businessFindingsHTML(){
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" data-bi-act="ack" data-bi-id="${escapeHtml(f.id)}">Reconocer</button>
           <button class="btn btn-ghost btn-sm" data-bi-act="resolve" data-bi-id="${escapeHtml(f.id)}">Resolver</button>
-          <button class="btn btn-ghost btn-sm" data-bi-act="ask" data-bi-id="${escapeHtml(f.id)}" data-bi-title="${escapeHtml(f.title)}">${ic('spark')} Preguntar a Hermes</button>
+          <button class="btn btn-ghost btn-sm" data-bi-act="ask" data-bi-id="${escapeHtml(f.id)}" data-bi-title="${escapeHtml(f.title)}">${ic('spark')} Preguntar a VANOVA</button>
         </div>
       </div>
     </details>`;
@@ -4979,7 +4990,7 @@ function updateHermesConversationContext(title, status) {
 }
 function hermesChatShellHTML(){
   return `<div class="card card-pad">
-    <div class="section-title" style="margin-bottom:14px">${ic('pulse')} Conversación con Hermes</div>
+    <div class="section-title" style="margin-bottom:14px">${ic('pulse')} Conversación con el Asistente</div>
     <div id="hermes-conversation-context" style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin:-2px 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)">
       <div style="min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3)">Conversación actual</span>
@@ -5005,7 +5016,7 @@ const HERMES_STEP_META = {
   dashboard: { label: 'Dashboard', icon: 'chart' },
   chat_cloud: { label: 'Modelo IA', icon: 'spark' },
   chat_local: { label: 'Modelo IA', icon: 'cpu' },
-  chat: { label: 'Hermes', icon: 'robot' },
+  chat: { label: 'Asistente', icon: 'robot' },
   processing: { label: 'Procesando', icon: 'pulse' },
   organize_warn: { label: 'Organización', icon: 'file' },
   done: { label: 'Completado', icon: 'check2' },
@@ -5073,7 +5084,7 @@ function hermesMsgHTML(m){
   if (m.role === 'thinking') {
     return `<div class="orch-node active" id="hermes-thinking-node" style="margin-bottom:8px">
       <div class="st" style="background:#dc2626">H</div>
-      <div style="flex:1;min-width:0"><div class="nm">Hermes</div><div class="st2">${escapeHtml(m.text || 'Hermes está pensando…')}</div></div>
+      <div style="flex:1;min-width:0"><div class="nm">Asistente</div><div class="st2">${escapeHtml(m.text || 'El Asistente está pensando…')}</div></div>
       <div class="status">● Trabajando…</div>
     </div>`;
   }
@@ -5088,7 +5099,7 @@ function hermesMsgHTML(m){
     return `<div class="orch-node active" style="margin-bottom:8px">
       <div class="st" style="background:#dc2626">H</div>
       <div style="flex:1;min-width:0">
-        <div class="nm">Hermes · trabajando</div>
+        <div class="nm">Asistente · trabajando</div>
         ${stepsHtml}
         ${executionHtml}
         ${partialHtml}
@@ -5117,7 +5128,7 @@ function hermesMsgHTML(m){
   const executionHtml = (!isErr) ? hermesExecutionHTML(m.events, m.commands) : '';
   return `<div class="orch-node" style="margin-bottom:8px">
     <div class="st" style="background:#dc2626">H</div>
-    <div style="flex:1;min-width:0"><div class="nm">Hermes</div><div class="st2">${stepsBlock}${executionHtml}${bodyHtml}${opDetail}</div></div>
+    <div style="flex:1;min-width:0"><div class="nm">Asistente</div><div class="st2">${stepsBlock}${executionHtml}${bodyHtml}${opDetail}</div></div>
     <div class="status" style="opacity:.5">${isErr ? '✗' : '✓'}</div>
   </div>`;
 }
@@ -5126,12 +5137,12 @@ function renderHermesChatLog(){
   if (!box) return;
   if (!state.hermesMessages.length) {
     const empty = window.MAIOSUx ? MAIOSUx.emptyState({
-      title: 'Pregunta a Hermes',
-      why: 'Escribe una pregunta y envíala a Hermes. Verás el historial completo aquí.',
+      title: 'Pregunta a VANOVA',
+      why: 'Escribe una pregunta y envíala al Asistente. Verás el historial completo aquí.',
       actionLabel: 'Ver diagnóstico',
       actionGo: 'diagnostics',
       icon: 'spark'
-    }) : `<div class="empty" style="padding:32px 12px">${ic('spark')}Escribe una pregunta y envíala a Hermes.</div>`;
+    }) : `<div class="empty" style="padding:32px 12px">${ic('spark')}Escribe una pregunta y envíala al Asistente.</div>`;
     box.innerHTML = empty + hermesQuickRepliesHTML();
     return;
   }
@@ -5224,7 +5235,7 @@ function setHermesThinking(active, text){
   if (txt && text) txt.textContent = text;
   const thinking = state.hermesMessages.find(function(m){ return m.role === 'thinking'; });
   if (active && !thinking) {
-    state.hermesMessages.push({ role: 'thinking', text: text || 'Hermes está pensando…' });
+    state.hermesMessages.push({ role: 'thinking', text: text || 'El Asistente está pensando…' });
   } else if (!active) {
     state.hermesMessages = state.hermesMessages.filter(function(m){ return m.role !== 'thinking'; });
   } else if (thinking && text) {
@@ -5262,8 +5273,8 @@ function loadCurrentHermesConversation(){
       } else if (m.status === 'error') {
         state.hermesMessages.push({ role: 'assistant', text: fixUtf8Text(m.error || 'Error'), status: 'error' });
       } else if (m.status === 'pending') {
-        state.hermesMessages.push({ role: 'thinking', text: 'Hermes está pensando…' });
-        setHermesThinking(true, 'Hermes está pensando…');
+        state.hermesMessages.push({ role: 'thinking', text: 'El Asistente está pensando…' });
+        setHermesThinking(true, 'El Asistente está pensando…');
       }
     });
     renderHermesChatLog();
@@ -5286,7 +5297,7 @@ function loadHermesSessions(){
   if (!ds || !ds.hermesConversations) { box.innerHTML = `<div class="empty" style="padding:16px">No hay historial disponible.</div>`; return; }
   ds.hermesConversations().then(raw=>{
     const list = (raw || []).filter(function(c){ return !isInternalHermesSession(c); });
-    if (!list || !list.length) { box.innerHTML = `<div class="empty" style="padding:16px">${ic('spark')}Aún no hay sesiones. Escribe tu primera pregunta a Hermes.</div>`; return; }
+    if (!list || !list.length) { box.innerHTML = `<div class="empty" style="padding:16px">${ic('spark')}Aún no hay sesiones. Escribe tu primera pregunta al Asistente.</div>`; return; }
     box.innerHTML = list.map(c=>`
       <div class="conv-item" data-conv="${c.conversation_id}" data-conv-title="${escAttr(c.title||'Conversación')}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:var(--trans)">
         ${hermesSessionBadgeHTML(c)}
@@ -5434,7 +5445,7 @@ async function renderOrchestration(){
           renderHermesChatLog();
           loadHermesOperationalPanel();
           updateHermesReadyUI(store.hermes);
-          toast('Hermes respondió.');
+          toast('El Asistente respondió.');
         } else if(st.status==='error'){
           done = true;
           state.hermesPending = false;
@@ -5448,7 +5459,7 @@ async function renderOrchestration(){
             } else if (pollCount === 8) {
               setHermesThinking(true, 'Modelo cloud cargando… (puede tardar 1-3 min)');
             } else if (pollCount > 2) {
-              setHermesThinking(true, 'Hermes está generando la respuesta…');
+              setHermesThinking(true, 'El Asistente está generando la respuesta…');
             }
             pollTimer = setTimeout(doPoll, pollMs());
           }
@@ -5522,7 +5533,7 @@ function renderHermesHistory(){
   ds.hermesConversations().then(list=>{
     const box = document.getElementById('conv-list');
     if (!list || !list.length) {
-      box.innerHTML = `<div class="empty" style="padding:24px">${ic('spark')}Aún no hay conversaciones. Escribe tu primera pregunta a Hermes.</div>`;
+      box.innerHTML = `<div class="empty" style="padding:24px">${ic('spark')}Aún no hay conversaciones. Escribe tu primera pregunta al Asistente.</div>`;
       return;
     }
     box.innerHTML = list.map(c=>`
@@ -5627,7 +5638,7 @@ function viewCeo(){
         <h2>Daily Executive Brief</h2>
         <div class="d">${fmtLocaleDate(new Date())} · El estado completo de la empresa en un minuto</div>
       </div>
-      <button class="btn btn-primary" data-act="askhermes">${ic('spark')} Ask Hermes about this report</button>
+      <button class="btn btn-primary" data-act="askhermes">${ic('spark')} Preguntar al Asistente sobre este informe</button>
     </div>
     <div class="grid g-5" style="margin-bottom:20px">
       ${metric('Revenue', fmtEuro(store.overview.revenue), store.overview.revenueChange, store.overview.revenueUp?'up':'down', 'vs budget', 'euro2')}
@@ -5760,7 +5771,7 @@ function markHermesChatProven(extra) {
     hermesHealthy: true,
     aiConfigured: true,
     reason: 'ok',
-    message: 'Hermes listo — chat verificado',
+    message: 'Asistente listo — chat verificado',
   }, extra || {}));
   store.hermes._chatProven = true;
 }
@@ -5790,8 +5801,8 @@ function applyHermesChatReady(info) {
     status: ready ? 'online' : 'offline',
     source: 'runtime',
     message: ready
-      ? ('Hermes listo — ' + (info.aiProvider || info.model || 'IA conectada'))
-      : (reasonMessages[info.reason] || info.error || 'Hermes no conectado'),
+      ? ('Asistente listo — ' + (info.aiProvider || info.model || 'IA conectada'))
+      : (reasonMessages[info.reason] || info.error || 'Asistente no conectado'),
     _verifiedAt: ready ? Date.now() : (store.hermes && store.hermes._verifiedAt) || 0,
     _syncedAt: Date.now(),
     _chatProven: wasProven || ready,
@@ -5818,8 +5829,8 @@ function syncHermesFromHealth(health) {
     status: chatReady ? 'online' : 'offline',
     source: 'runtime',
     message: chatReady
-      ? (comp.message || 'Chat Hermes listo (Ollama local)')
-      : (comp.message || 'Hermes no listo para chat'),
+      ? (comp.message || 'Chat del Asistente listo (Ollama local)')
+      : (comp.message || 'Asistente no listo para chat'),
     _verifiedAt: chatReady ? Date.now() : 0,
     _syncedAt: Date.now(),
   });
@@ -5835,7 +5846,7 @@ function updateHermesReadyUI(readyInfo) {
     strip.innerHTML =
       '<span class="status-dot ' + (ok ? 'ok' : 'warn') + '"></span>' +
       '<div class="conn-banner-body"><strong>' + (ok ? 'Chat listo' : 'Conectando…') + '</strong>' +
-      '<span>' + (ok ? ('Hermes listo — conexión local' + (readyInfo.latencyMs || readyInfo.warmLatencyMs ? (' (' + (readyInfo.warmLatencyMs || readyInfo.latencyMs) + ' ms)') : '')) : (readyInfo.message || 'Preparando Hermes en localhost…')) + '</span></div>';
+      '<span>' + (ok ? ('Asistente listo — conexión local' + (readyInfo.latencyMs || readyInfo.warmLatencyMs ? (' (' + (readyInfo.warmLatencyMs || readyInfo.latencyMs) + ' ms)') : '')) : (readyInfo.message || 'Preparando el Asistente en localhost…')) + '</span></div>';
   }
   const spVal = document.getElementById('sp-val-hermes');
   const spDot = document.getElementById('sp-dot-hermes');
@@ -5996,10 +6007,10 @@ function refreshAiProviderPanel(){
         <div class="row" style="gap:8px">
           <button class="btn btn-primary" data-act="ai-provider-apply" style="height:34px;font-size:13px">${ic('check')} Usar este modelo</button>
         </div>
-        <p style="font-size:11px;color:var(--text-3);margin:0">VANOVA usa la config de Hermes (<code>config.yaml</code>), no impone OpenRouter. Reinicia el chat si cambias modelo.</p>
+        <p style="font-size:11px;color:var(--text-3);margin:0">VANOVA usa la config del Asistente (<code>config.yaml</code>), no impone OpenRouter. Reinicia el chat si cambias modelo.</p>
       </div>`;
   }).catch(function(){
-    box.innerHTML = '<div style="font-size:13px;color:var(--danger)">No se pudo leer config Hermes.</div>';
+    box.innerHTML = '<div style="font-size:13px;color:var(--danger)">No se pudo leer la config del Asistente.</div>';
   });
 }
 
@@ -6007,11 +6018,11 @@ function refreshHermesSettingsUI() {
   const online = isHermesOnline();
   const row = document.getElementById('settings-hermes-status');
   if (row) {
-    let msg = online ? 'Conexión establecida' : ((store.hermes && store.hermes.message) || 'Hermes no conectado');
+    let msg = online ? 'Conexión establecida' : ((store.hermes && store.hermes.message) || 'Asistente no conectado');
     if (online && store.aiProvider && store.aiProvider.configured) {
-      msg = 'Hermes + ' + (store.aiProvider.provider || store.aiProvider.providerId || 'IA') + ' conectados';
+      msg = 'Asistente + ' + (store.aiProvider.provider || store.aiProvider.providerId || 'IA') + ' conectados';
     } else if (online && store.aiProvider && !store.aiProvider.configured) {
-      msg = 'Hermes detectado — proveedor IA no configurado en runtime';
+      msg = 'Asistente detectado — proveedor IA no configurado en runtime';
     }
     row.innerHTML = hermesStatusHTML(online, msg);
   }
@@ -6144,7 +6155,7 @@ function viewSettings(){
   const hermesOnline = isHermesOnline();
   const aiExtStatus = (store.aiProvider && store.aiProvider.configured) ? 'connected' : 'available';
   const extensions = [
-    {id:'hermes', name:'Hermes Agent', desc:'Orquestador de IA local — coordina agentes y consultas.', ico:'spark', color:'#dc2626', status: hermesOnline ? 'connected' : 'available'},
+    {id:'hermes', name:'Asistente de IA', desc:'Orquestador de IA local — coordina agentes y consultas.', ico:'spark', color:'#dc2626', status: hermesOnline ? 'connected' : 'available'},
     {id:'mcp', name:'Herramientas externas', desc:'Herramientas y agentes externos conectados a VANOVA.', ico:'plug', color:'#8b5cf6', status: store.mcp && store.mcp.connected ? 'connected' : 'available'},
     {id:'ai-provider', name:'Proveedor IA (NVIDIA / Ollama)', desc:'Modelos configurados en el runtime local (NVIDIA NIM, Ollama, etc.).', ico:'cpu', color:'#3b82f6', status: aiExtStatus},
   ];
@@ -6169,16 +6180,16 @@ function viewSettings(){
         </div>
       </div>
       <div class="dash-card">
-        <div class="section-title" style="margin-bottom:16px">${ic('spark')} Conexión con Hermes</div>
-        <div class="row" style="margin-bottom:16px" id="settings-hermes-status">${hermesStatusHTML(hermesOnline, hermesOnline ? 'Conexión establecida' : 'Hermes no conectado')}</div>
+        <div class="section-title" style="margin-bottom:16px">${ic('spark')} Conexión con el Asistente</div>
+        <div class="row" style="margin-bottom:16px" id="settings-hermes-status">${hermesStatusHTML(hermesOnline, hermesOnline ? 'Conexión establecida' : 'Asistente no conectado')}</div>
         <button class="btn btn-ghost" data-act="test-conn">${ic('refresh')} Probar conexión</button>
       </div>
       <div class="dash-card" style="grid-column:1/-1" id="settings-ai-provider-host">
         <div class="section-title" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
-          <span>${ic('cpu')} Proveedor de IA (Hermes)</span>
+          <span>${ic('cpu')} Proveedor de IA (Asistente)</span>
           <button class="btn btn-ghost" style="height:30px;font-size:12px" data-act="ai-provider-refresh">${ic('refresh')} Actualizar</button>
         </div>
-        <div id="ai-provider-panel"><div style="font-size:13px;color:var(--text-3)">Cargando configuración de Hermes…</div></div>
+        <div id="ai-provider-panel"><div style="font-size:13px;color:var(--text-3)">Cargando configuración del Asistente…</div></div>
       </div>
       <div class="dash-card">
         <div class="section-title" style="margin-bottom:12px">${ic('layers')} Datos de la empresa</div>         <div style="font-size:13px;color:var(--text-2);margin-bottom:12px">
@@ -6416,7 +6427,7 @@ function viewSales(){
     s.date || '—',
     s.status || '—'
   ]);
-  let sub = total + ' registros de ventas organizados por Hermes (archivos + Shopify).';
+  let sub = total + ' registros de ventas organizados por el Asistente (archivos + Shopify).';
   if (total > sales.length) sub += ' Mostrando las ' + sales.length + ' más recientes.';
   if (summary.revenue != null) sub = 'Ingresos €' + Number(summary.revenue).toFixed(2) + ' · ' + sub;
   if (store.shopifySync && store.shopifySync.lastSync) {
@@ -6449,7 +6460,7 @@ function productsEmptyState(){
     why = localExcel + ' archivo(s) Excel/CSV en tu PC. '
       + (shopifyNeedsReauth()
         ? 'Los productos del Excel se muestran aquí; Shopify está conectado pero necesita permisos (read_products) para sincronizar la tienda.'
-        : 'Pide a Hermes «organiza mis productos» o importa de nuevo el archivo si la tabla está vacía.');
+        : 'Pide al Asistente «organiza mis productos» o importa de nuevo el archivo si la tabla está vacía.');
     actionLabel = localExcel ? 'Ver archivos Excel' : 'Ir a integraciones';
     actionGo = localExcel ? 'files' : 'integrations';
   } else if (shopifyNeedsReauth()) {
@@ -7027,25 +7038,25 @@ function promptGmailConfig(){
 }
 function askHermesToConnect(integrationId){
   const ds = window.DataServices;
-  if(!ds || !ds.askHermes){ toast('Hermes no está disponible ahora mismo.', true); return; }
+  if(!ds || !ds.askHermes){ toast('El Asistente no está disponible ahora mismo.', true); return; }
   const names = { gmail:'Gmail', drive:'Google Drive', facturascript:'FacturaScript' };
   const name = names[integrationId] || integrationId;
-  toast('Pidiendo a Hermes que conecte ' + name + '…');
+  toast('Pidiendo al Asistente que conecte ' + name + '…');
   ds.hermesIntegrationPrompt(integrationId).then(r=>{
     const prompt = (r && r.prompt) || ('Ayúdame a conectar la integración de ' + name + ' en VANOVA. Explícame qué necesito (credenciales, pasos, errores comunes) y, si puedes, hazlo tú.');
     ds.askHermes(prompt, state.convId).then(function(req){
-      if(req && req.error) toast('No se pudo contactar con Hermes: ' + req.error, true);
+      if(req && req.error) toast('No se pudo contactar con el Asistente: ' + req.error, true);
       else {
-        toast('Hermes está trabajando en conectar ' + name + '. Revisa su respuesta en el chat.');
+        toast('El Asistente está trabajando en conectar ' + name + '. Revisa su respuesta en el chat.');
         go('hermes');
         setTimeout(loadCurrentHermesConversation, 400);
       }
-    }).catch(function(err){ toast('Error al pedir ayuda a Hermes.', true); });
+    }).catch(function(err){ toast('Error al pedir ayuda al Asistente.', true); });
   }).catch(function(err){
     const prompt = 'Ayúdame a conectar la integración de ' + name + ' en VANOVA. Explícame qué necesito y si puedes hazlo tú.';
     ds.askHermes(prompt, state.convId).then(function(req){
-      if(req && req.error) toast('No se pudo contactar con Hermes: ' + req.error, true);
-      else { toast('Hermes está trabajando en conectar ' + name + '. Revisa su respuesta en el chat.'); go('hermes'); }
+      if(req && req.error) toast('No se pudo contactar con el Asistente: ' + req.error, true);
+      else { toast('El Asistente está trabajando en conectar ' + name + '. Revisa su respuesta en el chat.'); go('hermes'); }
     });
   });
 }
@@ -7083,7 +7094,7 @@ function viewIntegrations(){
           <div class="int-desc">${i.desc}</div>            <div class="int-foot">
             <span class="int-count">${foot.meta}</span>
             <div style="display:flex;gap:6px">
-              ${(i.id==='gmail'||i.id==='drive'||i.id==='facturascript') && i.status!=='connected' ? `<button class="btn btn-ghost" style="height:30px;font-size:12px" data-act="int-hermes-${i.id}" title="Pídele a Hermes que conecte esta integración por ti">${ic('spark')} Hermes</button>` : ''}
+              ${(i.id==='gmail'||i.id==='drive'||i.id==='facturascript') && i.status!=='connected' ? `<button class="btn btn-ghost" style="height:30px;font-size:12px" data-act="int-hermes-${i.id}" title="Pídele al Asistente que conecte esta integración por ti">${ic('spark')} Asistente</button>` : ''}
               <button class="btn btn-ghost" style="height:30px;font-size:12px" data-act="int-${i.id}">${foot.btn}</button>
             </div>
           </div>
@@ -7112,7 +7123,7 @@ function buildNotificationsBody(){
   const d = (store.decisions || []).filter(function(dc){ return (dc.status||'pending') === 'pending'; }).length;
   const candCount = (store.fileCandidates||[]).length;
   const parts = [];
-  if (candCount>0) parts.push(`<div class="drawer-sec"><div class="ds-label" style="color:var(--accent)">Archivos sugeridos</div><div class="ds-val muted">Hermes encontró ${candCount} archivo(s) que podrían ser de tu empresa · <button class="btn btn-ghost" style="height:26px;font-size:11px;padding:0 8px;margin-top:6px" data-act="notif-go-files">Revisar</button></div></div>`);
+  if (candCount>0) parts.push(`<div class="drawer-sec"><div class="ds-label" style="color:var(--accent)">Archivos sugeridos</div><div class="ds-val muted">el Asistente encontró ${candCount} archivo(s) que podrían ser de tu empresa · <button class="btn btn-ghost" style="height:26px;font-size:11px;padding:0 8px;margin-top:6px" data-act="notif-go-files">Revisar</button></div></div>`);
   if (gr.length) {
     parts.push(`<div class="drawer-sec">
       <div class="ds-label" style="color:var(--danger)">Aprobaciones pendientes</div>
@@ -7297,7 +7308,7 @@ function candidateListHTML(){
   const cand = store.fileCandidates || [];
   if (!cand.length) return '';
   return `<div class="card card-pad" style="margin-bottom:16px">
-    <div class="section-head" style="margin-bottom:8px"><div class="section-title">${ic('search')} Sugerencias de Hermes (${cand.length})</div><button class="btn btn-ghost btn-sm" data-act="cand-approve-all">${ic('plus')} Añadir todos</button></div>
+    <div class="section-head" style="margin-bottom:8px"><div class="section-title">${ic('search')} Sugerencias del Asistente (${cand.length})</div><button class="btn btn-ghost btn-sm" data-act="cand-approve-all">${ic('plus')} Añadir todos</button></div>
     ${cand.map(c=>`<div class="cand-row" data-path="${escAttr(c.path||c.name||'')}">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600">${escapeHtml(c.name||c.path)}</div>
@@ -7319,7 +7330,7 @@ function cmdItems(filter){
     items.push({label:it.label,view:it.k,group:g.group,ico:it.ico});
   }));
   items.unshift({label:'Aprobaciones pendientes',view:'__notifications__',group:'Acciones',ico:'shield'});
-  items.unshift({label:'Hermes — Command Interface',view:'hermes',group:'Acciones',ico:'spark'});
+  items.unshift({label:'Asistente — Command Interface',view:'hermes',group:'Acciones',ico:'spark'});
   items.unshift({label:'Nuevo insight',view:'insights',group:'Acciones',ico:'plus'});
   if(filter){const f=filter.toLowerCase();return items.filter(i=>i.label.toLowerCase().includes(f)||i.group.toLowerCase().includes(f));}
   return items;
@@ -7452,7 +7463,7 @@ async function importPcFiles(picked){
     }
   }
   if (ok){
-    toast(ok === 1 ? 'Hermes organizó: '+imported[0].name : ok+' archivo(s) importados y organizados por Hermes');
+    toast(ok === 1 ? 'El Asistente organizó: '+imported[0].name : ok+' archivo(s) importados y organizados por el Asistente');
     const filter = state.filesFilter;
     if (filter && FILE_EXT_MAP[filter]){
       const exts = FILE_EXT_MAP[filter];
@@ -7602,9 +7613,9 @@ function init(){
     if (!window.MAIOSSystemStatus) return;
     try {
       await MAIOSSystemStatus.runRecovery('hermes');
-      toast('Hermes reiniciado');
+      toast('Asistente reiniciado');
       MAIOSSystemStatus.fetchHealth().then(h => MAIOSSystemStatus.renderPopover(h));
-    } catch(e){ toast('No se pudo reiniciar Hermes'); }
+    } catch(e){ toast('No se pudo reiniciar el Asistente'); }
   });
   document.addEventListener('click',(e)=>{
     const pop=document.getElementById('status-pop');
@@ -8202,7 +8213,7 @@ function onAppClick(e){
             help: 'VANOVA puede leer facturas y pedidos llegados por correo y responder con plantillas.',
             reconfigAct: 'int-gmail-reconfig',
             viewAct: 'go-hermes',
-            viewLabel: 'Preguntar a Hermes'
+            viewLabel: 'Preguntar a VANOVA'
           });
           return;
         }
@@ -8654,7 +8665,7 @@ const SETUP_PHASES = [
   {id:'company',  label:'Empresa',    title:'¿Qué empresa estás configurando?', sub:'Contamos con plantillas para MOOVING PAPER y BlisArtPaper. O configura la tuya.'},
   {id:'people',   label:'Contacto',   title:'Sobre ti', sub:'Quién eres y tu rol — esto personaliza el dashboard.'},
   {id:'sources',  label:'Fuentes',    title:'Conecta tus fuentes de datos', sub:'Archivos, herramientas externas, tu programa de gestión (ERP), tienda... Todo lo que alimenta a VANOVA.'},
-  {id:'hermes',   label:'Hermes',     title:'Asistente de IA de VANOVA', sub:'VANOVA usa un asistente de IA como cerebro para analizar tus datos. Detectamos su instalación.'},
+  {id:'hermes',   label:'Asistente',  title:'Asistente de IA de VANOVA', sub:'VANOVA usa un asistente de IA como cerebro para analizar tus datos. Detectamos su instalación.'},
   {id:'autonomy', label:'Autonomía',  title:'Nivel de autonomía', sub:'Define cuánto puede hacer VANOVA sin tu confirmación.'},
   {id:'review',   label:'Resumen',    title:'Revisa y listo', sub:'Confirma que todo está correcto para terminar.'}
 ];
@@ -8714,7 +8725,7 @@ function renderSetupPhase(){
       <p style="font-size:15px;color:var(--text-2);max-width:480px;margin:0 auto;line-height:1.6">VANOVA convierte los datos de tu empresa en decisiones. Primero conéctalos.</p>
       <div class="s-opt-grid" style="grid-template-columns:1fr 1fr;max-width:560px;margin:22px auto 0">
         <div class="s-opt s-welcome-card" data-act="sw-go" data-target="sources" style="cursor:pointer;text-align:center;padding:22px 14px"><div class="sw-icon">${ic('plug')}</div><div class="s-ot">Fuentes</div><div class="s-od">Archivos, herramientas externas, tu gestión, tienda</div><div class="sw-go">Conectar →</div></div>
-        <div class="s-opt s-welcome-card" data-act="sw-go" data-target="hermes" style="cursor:pointer;text-align:center;padding:22px 14px"><div class="sw-icon">${ic('robot')}</div><div class="s-ot">Hermes</div><div class="s-od">El cerebro que analiza</div><div class="sw-go">Configurar →</div></div>
+        <div class="s-opt s-welcome-card" data-act="sw-go" data-target="hermes" style="cursor:pointer;text-align:center;padding:22px 14px"><div class="sw-icon">${ic('robot')}</div><div class="s-ot">Asistente</div><div class="s-od">El cerebro que analiza</div><div class="sw-go">Configurar →</div></div>
         <div class="s-opt s-welcome-card" data-act="sw-go" data-target="review" style="cursor:pointer;text-align:center;padding:22px 14px"><div class="sw-icon">${ic('chart')}</div><div class="s-ot">Insights</div><div class="s-od">Decisiones accionables</div><div class="sw-go">Ver →</div></div>
         <div class="s-opt s-welcome-card" data-act="sw-go" data-target="review" style="cursor:pointer;text-align:center;padding:22px 14px"><div class="sw-icon">${ic('zap')}</div><div class="s-ot">Agentes</div><div class="s-od">Automatizan tu negocio</div><div class="sw-go">Ver →</div></div>
       </div>
@@ -8762,13 +8773,13 @@ function renderSetupPhase(){
       <div style="display:flex;align-items:center;gap:12px;width:100%">
         <div class="sc-ico">${ic('robot')}</div>
         <div style="flex:1">
-          <div class="sc-title">${detected?'Hermes detectado ✓':'Hermes no detectado'}</div>
-          <div class="sc-desc">${detected? (typeof detected==='string'? detected : 'VANOVA usará Hermes como orquestador de IA.') : 'Instala Hermes Agent para que VANOVA pueda analizar y ejecutar.'}</div>
+          <div class="sc-title">${detected?'Asistente detectado ✓':'Asistente no detectado'}</div>
+          <div class="sc-desc">${detected? (typeof detected==='string'? detected : 'VANOVA usará el Asistente como orquestador de IA.') : 'Instala el Asistente para que VANOVA pueda analizar y ejecutar.'}</div>
         </div>
         ${detected?`<span class="sc-status ok">Online</span>`:`<span class="sc-status act">Falta</span>`}
       </div>
-      ${detected?'':`<label class="s-chip active" style="margin-top:12px"><input type="checkbox" id="s-install-hermes" ${setupData.installHermes?'checked':''}/> Descargar e instalar Hermes Agent</label>
-      <div class="s-hint" style="font-size:12px;color:var(--text-3);margin-top:6px">VANOVA abrirá el instalador oficial de Hermes para que lo completes.</div>`}
+      ${detected?'':`<label class="s-chip active" style="margin-top:12px"><input type="checkbox" id="s-install-hermes" ${setupData.installHermes?'checked':''}/> Descargar e instalar el Asistente</label>
+      <div class="s-hint" style="font-size:12px;color:var(--text-3);margin-top:6px">VANOVA abrirá el instalador oficial del Asistente para que lo completes.</div>`}
     </div>`;
   } else if (ph.id==='autonomy'){
     const levels = [
@@ -8785,7 +8796,7 @@ function renderSetupPhase(){
       <div class="s-review-item"><span class="ri-k">Empresa</span><span class="ri-v">${setupData.company==='MOOVING'?'MOOVING PAPER':setupData.company==='BLIS'?'BlisArtPaper':(setupData.companyCustom||'Personalizada')}</span><span class="ri-badge">${setupData.company}</span></div>
       <div class="s-review-item"><span class="ri-k">Usuario</span><span class="ri-v">${setupData.user||'—'}</span><span class="ri-badge">${setupData.role||'—'}</span></div>
       <div class="s-review-item"><span class="ri-k">Fuentes</span><span class="ri-v">${Object.entries(setupData.sources).filter(([k,v])=>v).map(([k])=>k).join(', ')||'Ninguna aún'}</span></div>
-      <div class="s-review-item"><span class="ri-k">Hermes</span><span class="ri-v">${setupData.hermesDetected?'Detectado ✓':(setupData.installHermes?'Se instalará':'Pendiente')}</span></div>
+      <div class="s-review-item"><span class="ri-k">Asistente</span><span class="ri-v">${setupData.hermesDetected?'Detectado ✓':(setupData.installHermes?'Se instalará':'Pendiente')}</span></div>
       <div class="s-review-item"><span class="ri-k">Autonomía</span><span class="ri-v">${setupData.autonomyLevel||'approval_required'}</span></div>
     </div>
     <label class="s-consent"><input type="checkbox" id="s-consent"/> Acepto que VANOVA recopile y analice los datos de las fuentes que conecte para generar informes e insights. Puedo revocar el acceso en cualquier momento.</label>
@@ -9329,7 +9340,7 @@ function openPriorityDetail(id){
   const foot = `
     <button class="btn btn-primary" data-act="approve">Aprobar</button>
     <button class="btn btn-ghost" data-act="reject">Rechazar</button>
-    <button class="btn btn-ghost" data-act="askhermes">${ic('spark')} Ask Hermes</button>`;
+    <button class="btn btn-ghost" data-act="askhermes">${ic('spark')} Preguntar al Asistente</button>`;
   openDrawer(p.title, p.agent + ' · ' + (p.type||'insight'), body, foot);
 }
 function openActivityDetail(id){
@@ -9360,7 +9371,7 @@ function openActivityDetail(id){
     drawerSec('Result', a.result || '—');
   const foot = `
     <button class="btn btn-primary" data-act="view-details">View details</button>
-    <button class="btn btn-ghost" data-act="askhermes">${ic('spark')} Ask Hermes</button>`;
+    <button class="btn btn-ghost" data-act="askhermes">${ic('spark')} Preguntar al Asistente</button>`;
   openDrawer(a.action, a.agent, body, foot);
 }
 
