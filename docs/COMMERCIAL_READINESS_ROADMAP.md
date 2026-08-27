@@ -1976,3 +1976,20 @@ Do not claim "production ready" until the Definition of Done above has actually 
 The ultimate goal is not to make VANOVA look like a commercial product.
 
 The goal is to make VANOVA **behave like one**.
+
+---
+
+# BACKLOG DE PRODUCTO — POST-PILOTO (mejoras futuras, NO se ejecutan ahora)
+
+> Registro de ideas de producto validadas como futuras (después de que el piloto real valide el MVP y la capa de inteligencia). No son prioridad actual; solo quedan anotadas para no perderlas.
+
+## Idea 1 — Acceso móvil por código de conexión (pairing) [POST-PILOTO]
+
+**Origen:** propuesta de Nico. **Estado:** aprobada como mejora futura de retención. **No se ejecuta ahora.**
+
+- **Qué es:** el PC genera un código de conexión (tipo pairing de TV/Spotify); el usuario introduce ese código en su móvil/web para acceder a su panel VANOVA.
+- **Modelo de datos:** los datos SIGUEN en el PC (no se suben a la nube). Respeta la regla de datos locales y que Hermes no se expone (el acceso móvil solo sirve el dashboard, no el chat/agente).
+- **Fases:** (1) red local primero (el móvil accede mientras esté en la misma red que el PC); (2) por internet con relay outbound (el PC es el servidor y debe estar encendido) como segunda fase.
+- **Seguridad:** el código es una contraseña corta — limitar intentos, expirar, revocar; token HTTPS corto; relay outbound (no abrir puertos).
+- **Decisión:** post-piloto, cuando el MVP valide. No bloquear el roadmap actual (piloto real + capa de inteligencia).
+- **Detalle técnico/estratégico completo:** ver `STRATI_DETALLE...` (análisis de Nico), registro en REGISTRO_STRATI.md.

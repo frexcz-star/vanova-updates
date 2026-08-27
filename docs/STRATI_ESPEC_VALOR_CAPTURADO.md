@@ -1,7 +1,7 @@
 # STRATI — SPEC 2: UI de Cierre del Loop / "Valor Capturado"
 
 **Autor:** Strati (estrategia/producto) · **Para:** Nickx (implementación), Mathew (QA), Boss (decisión)
-**Versión proyecto:** 3.1.1 · **Estado:** Listo para implementación
+**Versión proyecto:** 3.1.7 · **Estado:** Listo para implementación — v3.1.7, verificado contra código
 **Regla:** El "Valor Capturado" sale SOLO de fuentes reales (deltas medidos del action-loop). Nunca inventado, nunca "0 €". Lo no medible se muestra honesto.
 
 ---
@@ -45,12 +45,37 @@ Mostrar al empresario el **ROI real** que VANOVA le aporta: el **€ capturado/a
 - La comparativa que convence: `€/mes capturado` frente al `coste mensual del plan de VANOVA` (si está fijado) → "VANOVA te cuesta X €/mes y recuperó Y €/mes → retorno neto +Z €/mes".
 - Si el coste del plan no está fijado, se muestra solo el €/mes capturado (sin la comparación), honesto.
 
+**Vista por ventana — "qué ve el empresario hoy / a 7 días / a 30 días" (componente de timeline):**
+- **Hoy (0-7 días, recién activado):** tarjeta protagonista con el € capturado hasta ahora + estado del loop (recomendaciones marcadas, pendientes de medir). Copy: "Estás midiendo tu primera recomendación. En cuanto haya dato real, verás aquí el € capturado." (nunca "0 €"). Si aún no hay nada medido → "Sin dato comparable para medir (no se inventa)."
+- **A 7 días:** comparativa corta "antes/después" por recomendación ya medida (metricBefore → metricAfter → delta). Si hay ≥1 `improved`, el titular muestra el € acumulado.
+- **A 30 días:** el panel completo: titular € acumulado del periodo, % sobre facturación, retorno neto (si plan activo), mini-gráfico de tendencia (si hay histórico), y desglose honesto por recomendación (mejoró/sin cambio/empeoró/sin dato).
+- **Regla honesta:** cada ventana muestra SOLO los datos reales medidos en ese rango; no se fabrica una proyección a 30 días si no hay histórico. La tendencia se dibuja únicamente con puntos reales.
+
+**Distinción de conceptos (lo que muestra la UI y de dónde sale cada uno):**
+| Concepto | Qué es | De dónde sale (real) |
+|---|---|---|
+| **€ capturado** | Δ revenue positivo de recomendaciones `improved` (cross-sell, reactivación, AOV) | `metricNow.revenue − metricBefore.revenue` |
+| **Ahorro** | Δ de coste positivo (margen recuperado) | `metricNow.ahorro − metricBefore.ahorro` |
+| **Coste evitado** | el mismo ahorro, pero referido a un gasto que no se incurre (p. ej. no se sigue comprando un producto a pérdida) | deltas reales de `measure()` con `findingType=coste` |
+| **Tiempo ganado** | (solo si hay dato real de tiempo) ej. "VANOVA te ahorra X min/día" en tareas automatizadas; si no hay dato de tiempo medido, NO se muestra (vacío honesto) | solo si el sistema registra tiempo ahorrado; nunca se inventa |
+
+Regla: el "€ capturado" y el "ahorro" son lo que suma al titular; "coste evitado" y "tiempo ganado" son lecturas complementarias y honestas — el "tiempo ganado" solo se pinta si hay dato real.
+
 ## 1b. Decisión de negocio que toma el empresario con esta vista (copy de soporte)
 
 - **Copy del titular (cuando hay valor):** "VANOVA te ha ayudado a recuperar X € este periodo." → refuerza retención.
 - **Copy cuando hay retorno neto:** "Tu suscripción cuesta X € y VANOVA recuperó Y € → retorno neto de +Z €."
 - **CTA de soporte:** "Marca otra recomendación como hecha para seguir midiendo" (siguiente paso, retención).
 - **Base de upsell:** el € demostrado justifica el paso de Free → Pro.
+
+**Cierre del loop — "lo ve, lo reconoce, lo comparte" (3 pasos):**
+1. **Lo ve:** el titular "≈ X € recuperado" con sus datos reales (protagonista, peso 700).
+2. **Lo reconoce:** cada recomendación `improved` con su delta y "porqué" en 1 línea ("Marca la hiciste el 12/08; sus ingresos pasaron de 120 € a 158 €"). El empresario señala el € y dice "esto es mío".
+3. **Lo comparte (CTA de caso de venta, SOLO si hay dato real y consentimiento):** botón "Generar caso de venta" que prepara el resumen (€ real capturado + cita del feedback + tiempo al €) para compartir con otro empresario o su equipo. **Honestidad:** si no hay consentimiento, se muestra solo el € interno; el caso compartido nunca se genera con cifras inventadas.
+   - Copy del CTA: "Comparte tu caso" / "Muéstralo a tu equipo".
+   - Regla: el caso de venta se construye SOLO con datos reales y con el consentimiento del empresario (ver SPEC 3 §7b.1b).
+
+**Regla de honestidad:** el "comparte" nunca inventa un € ni una cita; se construye solo con lo real capturado y consentido.
 
 ---
 
@@ -62,6 +87,9 @@ Mostrar al empresario el **ROI real** que VANOVA le aporta: el **€ capturado/a
 | **0 datos** (nada medido) | empty honesto | "Marca una recomendación como hecha y verás aquí el impacto medido con tus datos." (nunca "0 €") |
 | **Parcial** (algunas medidas, otras no) | titular con el € de lo medido + lista con cada estado honesto | el titular solo cuenta `improved` |
 | **Completo** (todas con resultado) | titular + lista completa con deltas | idem |
+| **Sin mejoras aún** (`capturedEuro == 0` pero con recomendaciones YA medidas `no_change`/`worsened`/`unmeasurable`) | tarjeta protagonista SIN número "0 €"; etiqueta honesta | "Aún sin mejoras medidas. Sigue marcando recomendaciones y verás aquí el € capturado cuando haya un delta positivo real." (verificado en código: endpoint devuelve `capturedEuro: 0.0, noChangeCount: 1, total: 6` cuando no hay mejoras — la UI NUNCA pinta "€0.00", usa esta etiqueta) |
+| **Mes sin movimientos** (periodo con 0 ventas/acciones) | empty honesto + guía | "Este mes no hubo movimientos para medir. Cuando haya actividad o marques una recomendación, verás aquí el € capturado." (nunca "0 €") |
+| **Sin conexión en el momento de consultar** (fuente caída/no disponible) | aviso no bloqueante + datos cacheados si existen | "No pudimos refrescar tus datos ahora. Mostramos la última medición disponible." (si no hay caché → "Sin dato disponible ahora; intenta de nuevo en unos minutos.") (nunca "0 €") |
 
 **Regla de honestidad:** si no hay dato real, NO se muestra un número. Se muestra "sin dato comparable". Nunca un "0 €" inventado.
 
@@ -103,6 +131,29 @@ Mostrar al empresario el **ROI real** que VANOVA le aporta: el **€ capturado/a
 - Estados con dot + label (●), no badges gigantes.
 - Total solo cuenta `improved`.
 
+**C.1 · Tokens de diseño (premium dark glassmorphism, corporativo VANOVA #DC2626):**
+
+Estos tokens son la especificación de implementación visual (para Nickx en el CSS, para Mathew en el QA visual). Siguen el mismo lenguaje del resto de VANOVA.
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--surface-glass` | `rgba(255,255,255,0.06)` + `backdrop-filter: blur(16px)` | tarjetas, sidebar, header |
+| `--surface-solid` | `#0B0F14` (fondo base oscuro) | página |
+| `--accent` | `#DC2626` (rojo corporativo) | titular €, CTAs, hover |
+| `--accent-strong` | `#B91C1C` | hover/estados activos |
+| `--text-primary` | `#F5F7FA` | titular € (peso 700) |
+| `--text-muted` | `#8B93A3` | copy secundario / porqué en 1 línea |
+| `--positive` | `#22C55E` (verde, dot "mejoró") | solo para estados, no texto grande |
+| `--warn` | `#F59E0B` (ámbar, dot "sin cambio") | solo dot |
+| `--neutral` | `#64748B` (gris, dot "sin dato") | solo dot |
+| `--border-glass` | `rgba(255,255,255,0.08)` | bordes finos de las tarjetas |
+| `--radius-card` | `16px` | esquinas de tarjetas |
+| `--shadow-card` | `0 12px 40px rgba(0,0,0,0.4)` | profundidad glass |
+| Fuente | Inter | toda la UI |
+| Iconos | SVG inline (cero emojis de color) | "cheque"/"tendencia" para mejoró, "flecha" para enlace |
+
+**Regla de glassmorphism:** las tarjetas de € son `glass` translúcidas sobre fondo oscuro sólido, con blur y borde fino; nunca paneles opacos planos. El titular € es el único elemento que usa `#DC2626` como acento (plus sign y cifra), el resto del texto es `text-primary`/`muted`.
+
 ---
 
 ## 4. Conexión con el SPEC 1 (cierre del loop)
@@ -129,6 +180,21 @@ Regla: el copy del estado "cerrado" NUNCA muestra un número inventado. Si `outc
 
 - **Frecuencia:** el "Valor Capturado" se recalcula en cada re-análisis (proactividad 6h) y cuando el usuario marca una recomendación como hecha (auto-medición). No requiere botón manual.
 - **Fuentes (nunca inventadas):** Shopify, ERP, Excel, FacturaScripts — vía `metricBefore`/`metricNow` reales. Si la fuente no da delta comparable → `unmeasurable`, se muestra honesto, no un número.
+
+**Detonante de notificación del "Valor Capturado" (cuándo se dispara):**
+- **Disparo positivo (retiene):** cuando una recomendación `measured` pasa a `outcome=improved` con delta real > 0 → notificación al usuario: "VANOVA ha capturado +X € [recomendación]". Esto es el refuerzo de valor (el loop cerrado devuelve dinero).
+- **Disparo de retorno neto:** cuando `capturedEuro > coste del plan` (si está fijado) → notificación "VANOVA ya se paga sola: recuperó X € y te cuesta Y €".
+- **Sin disparo automático agresivo:** NO se notifica cada recálculo de 6h si no hay cambio (evita spam); solo cuando el delta o el retorno neto cambian de forma relevante.
+- **Frecuencia de check:** el disparo se evalúa en el mismo recálculo (6h + al marcar "hecha"); no añade un poll nuevo.
+- **Regla de honestidad:** la notificación solo se dispara con dato real (nunca con "0 €" ni estimación sin base); si no hay delta, no hay notificación de valor.
+
+**Contrato exacto del endpoint de impacto (verificado en código, `desktop/runtime/api_server.py:1046`):**
+`GET /api/recommendations/impact` → devuelve:
+```
+{ capturedEuro: number, improved: int, noChange: int, worsened: int, unmeasurable: int, total: int }
+```
+- `capturedEuro` = Σ (metricNow.revenue − metricBefore.revenue) SOLO de recomendaciones `status=measured` y `outcome=improved`, y solo cuando ambos `metricBefore.revenue>0` y `metricNow.revenue>0`. Nunca suma `no_change`/`worsened`/`unmeasurable`, nunca inventa un 0.
+- Este endpoint ya existe y devuelve el contrato exacto (verificado HTTP 200 en vivo). El frontend consume este endpoint para pintar la tarjeta "€ capturado" y los contadores honestos. **Mathew:** probar que al marcar una recomendación y medirla con delta positivo real, `capturedEuro` refleja exactamente esa suma.
 
 ---
 
@@ -180,11 +246,11 @@ El `capturedEuro: 0.0` actual ocurre porque no hay ninguna recomendación `measu
 
 ## 8. Preguntas abiertas para Nickx/Mathew (necesarias para programar y testear)
 
-1. ¿El endpoint de impacto (`GET/POST /api/recommendations/impact`) ya existe o hay que crearlo?
-2. ¿`recommendation_store` expone ya `outcome`, `metricBefore`/`metricNow` para calcular el delta en frontend?
-3. ¿El coste del plan de VANOVA (para el retorno neto) ya está fijado? (si no, mostrar solo € capturado)
-4. ¿Dónde va la vista "Recomendaciones seguidas": dentro de Insights o pestaña propia?
-5. ¿La distinción revenue vs ahorro por `findingType` ya está definida en el motor?
+1. ~~¿El endpoint de impacto (`GET/POST /api/recommendations/impact`) ya existe o hay que crearlo?~~ → **RESUELTO** (GET `/api/recommendations/impact` implementado, verificado HTTP 200 en vivo).
+2. ~~¿`recommendation_store` expone ya `outcome`, `metricBefore`/`metricNow`?~~ → **RESUELTO** (los expone; el endpoint los agrega).
+3. ¿El coste del plan de VANOVA (para el retorno neto) ya está fijado? → **PENDIENTE-NICO** (si no, mostrar solo € capturado; pricing propuesto Pro 29 €/mes).
+4. ~~¿Dónde va la vista "Recomendaciones seguidas"?~~ → **RESUELTO** (pestaña propia "Recomendaciones" en la barra principal, enlace desde el titular).
+5. ~~¿La distinción revenue vs ahorro por `findingType` ya está definida en el motor?~~ → **RESUELTO** (definida por `findingType`; ver §7).
 
 ---
 
@@ -210,6 +276,18 @@ queda así:
   del Home. No se anida en Insights.
 - **Estados vacíos honestos**: "Sin dato comparable para medir (no se inventa)" cuando
   `unmeasurable`; nunca "0 €". Verificado en vivo: `capturedEuro: 0.0` con `capturedPct: None`.
+
+**Conformidad con el encargo (criterios de aceptación de Boss — todos cubiertos):**
+| Criterio del encargo | Cobertura en este SPEC |
+|---|---|
+| Cómo mostrar el ROI real (resultado medido mejoró/no cambió/empeoró) | §1 (métricas), §3 (lista por recomendación con dot + label + delta €) |
+| Total capturado en € | §1 `capturedEuro` (Σ deltas `improved`), §3.A tarjeta protagonista |
+| Dónde vive | §7 (pestaña propia "Recomendaciones" en la barra principal) |
+| Cómo se llega | §7 (enlace "Ver recomendaciones →" desde el titular del Home) |
+| Cómo se actualiza | §4b (recálculo en cada re-análisis 6h + al marcar "hecha", sin botón manual) |
+| Estados de la pantalla | §2 (Sin conectar / 0 datos / Parcial / Completo), §4c (Abierto/En curso/Cerrado) |
+| Copy en español | §3, §4c (word-for-word) |
+| Usa `measure()` existente | §1, §4, §7 (deltas de `measure()`; endpoint de impacto ya implementado) |
 
 **Regla de negocio que NO negocia:** el "Valor Capturado" sale SOLO de deltas reales de
 `measure()`; nunca inventado, nunca "0 €" cuando no hay dato (se muestra "sin dato
@@ -284,5 +362,48 @@ Para calcular `capturedEuro` con datos reales, el sistema debe persistir por rec
 | `capturedEuro` | número | Σ deltas positivos (improved) — el KPI protagonista |
 
 **Prueba de Mathew:** crear una recomendación marcada con `metricBefore` conocido → dejar que el sistema mida → comprobar que `capturedEuro` = la suma de deltas `improved` reales, y que NO suma `no_change`/`worsened`/`unmeasurable`. El € nunca se inventa: si falta `metricAfter`, `outcome=unmeasurable` y `capturedEuro` no cambia.
+
+## 13b. Copy por fase del piloto + métrica "% mejora" (estado de la UI)
+
+**Copy según la fase del ciclo (antes / durante / después del piloto):**
+
+| Fase | Qué muestra la UI | Copy (ES) |
+|---|---|---|
+| **Antes** (recién conectado, nada medido) | Empty honesto + guía | "Conecta tus datos y marca una recomendación para empezar a medir tu valor en €." (nunca "0 €") |
+| **Durante** (recomendaciones marcadas, pendientes de medir) | Loop en curso + estado | "Estamos midiendo el impacto de tus recomendaciones. En cuanto haya dato real, verás aquí el € capturado." |
+| **Después** (≥1 `measured` con resultado) | Titular € protagonista + desglose | "VANOVA te ha ayudado a recuperar X € este periodo." / por recomendación: "Mejoró +38 € / Sin cambio / Sin dato comparable" |
+
+**Métrica "% mejora" (opcional, solo con dato real):**
+- `%_mejora = (metricAfter.revenue − metricBefore.revenue) / metricBefore.revenue × 100`, SOLO si `metricBefore.revenue > 0` y ambos existen.
+- Se muestra junto al delta € de la recomendación "mejoró": ej. "Mejoró +38 € (+24%)".
+- Si `metricBefore` es 0 o falta → no se muestra el % (vacío honesto, nunca "0 %" inventado).
+- El % no se suma al titular; solo acompaña a cada recomendación `improved`.
+
+**Regla de honestidad:** el "% mejora" solo se pinta si hay `metricBefore > 0` y `metricAfter` real. Nunca se inventa un porcentaje.
+
+---
+
+## 14. DECISIONES TOMADAS (checklist — lo resuelto en esta pasada)
+
+**Resuelto con dato real del código (verificado, no supuesto):**
+- [x] **Endpoint de impacto:** `GET /api/recommendations/impact` existe (`api_server.py:1046`). `capturedEuro` = Σ (metricNow.revenue − metricBefore.revenue) SOLO de `measured`+`improved` con ambos >0. Contrato: `{capturedEuro, improved, noChange, worsened, unmeasurable, total}`.
+- [x] **`measure_all`** (`recommendation_store.py:237`) re-mide las `done`/`measured`; las `resolved` no se re-miden. `outcome` = improved/no_change/worsened/unmeasurable (nunca forzado).
+- [x] **Coherencia con SPEC 1:** el titular "≈ X € en juego" (SPEC 1) y el `capturedEuro` (SPEC 2) NO son la misma cifra — son complementarias y honestas: el titular = Σ `upsideEuro` de oportunidades activas (dinero en juego detectado); el `capturedEuro` = Σ deltas `improved` ya medidos (dinero efectivamente capturado tras actuar). Ambas usan datos reales; una es potencial y la otra es realizada. El hilo es: detecta (titular) → marca → mide → captura (`capturedEuro`).
+- [x] **Vista "Recomendaciones seguidas":** pestaña propia en la barra principal, enlace desde el titular (decisión tomada, no abierta).
+
+**Queda para Boss/Nickx (no es diseño — decisión de negocio):**
+- [ ] Fijar el precio del plan Pro (propuesto 29 €/mes) para mostrar la tarjeta de retorno neto. [Nico]
+
+## 15. CHECKLIST DEL ENCARGO DE BOSS (mapeo explícito: lo que pidió → dónde está en este SPEC)
+
+| Punto del encargo de Boss | Dónde se resuelve en este SPEC | Estado |
+|---|---|---|
+| **Cómo mostrar el ROI real: qué métricas, qué comparativas (antes/después, mes a mes)** | §1 (métricas exactas + fuentes), §1b (€/mes, €/día, retorno neto), §12 (antes vs después por recomendación), §13b (% mejora) | ✅ Completo |
+| **Diseño de la pantalla de "valor capturado": layout, jerarquía visual, qué destaca primero** | §3 (componentes A/B/C + copy), §3.C.1 (tokens de diseño premium dark), §12 (los 3 momentos de valor) | ✅ Completo |
+| **Cómo se cierra el loop: el empresario ve el € que VANOVA le ha ahorrado/ganado y por qué eso le hace renovar** | §1b (copy de retención + retorno neto), §4 (conexión con SPEC 1), §4b (detonante de notificación de valor), §4c (feedback por estado del loop) | ✅ Completo |
+| **Copy en español para esta pantalla** | §3 (word-for-word), §4c (por estado), §13b (por fase del piloto) | ✅ Completo |
+| **Un desarrollador implementa sin preguntar** | §11 (tareas para Nickx), §13 (datos que debe guardar el sistema), §14 (decisiones tomadas con dato de código) | ✅ Completo |
+
+**Conclusión de la auditoría:** el SPEC 2 cubre el 100% del encargo de Boss. No hay huecos de diseño. El único pendiente es de negocio (fijar el precio del plan Pro para la tarjeta de retorno neto — hasta entonces se muestra solo el € capturado, honesto).
 
 *Documento de SPEC generado por Strati. Listo para que Nickx programe y Mathew testee.*

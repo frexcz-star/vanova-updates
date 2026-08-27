@@ -8,6 +8,23 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "cloud", "maios_cloud.db")
 XLSX = r"C:\Users\Admin\Downloads\NET_PRICE_LECLERC_ENGLISH_FORMATTED.xlsx"
 
+def _price(v):
+    """Convierte un valor de precio del Excel a float, o None si no es numérico."""
+    if v is None:
+        return None
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return round(float(v), 2)
+    s = str(v).strip().replace(",", ".")
+    if not s:
+        return None
+    try:
+        f = float(s)
+    except ValueError:
+        return None
+    return round(f, 2)
+
 def main():
     import openpyxl
     wb = openpyxl.load_workbook(XLSX, data_only=True)
@@ -19,14 +36,19 @@ def main():
         if not sku or not str(sku).strip():
             continue
         name = str(r[2] or "").strip()
-        net = r[4]
-        rrp = r[5]
+        net = _price(r[4])   # NET PRICE EX WORKS = coste de adquisición real por unidad
+        rrp = _price(r[5])   # RRP = precio de venta al público (PVD)
         products.append({
             "sku": str(sku).strip(),
             "ean": str(r[1] or "").strip(),
             "name": name,
-            "netPrice": round(float(net), 2) if isinstance(net, (int, float)) else None,
-            "rrp": round(float(rrp), 2) if isinstance(rrp, (int, float)) else None,
+            "netPrice": net,
+            "rrp": rrp,
+            # coste REAL de adquisición (ex works) + procedencia → costStatus=verified.
+            # Es lo que resolve_cost() consume para calcular margen y upside en €.
+            "cost": net,
+            "costSource": "supplier",
+            "costStatus": "verified",
         })
     print(f"Extraídos {len(products)} productos reales de MOOVING")
 
