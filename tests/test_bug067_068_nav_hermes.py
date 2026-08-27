@@ -49,6 +49,26 @@ class Bug067NavBadgeSyncTests(unittest.TestCase):
         block = html[idx:idx + 120]
         self.assertIn("activeRiskCount()", block, "nav-badge inicial no usa activeRiskCount")
 
+    def test_apply_insight_action_filter_recalcula_badges(self):
+        """BUG-067 raíz real: al filtrar prioridades (aprobar/descartar), los badges
+        de la sidebar y la campana deben recalcularse para no quedar stale."""
+        html = DASHBOARD.read_text(encoding="utf-8")
+        idx = html.find("function applyInsightActionFilter()")
+        self.assertGreater(idx, -1, "applyInsightActionFilter ausente")
+        block = html[idx:idx + 900]
+        self.assertIn("updateNavBadges", block, "applyInsightActionFilter no recalcula updateNavBadges")
+        self.assertIn("updateBellBadge", block, "applyInsightActionFilter no recalcula updateBellBadge")
+
+    def test_handle_insight_action_recalcula_badges(self):
+        """BUG-067: al aprobar/descartar un insight (handleInsightAction), los badges
+        se recalcular para que badge == contenido inmediatamente."""
+        html = DASHBOARD.read_text(encoding="utf-8")
+        idx = html.find("async function handleInsightAction(")
+        self.assertGreater(idx, -1, "handleInsightAction ausente")
+        block = html[idx:idx + 900]
+        self.assertIn("updateNavBadges", block, "handleInsightAction no recalcula updateNavBadges")
+        self.assertIn("updateBellBadge", block, "handleInsightAction no recalcula updateBellBadge")
+
 
 class Bug068NoHermesVisibleTests(unittest.TestCase):
     def test_no_hay_hermes_visible_en_ui(self):

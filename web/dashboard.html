@@ -5583,7 +5583,7 @@ function continueConversation(convId, title){
       }
     });
     renderHermesChatLog();
-    toast(convId.indexOf('cli:') === 0 ? 'Sesión Hermes vinculada — puedes continuar aquí.' : 'Conversación reanudada.');
+    toast(convId.indexOf('cli:') === 0 ? 'Sesión del Asistente vinculada — puedes continuar aquí.' : 'Conversación reanudada.');
   });
 }
 
@@ -5974,7 +5974,7 @@ function refreshAiProviderPanel(){
   ds.getHermesConfig().then(function(cfg){
     if (!cfg || !cfg.hermesConfig || !cfg.hermesConfig.found) {
       box.innerHTML = `<div style="font-size:13px;color:var(--text-2);line-height:1.6">
-        <p><b>Hermes no configurado.</b> Ejecuta en terminal:</p>
+        <p><b>Asistente no configurado.</b> Ejecuta en terminal:</p>
         <code style="display:block;margin:8px 0;padding:8px;background:var(--bg-2);border-radius:6px;font-size:12px">ollama launch hermes</code>
         <p style="color:var(--text-3);font-size:12px">O con modelo cloud: <code>ollama launch hermes --model deepseek-v4-flash:cloud</code></p>
       </div>`;
@@ -7212,7 +7212,7 @@ function viewFiles(){
   const files = filter && extMap[filter] ? all.filter(f=>extMap[filter].includes((f.ext||'').toLowerCase())) : all;
   const filterLabel = filter ? ({excel:'Excel / CSV', pdf:'PDF', docs:'Word / Texto', json:'JSON / Datos'}[filter]) : 'todos los tipos';
   const candBanner = (store.fileCandidates||[]).length
-    ? `<div class="conn-banner conn-banner--warn" style="margin-bottom:16px"><span class="status-dot warn"></span><div class="conn-banner-body"><strong>${(store.fileCandidates||[]).length} archivo(s) que podrían ser de tu empresa</strong><span>Hermes los encontró pero no está seguro de que sean datos de negocio. Añádelos si son tuyos.</span></div></div>`
+    ? `<div class="conn-banner conn-banner--warn" style="margin-bottom:16px"><span class="status-dot warn"></span><div class="conn-banner-body"><strong>${(store.fileCandidates||[]).length} archivo(s) que podrían ser de tu empresa</strong><span>El Asistente los encontró pero no está seguro de que sean datos de negocio. Añádelos si son tuyos.</span></div></div>`
     : '';
   if (!files.length) {
     return `<div class="page">
@@ -8961,7 +8961,7 @@ function showSetupLoading(){
   function evaluateStages(){
     const stages = [
       { label:'Cloud / Connector', done: store.connected },
-      { label:'Hermes', done: !!(store.hermes && (store.hermes.connected||store.hermes.status==='online')) },
+      { label:'Asistente', done: !!(store.hermes && (store.hermes.connected||store.hermes.status==='online')) },
       { label:'Datos de negocio', done: isRealDataMode(store.dataMode) },
       { label:'Agentes de IA', done: AGENTS.some(a=>a.status==='Active'||a.status==='Running'||a.status==='active'||a.status==='running'||a.status==='idle') },
     ];
@@ -9271,6 +9271,13 @@ function applyInsightActionFilter() {
   };
   store.priorities = (store.priorities || []).filter(isVisible);
   store.insights = (store.insights || []).filter(isVisible);
+  // BUG-067 (raíz real): al aprobar/descartar/archivar insights, store.priorities
+  // se limpia (los resueltos se quitan) y la home se re-renderiza mostrando 0,
+  // pero el badge de la sidebar "Inicio" y el de la campana quedaban STALE con
+  // el número anterior (p.ej. 7) hasta el siguiente poll de 3s. Recalcularlos
+  // aquí para que badge == contenido SIEMPRE (no solo en el poll).
+  if (typeof updateNavBadges === 'function') updateNavBadges();
+  if (typeof updateBellBadge === 'function') updateBellBadge();
 }
 
 /* Approve/deny an approval optimistically: remove the card immediately, then
@@ -9309,6 +9316,11 @@ async function handleInsightAction(insightId, action, successMsg) {
   store.insights = (store.insights || []).filter((i) => i.id !== insightId);
   closeDrawer();
   render();
+  // BUG-067: tras aprobar/descartar un insight, store.priorities se limpia y la
+  // home se re-renderiza, pero el badge de la sidebar/campana quedaba stale.
+  // Recalcularlos aquí para que badge == contenido inmediatamente.
+  if (typeof updateNavBadges === 'function') updateNavBadges();
+  if (typeof updateBellBadge === 'function') updateBellBadge();
   const result = await DataServices.setInsightAction(insightId, action);
   if (!result || result.ok === false) {
     toast((result && result.error) || 'No se pudo realizar la acción.');
