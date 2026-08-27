@@ -64,7 +64,7 @@
   --mono:'Geist Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
   --sidebar-w:240px; --sidebar-w-collapsed:60px; --header-h:56px;
   --trans:.18s cubic-bezier(.4,0,.2,1);
-  --blur:blur(20px);
+  --blur:blur(12px);
   --glow-a:rgba(139,124,246,.14);
   --glow-b:rgba(56,189,248,.10);
   --glow-c:rgba(52,211,153,.07);
@@ -288,7 +288,7 @@ body.sidebar-collapsed .sp-meta,body.sidebar-collapsed .sp-more{display:none}
 @media(max-width:600px){.g-5,.g-4,.g-3,.g-2{grid-template-columns:1fr}}
 
 /* Metric — calm, not giant KPI */
-.metric{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-5);transition:var(--trans);position:relative;box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)}
+.metric{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-5);transition:var(--trans);position:relative;box-shadow:var(--shadow-float);backdrop-filter:blur(8px) saturate(115%);-webkit-backdrop-filter:blur(8px) saturate(115%)}
 .metric:hover{border-color:var(--border-strong);transform:translateY(-2px);box-shadow:var(--shadow-float-hover)}
 .metric[data-finance-metric]{cursor:pointer}
 .metric[data-finance-metric]:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
@@ -320,11 +320,11 @@ body.sidebar-collapsed .sp-meta,body.sidebar-collapsed .sp-more{display:none}
 .section-link:hover{text-decoration:underline}
 
 /* Card — large radius, minimal shadow */
-.card{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);transition:var(--trans);box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)}
+.card{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);transition:var(--trans);box-shadow:var(--shadow-float);backdrop-filter:blur(8px) saturate(115%);-webkit-backdrop-filter:blur(8px) saturate(115%)}
 .card:hover{border-color:var(--border-strong)}
 .card-pad{padding:var(--space-5)}
 .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.dash-card{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:18px;box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)}
+.dash-card{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:18px;box-shadow:var(--shadow-float);backdrop-filter:blur(8px) saturate(115%);-webkit-backdrop-filter:blur(8px) saturate(115%)}
 .dash-card--yellow{background:var(--pastel-yellow)}
 .dash-card--pink{background:var(--pastel-pink)}
 .dash-card--green{background:var(--pastel-green)}
@@ -354,7 +354,7 @@ body.sidebar-collapsed .sp-meta,body.sidebar-collapsed .sp-more{display:none}
 .badge-neutral .bdot{background:var(--text-3)}
 
 /* Priority card — flat, no nested boxes */
-.priority{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-5);transition:var(--trans);box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)}
+.priority{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-5);transition:var(--trans);box-shadow:var(--shadow-float);backdrop-filter:blur(8px) saturate(115%);-webkit-backdrop-filter:blur(8px) saturate(115%)}
 .priority:hover{border-color:var(--border-strong)}
 .priority.high{border-left:3px solid var(--danger)}
 .priority.opp{border-left:3px solid var(--success)}
@@ -410,7 +410,7 @@ body.sidebar-collapsed .sp-meta,body.sidebar-collapsed .sp-more{display:none}
 .aut-example{font-size:11px;color:var(--text-3);background:var(--surface-2);padding:3px 9px;border-radius:6px;border:1px solid var(--border)}
 
 /* Agent card — name, purpose, status first */
-.agent-card{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-5);cursor:pointer;transition:var(--trans);display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)}
+.agent-card{background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:var(--space-5);cursor:pointer;transition:var(--trans);display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-float);backdrop-filter:blur(8px) saturate(115%);-webkit-backdrop-filter:blur(8px) saturate(115%)}
 .agent-card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm)}
 .agent-top{display:flex;align-items:flex-start;gap:14px}
 .agent-avatar{width:40px;height:40px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0}
@@ -626,7 +626,7 @@ body.sidebar-open .overlay-mob{display:block}
 #setup-modal::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
 .setup-wrap{width:100%;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;position:relative}
 .setup-orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:.28;pointer-events:none}
-.setup-box{width:min(860px,100%);max-height:calc(100vh - 64px);background:rgba(18,18,21,.62);border:1px solid var(--border-strong);border-radius:var(--radius-lg);box-shadow:0 24px 80px rgba(0,0,0,.55);backdrop-filter:blur(28px) saturate(160%);-webkit-backdrop-filter:blur(28px) saturate(160%);position:relative;overflow-y:auto;animation:setupIn .3s ease}
+.setup-box{width:min(860px,100%);max-height:calc(100vh - 64px);background:rgba(18,18,21,.62);border:1px solid var(--border-strong);border-radius:var(--radius-lg);box-shadow:0 24px 80px rgba(0,0,0,.55);backdrop-filter:blur(16px) saturate(130%);-webkit-backdrop-filter:blur(16px) saturate(130%);position:relative;overflow-y:auto;animation:setupIn .3s ease}
 .setup-box::-webkit-scrollbar{width:6px}
 .setup-box::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
 @keyframes setupIn{from{opacity:0;transform:translateY(20px) scale(.985)}to{opacity:1;transform:none}}
@@ -930,7 +930,7 @@ button:focus-visible,[data-act]:focus-visible{
 #scan-modal{background:rgba(26,26,28,.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .app-modal-box{background:var(--surface-glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:var(--radius-lg)}
 .status-pop{background:var(--surface-glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:var(--radius-md)}
-.setup-box{background:var(--surface-glass);backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);border-radius:var(--radius-lg)}
+.setup-box{background:var(--surface-glass);backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);border-radius:var(--radius-lg)}
 .sl-box{background:var(--surface-glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:var(--radius-lg)}
 .s-welcome-card{background:var(--surface);border:1px solid var(--border)}
 .s-welcome-card:hover{border-color:var(--accent)}
@@ -1004,8 +1004,10 @@ button:focus-visible,[data-act]:focus-visible{
 @keyframes orbFloat{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(46px,34px,0) scale(1.09)}}
 
 /* Glass chrome (dark only) */
-[data-theme="dark"] .sidebar{background:linear-gradient(180deg,rgba(17,18,28,.86),rgba(13,14,21,.94));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-right:1px solid var(--border)}
-[data-theme="dark"] .header{background:rgba(13,14,21,.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+/* Rendimiento (hardware débil 8GB/MX130): sin blur si el SO prefiere poca transparencia */
+@media (prefers-reduced-transparency: reduce){[class]{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
+[data-theme="dark"] .sidebar{background:linear-gradient(180deg,rgba(17,18,28,.86),rgba(13,14,21,.94));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-right:1px solid var(--border)}
+[data-theme="dark"] .header{background:rgba(13,14,21,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
 [data-theme="dark"] .card,[data-theme="dark"] .dash-card{background:linear-gradient(160deg,rgba(255,255,255,.045),rgba(255,255,255,.012));border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.04)}
 [data-theme="dark"] .btn-primary{background:var(--grad-btns);box-shadow:0 4px 16px rgba(139,124,246,.35);border:none;color:#fff}
 [data-theme="dark"] .btn-primary:hover{filter:brightness(1.08);box-shadow:0 6px 22px rgba(56,189,248,.35)}
@@ -1323,15 +1325,42 @@ button:focus-visible,[data-act]:focus-visible{
       <div class="hdr-status sys-checking" id="ai-status" title="Click for system status">
         <span class="dot checking"></span><span class="live">Comprobando estado…</span>
       </div>
-      <button class="hdr-icon" id="hdr-hermes" title="Hablar con Hermes" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;height:34px;display:flex;align-items:center;gap:6px;color:var(--text-2);font-size:12px;font-weight:500">
+      <button class="hdr-icon" id="hdr-hermes" title="Hablar con el Asistente VANOVA" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;height:34px;display:flex;align-items:center;gap:6px;color:var(--text-2);font-size:12px;font-weight:500">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/></svg>
-        Hermes
+        Asistente
       </button>
       <div class="hdr-user">
         <div class="hdr-avatar" id="hdr-avatar">PA</div>
         <span class="u-name" id="hdr-uname">Pablo</span>
       </div>
     </header>
+
+    <!-- HERO: Valor Capturado (Paso 1 del rediseño) -->
+    <div id="hero-valor-capturado" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:24px 28px;margin:16px 20px 0;position:relative;overflow:hidden">
+      <div style="text-align:center;padding:12px 0">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Valor Capturado por VANOVA</div>
+        <div id="valor-capturado-num" style="font-size:42px;font-weight:700;color:var(--accent);line-height:1">--</div>
+        <div style="font-size:13px;color:var(--text-2);margin-top:8px">Estimado de beneficio neto generado</div>
+        <div id="valor-capturado-change" style="font-size:12px;color:var(--success);margin-top:4px"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:16px;justify-content:center">
+        <div style="flex:1;padding:14px;border-radius:var(--radius-sm);background:var(--surface-2);border:1px solid var(--border);text-align:center;position:relative;overflow:hidden;max-width:160px">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--danger)"></div>
+          <div id="hero-riesgos" style="font-size:28px;font-weight:700;color:var(--danger);line-height:1">--</div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px">Riesgos activos</div>
+        </div>
+        <div style="flex:1;padding:14px;border-radius:var(--radius-sm);background:var(--surface-2);border:1px solid var(--border);text-align:center;position:relative;overflow:hidden;max-width:160px">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--warning)"></div>
+          <div id="hero-decisiones" style="font-size:28px;font-weight:700;color:var(--warning);line-height:1">--</div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px">Decisiones pendientes</div>
+        </div>
+        <div style="flex:1;padding:14px;border-radius:var(--radius-sm);background:var(--surface-2);border:1px solid var(--border);text-align:center;position:relative;overflow:hidden;max-width:160px">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--success)"></div>
+          <div id="hero-oportunidades" style="font-size:28px;font-weight:700;color:var(--success);line-height:1">--</div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:6px">Oportunidades</div>
+        </div>
+      </div>
+    </div>
 
     <main class="content" id="content"></main>
   </div>
@@ -1501,33 +1530,24 @@ const NAV = [
   {group:'Command Center', ico:'grid', items:[
     {k:'home',label:'Inicio',ico:'grid'},
     {k:'insights',label:'Insights',ico:'bulb'},
-    {k:'recommendations',label:'Recomendaciones',ico:'check'},
-    {k:'activity',label:'Actividad',ico:'pulse'},
-  ]},
-  {group:'Work', ico:'cpu', items:[
-    {k:'tasks',label:'Tareas',ico:'clock'},
-    {k:'agents',label:'Agentes',ico:'cpu'},
-    {k:'hermes',label:'Hermes',ico:'spark'},
+    {k:'decisions',label:'Decisiones',ico:'check'},
     {k:'approvals',label:'Aprobaciones',ico:'shield'},
   ]},
-  {group:'Data', ico:'database', items:[
-    {k:'integrations',label:'Integraciones',ico:'link'},
-    {k:'files',label:'Archivos',ico:'file'},
-    {k:'products',label:'Productos',ico:'box'},
-    {k:'sources',label:'Fuentes',ico:'plug'},
-  ]},
-  {group:'Negocio', ico:'chart', items:[
+  {group:'Mi Negocio', ico:'chart', items:[
     {k:'sales',label:'Ventas',ico:'euro'},
     {k:'customers',label:'Clientes',ico:'users'},
-    {k:'inventory',label:'Inventario',ico:'box2'},
+    {k:'products',label:'Productos',ico:'box'},
     {k:'finance',label:'Finanzas',ico:'euro2'},
-    {k:'licenses',label:'Licencias',ico:'tag'},
+    {k:'inventory',label:'Inventario',ico:'box2'},
   ]},
-  {group:'Automation', ico:'clock', items:[
-    {k:'automation',label:'Automatizaciones',ico:'clock'},
-    {k:'decisions',label:'Decisiones',ico:'check'},
+  {group:'Datos y Agentes', ico:'database', items:[
+    {k:'integrations',label:'Integraciones',ico:'link'},
+    {k:'files',label:'Archivos',ico:'file'},
+    {k:'agents',label:'Agentes',ico:'cpu'},
+    {k:'tasks',label:'Tareas',ico:'clock'},
+    {k:'hermes',label:'Asistente',ico:'spark'},
   ]},
-  {group:'System', ico:'gear', items:[
+  {group:'Sistema', ico:'gear', items:[
     {k:'diagnostics',label:'Diagnóstico',ico:'pulse'},
     {k:'settings',label:'Ajustes',ico:'gear'},
   ]}
@@ -1769,7 +1789,7 @@ function buildNav(){
         ${g.items.map(it=>{
           const approvalBadge = it.k==='approvals' && (store.pendingApprovals||[]).length
             ? `<span class="nav-badge">${(store.pendingApprovals||[]).length}</span>` : '';
-          // FASE 9 — proactividad: badge de problemas activos en Inicio (🔴)
+          // FASE 9 — proactividad: badge de problemas activos en Inicio
           const problemCount = it.k==='home' ? activeFindingCount('problem') : 0;
           const problemBadge = problemCount ? `<span class="nav-badge" style="background:var(--danger)" title="${problemCount} problema(s) activo(s) detectados">${problemCount}</span>` : '';
           return `
@@ -2166,7 +2186,7 @@ function sparklineSVG(values, color){
 }
 /* Tarjeta de Financiación — estilo flotante redondeado, con € real o vacío honesto. */
 function finCard(label, value, hint, hasData, kind){
-  return `<div class="fin-card" style="background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:18px;box-shadow:var(--shadow-float);backdrop-filter:blur(14px) saturate(120%);-webkit-backdrop-filter:blur(14px) saturate(120%)">
+  return `<div class="fin-card" style="background:var(--surface-glass);border:1px solid var(--border);border-radius:var(--radius-xl);padding:18px;box-shadow:var(--shadow-float);backdrop-filter:blur(8px) saturate(115%);-webkit-backdrop-filter:blur(8px) saturate(115%)">
     <div style="font-size:12px;font-weight:600;color:var(--text-3);margin-bottom:6px">${label}</div>
     <div style="font-size:22px;font-weight:700;letter-spacing:-.4px;color:${hasData ? 'var(--text)' : 'var(--text-3)'}">${value}</div>
     <div style="font-size:11.5px;color:var(--text-3);margin-top:6px;line-height:1.5">${hint}</div>
@@ -2627,7 +2647,7 @@ function viewHome(){
     <div id="maios-conn-banner" class="conn-banner hidden"></div>
     <div id="post-update-banner"></div>
     <div class="page-head">
-      <div class="page-title">${greeting()} 👋</div>
+      <div class="page-title">${greeting()}</div>
       <div class="page-sub">${opps} oportunidades · ${risks} riesgos · ${decisions} decisiones pendientes</div>
       <div class="freshness">
         <span class="fdot ${isRealDataMode(store.dataMode)?'':'warn'}"></span>
@@ -3468,7 +3488,7 @@ function scheduledTasksHTML(){
   if (!items.length) return `<div style="font-size:13px;color:var(--text-3);padding:6px 0">Sin tareas programadas. Usa "Nueva tarea" y elige Programar o Repetir.</div>`;
   return items.map(function(it){
     const e = it.e;
-    const when = it.kind === 'once' ? '⏱ ' + fmtDueLocal(e.due) : '🔁 ' + (e.schedule || '');
+    const when = it.kind === 'once' ? fmtDueLocal(e.due) : (e.schedule || '');
     const label = it.kind === 'once' ? 'UNA VEZ' : 'RECURRENTE';
     return `<div class="tasks-sched-item" data-sched-id="${escapeHtml(e.id || '')}">
       <div style="flex:1;min-width:0">
@@ -4493,10 +4513,10 @@ function dataHealthHTML(){
       ${needsReview > 0 ? '<button class="section-link" data-act="data-review">Revisar datos →</button>' : ''}
     </div>
     <div class="grid g-4" style="gap:12px">
-      <div class="metric"><div class="metric-top"><span class="metric-label">🟢 Verificados</span></div><div class="metric-value">${t.verified != null ? t.verified : '—'}</div><div class="metric-foot"><span class="metric-period">con evidencia de fuente o coste</span></div></div>
-      <div class="metric"><div class="metric-top"><span class="metric-label">🟡 Importados</span></div><div class="metric-value">${t.imported != null ? t.imported : '—'}</div><div class="metric-foot"><span class="metric-period">importados, sin verificación externa</span></div></div>
-      <div class="metric"><div class="metric-top"><span class="metric-label">🟠 Revisión</span></div><div class="metric-value">${(h.needsReviewCount||0)}</div><div class="metric-foot"><span class="metric-period">legacy + sin verificar + inconsistentes</span></div></div>
-      <div class="metric"><div class="metric-top"><span class="metric-label">🔴 Inválidos</span></div><div class="metric-value">${h.invalidCount != null ? h.invalidCount : '—'}</div><div class="metric-foot"><span class="metric-period">contradicciones o valores imposibles</span></div></div>
+      <div class="metric"><div class="metric-top"><span class="metric-label"><span class="fdot" style="display:inline-block;background:var(--success)"></span> Verificados</span></div><div class="metric-value">${t.verified != null ? t.verified : '—'}</div><div class="metric-foot"><span class="metric-period">con evidencia de fuente o coste</span></div></div>
+      <div class="metric"><div class="metric-top"><span class="metric-label"><span class="fdot" style="display:inline-block;background:var(--warning)"></span> Importados</span></div><div class="metric-value">${t.imported != null ? t.imported : '—'}</div><div class="metric-foot"><span class="metric-period">importados, sin verificación externa</span></div></div>
+      <div class="metric"><div class="metric-top"><span class="metric-label"><span class="fdot" style="display:inline-block;background:var(--warning)"></span> Revisión</span></div><div class="metric-value">${(h.needsReviewCount||0)}</div><div class="metric-foot"><span class="metric-period">legacy + sin verificar + inconsistentes</span></div></div>
+      <div class="metric"><div class="metric-top"><span class="metric-label"><span class="fdot" style="display:inline-block;background:var(--danger)"></span> Inválidos</span></div><div class="metric-value">${h.invalidCount != null ? h.invalidCount : '—'}</div><div class="metric-foot"><span class="metric-period">contradicciones o valores imposibles</span></div></div>
     </div>
     <div style="margin-top:12px;font-size:12px;color:var(--text-3);line-height:1.6">
       <div><b>Productos</b>: ${verifiedFrac(prod)} · <b>Pedidos</b>: ${verifiedFrac(ord)} · <b>Líneas</b>: ${verifiedFrac(lin)} · <b>Clientes</b>: ${verifiedFrac(cus)}</div>
@@ -4551,7 +4571,7 @@ function pollBusinessNow(){
     if (fresh.length && typeof toast === 'function') {
       fresh.slice(0, 2).forEach(function(x){ _notifiedFindingIds[x.id] = true; });
       const n = fresh.length;
-      const label = fresh[0].category === 'problem' ? '🔴' : (fresh[0].category === 'opportunity' ? '🟡' : '🟢');
+      const label = fresh[0].category === 'problem' ? '[Riesgo]' : (fresh[0].category === 'opportunity' ? '[Oportunidad]' : '[Info]');
       toast((n > 1 ? 'Nuevos hallazgos del motor (' + n + '): ' : 'Nuevo hallazgo: ') + label + ' ' + fresh[0].title);
     }
     if (sig === _liveBusinessSignature) return;
@@ -5456,6 +5476,10 @@ function escapeHtml(s){
    a bold summary up top, section lines as subtitles, and key data
    (€/%, PICO, CLAVE, RECOMENDACIÓN…) highlighted in bold. Always escapes
    the source text first so the only tags emitted are ours. */
+function formatCurrency(n){
+  if (n == null || isNaN(n)) return '--';
+  return '€' + Number(n).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+}
 function formatAgentReport(text, maxLen){
   const src = String(text || '').trim();
   if (!src) return '';
@@ -7126,6 +7150,34 @@ function updateBellBadge(){
   const pending = gr + risks + decisions + files;
   badge.style.opacity = pending > 0 ? '1' : '0';
   badge.textContent = pending > 0 ? String(pending) : '';
+  // PASO 1: Actualizar hero Valor Capturado (rediseño dashboard)
+  updateHeroValorCapturado(gr, risks, decisions, files);
+}
+function updateHeroValorCapturado(gr, risks, decisions, files){
+  const hero = document.getElementById('hero-valor-capturado');
+  if (!hero) return;
+  // Mostrar hero solo si hay datos reales
+  const total = gr + risks + decisions + files;
+  if (total > 0 || isRealDataMode(store.dataMode)) {
+    hero.style.display = 'block';
+    document.getElementById('hero-riesgos').textContent = String(risks);
+    document.getElementById('hero-decisiones').textContent = String(decisions);
+    document.getElementById('hero-oportunidades').textContent = String(files);
+    // Valor capturado: intentar obtener de la API, si no hay mostrar --
+    if (store.valorCapturado != null) {
+      document.getElementById('valor-capturado-num').textContent = formatCurrency(store.valorCapturado);
+      if (store.valorCapturadoChange != null) {
+        const changeEl = document.getElementById('valor-capturado-change');
+        changeEl.textContent = (store.valorCapturadoChange >= 0 ? '+' : '') + store.valorCapturadoChange + '% vs mes anterior';
+        changeEl.style.color = store.valorCapturadoChange >= 0 ? 'var(--success)' : 'var(--danger)';
+      }
+    } else {
+      document.getElementById('valor-capturado-num').textContent = '--';
+      document.getElementById('valor-capturado-change').textContent = '';
+    }
+  } else {
+    hero.style.display = 'none';
+  }
 }
 function openNotificationsDrawer(){
   openDrawer('Notificaciones', 'Centro de alertas de VANOVA', buildNotificationsBody(),
