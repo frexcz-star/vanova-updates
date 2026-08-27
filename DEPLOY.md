@@ -50,7 +50,7 @@ de internet.
 
 1. Doble clic en **`start_all.bat`** (arranca Cloud + Connector juntos).
 2. Abre el navegador en **`http://127.0.0.1:8000`**.
-3. Login: **`ceo` / `mooving2026`**.
+3. Login: usuario **`ceo`**. La contraseña se genera aleatoriamente al instalar y se guarda en `cloud/.env` (`MAIOS_DEMO_PASSWORD`). Si `cloud/.env` no existe, créalo con una contraseña fuerte (≥16 caracteres, NO débil como `mooving2026` — el sistema la rechaza en producción y la regenera automáticamente; ver BUG-031). Consulta `cloud/.env` para la contraseña vigente de tu instalación.
 
 ### Configurar Hermes (una vez)
 
