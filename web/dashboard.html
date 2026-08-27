@@ -1962,7 +1962,8 @@ function render(){
 /* ---- HOME / COMMAND CENTER ---- */
 function greeting(){
   const h = new Date().getHours();
-  const g = h < 12 ? 'Good morning' : h < 20 ? 'Good afternoon' : 'Good evening';
+  // BUG-066: saludo en español (regla UI en español), sin emoji (Paso 3 rediseño).
+  const g = h < 6 ? 'Buenas noches' : h < 12 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches';
   // Priority: setup name (localStorage) wins over the API-reported user.
   const localName = currentUser();
   const apiName = store.user && store.user.name;
