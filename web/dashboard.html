@@ -1757,7 +1757,7 @@ function setupChecklistHTML(){
     { label:'Escaneo del sistema', done: sp.scanComplete !== false },
     { label:'Datos en dashboard', done: isRealDataMode(store.dataMode) },
     { label:'Agentes configurados', done: sp.agentsConfigured || (AGENTS && AGENTS.length > 0) },
-    { label:'Fuentes conectadas', done: (sp.sourcesConnected||0) > 0 || store.sources.some(s=>s.status==='connected') },
+    { label:'Fuentes conectadas', done: (sp.sourcesConnected||0) > 0 || store.sources.some(s=>s.status==='connected' && s.id !== 'hermes') },
   ];
   const pending = steps.filter(s=>!s.done).length;
   if (!pending) return '';
@@ -2470,7 +2470,7 @@ function homeSystemStatusHTML(){
     return s === 'running' || s === 'idle' || s === 'active' || s === 'working';
   }).length;
   const hermesOk = !!(store.hermes && (store.hermes.healthy || store.hermes.status === 'online'));
-  const integs = store.sources.filter(function(s){ return s.status === 'connected'; }).length;
+  const integs = store.sources.filter(function(s){ return s.status === 'connected' && s.id !== 'hermes'; }).length;
   const dbOk = isRealDataMode(store.dataMode);
   return `<div class="dash-card">
     <div class="section-head" style="margin-bottom:12px"><div class="section-title">${ic('pulse')} Estado del sistema</div></div>
@@ -2654,7 +2654,7 @@ function viewHome(){
         <span class="fdot ${isRealDataMode(store.dataMode)?'':'warn'}"></span>
         <span>${isRealDataMode(store.dataMode) ? dataModeLabel(store.dataMode) + ' ' + (store.lastSync||'recientemente') : dataModeLabel(store.dataMode)}</span>
         <span class="sep">·</span>
-        <span>${store.sources.filter(s=>s.status==='connected').length} fuentes conectadas</span>
+        <span>${store.sources.filter(s=>s.status==='connected' && s.id !== 'hermes').length} fuentes conectadas</span>
         ${store.dataMode==='mock' ? '<span class="mock-badge">'+ic('info')+' Demo</span>' : ''}
       </div>
     </div>
@@ -3993,7 +3993,11 @@ function buildConnectedSourceLabels(){
   if (isApiIntegrationConnected('shopify')) labels.push('Shopify');
   if (isApiIntegrationConnected('facturascript')) labels.push('FacturaScript');
   if (isApiIntegrationConnected('drive')) labels.push('Google Drive');
-  (store.sources||[]).filter(s=>s.status==='connected').forEach(s=>{
+  // Excluir el motor Hermes/Asistente (id 'hermes') de las fuentes de datos de
+  // negocio: NO es una fuente conectada, es el procesador. Sin esto, la vista
+  // Agentes inflaba el conteo (ej. "6 fuentes" incluyendo "Hermes Agent") cuando
+  // solo había 1 integración real (Excel/CSV) — inconsistencia con Integraciones.
+  (store.sources||[]).filter(s=>s.status==='connected' && s.id !== 'hermes').forEach(s=>{
     const t = s.name + (s.recordCount ? ' ('+s.recordCount+')' : '');
     if (!labels.some(l=>l.indexOf(s.name)===0)) labels.push(t);
   });

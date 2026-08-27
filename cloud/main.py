@@ -899,7 +899,7 @@ async def connector_insight_event(request: Request):
         "VALUES (?,?,?,?,?,?,?,?,?,?)",
         (body.get("id", str(uuid.uuid4())), dev["workspace_id"], body.get("agent", "CEO Copilot"),
          body.get("type", "recommendation"), body.get("priority", "medium"),
-         body.get("title", ""), body.get("description", ""), body.get("source", "Hermes Agent"),
+         body.get("title", ""), body.get("description", ""), body.get("source", "Asistente"),
          body.get("status", "open"), body.get("createdAt", datetime.now(timezone.utc).isoformat())),
     )
     conn.commit()

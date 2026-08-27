@@ -83,7 +83,7 @@ class Bug068NoHermesVisibleTests(unittest.TestCase):
             "Enviar a Hermes", "Hermes listo", "Preparando Hermes",
             "Bot de Hermes activo", "Hermes está pensando", "Hermes respondió",
             "a Hermes", "Ask Hermes", "Ask Hermes about this report",
-            ">Hermes<", "Conexión con Hermes",
+            ">Hermes<", "Conexión con Hermes", "coordinados por Hermes",
         ]:
             self.assertNotIn(bad, html, f"'Hermes' visible en UI: {bad}")
 
@@ -92,6 +92,30 @@ class Bug068NoHermesVisibleTests(unittest.TestCase):
         # Debe haber el reemplazo por Asistente.
         self.assertIn("Asistente", html)
         self.assertIn("Pregunta a VANOVA", html)
+
+
+class Bug068FuentesMotorExcluidoTests(unittest.TestCase):
+    """Punto 3 (Boss): la vista Agentes decía "6 fuentes conectadas" incluyendo
+    "Hermes Agent", pero Integraciones solo mostraba 1 (Excel/CSV). El motor
+    Hermes/Asistente NO es una fuente de datos de negocio y no debe contar."""
+
+    def test_build_connected_source_labels_excluye_motor(self):
+        html = DASHBOARD.read_text(encoding="utf-8")
+        idx = html.find("function buildConnectedSourceLabels()")
+        self.assertGreater(idx, -1, "buildConnectedSourceLabels ausente")
+        block = html[idx:idx + 1000]
+        self.assertIn("s.id !== 'hermes'", block, "no excluye el motor de fuentes conectadas")
+
+    def test_conteo_fuentes_home_excluye_motor(self):
+        html = DASHBOARD.read_text(encoding="utf-8")
+        # El "N fuentes conectadas" de la home debe excluir el motor.
+        self.assertIn("s.status==='connected' && s.id !== 'hermes'", html,
+                      "conteo de fuentes de la home no excluye el motor")
+
+    def test_scanner_renombra_motor_a_asistente(self):
+        src = (ROOT / "desktop" / "runtime" / "business_scanner.py").read_text(encoding="utf-8")
+        self.assertNotIn('"name": "Hermes Agent"', src, "scanner aún expone 'Hermes Agent'")
+        self.assertIn('"name": "Asistente"', src, "scanner no renombra el motor a Asistente")
 
 
 if __name__ == "__main__":

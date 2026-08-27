@@ -785,7 +785,7 @@ def _detect_integrations(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if shutil.which("hermes"):
         detected.append({
             "id": "hermes",
-            "name": "Hermes Agent",
+            "name": "Asistente",
             "status": "connected" if hermes_service.status().get("healthy") else "detected",
             "source": "local",
             "recordCount": 0,
