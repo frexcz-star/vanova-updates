@@ -1787,7 +1787,7 @@ function buildNav(){
         ${g.items.map(it=>{
           const approvalBadge = it.k==='approvals' && (store.pendingApprovals||[]).length
             ? `<span class="nav-badge">${(store.pendingApprovals||[]).length}</span>` : '';
-          // FASE 9 — proactividad: badge de problemas activos en Inicio (🔴)
+          // FASE 9 — proactividad: badge de problemas activos en Inicio
           const problemCount = it.k==='home' ? activeFindingCount('problem') : 0;
           const problemBadge = problemCount ? `<span class="nav-badge" style="background:var(--danger)" title="${problemCount} problema(s) activo(s) detectados">${problemCount}</span>` : '';
           return `
@@ -2645,7 +2645,7 @@ function viewHome(){
     <div id="maios-conn-banner" class="conn-banner hidden"></div>
     <div id="post-update-banner"></div>
     <div class="page-head">
-      <div class="page-title">${greeting()} 👋</div>
+      <div class="page-title">${greeting()}</div>
       <div class="page-sub">${opps} oportunidades · ${risks} riesgos · ${decisions} decisiones pendientes</div>
       <div class="freshness">
         <span class="fdot ${isRealDataMode(store.dataMode)?'':'warn'}"></span>
@@ -3486,7 +3486,7 @@ function scheduledTasksHTML(){
   if (!items.length) return `<div style="font-size:13px;color:var(--text-3);padding:6px 0">Sin tareas programadas. Usa "Nueva tarea" y elige Programar o Repetir.</div>`;
   return items.map(function(it){
     const e = it.e;
-    const when = it.kind === 'once' ? '⏱ ' + fmtDueLocal(e.due) : '🔁 ' + (e.schedule || '');
+    const when = it.kind === 'once' ? fmtDueLocal(e.due) : (e.schedule || '');
     const label = it.kind === 'once' ? 'UNA VEZ' : 'RECURRENTE';
     return `<div class="tasks-sched-item" data-sched-id="${escapeHtml(e.id || '')}">
       <div style="flex:1;min-width:0">
@@ -4511,10 +4511,10 @@ function dataHealthHTML(){
       ${needsReview > 0 ? '<button class="section-link" data-act="data-review">Revisar datos →</button>' : ''}
     </div>
     <div class="grid g-4" style="gap:12px">
-      <div class="metric"><div class="metric-top"><span class="metric-label">🟢 Verificados</span></div><div class="metric-value">${t.verified != null ? t.verified : '—'}</div><div class="metric-foot"><span class="metric-period">con evidencia de fuente o coste</span></div></div>
-      <div class="metric"><div class="metric-top"><span class="metric-label">🟡 Importados</span></div><div class="metric-value">${t.imported != null ? t.imported : '—'}</div><div class="metric-foot"><span class="metric-period">importados, sin verificación externa</span></div></div>
-      <div class="metric"><div class="metric-top"><span class="metric-label">🟠 Revisión</span></div><div class="metric-value">${(h.needsReviewCount||0)}</div><div class="metric-foot"><span class="metric-period">legacy + sin verificar + inconsistentes</span></div></div>
-      <div class="metric"><div class="metric-top"><span class="metric-label">🔴 Inválidos</span></div><div class="metric-value">${h.invalidCount != null ? h.invalidCount : '—'}</div><div class="metric-foot"><span class="metric-period">contradicciones o valores imposibles</span></div></div>
+      <div class="metric"><div class="metric-top"><span class="metric-label"><span class="fdot" style="display:inline-block;background:var(--success)"></span> Verificados</span></div><div class="metric-value">${t.verified != null ? t.verified : '—'}</div><div class="metric-foot"><span class="metric-period">con evidencia de fuente o coste</span></div></div>
+      <div class="metric"><div class="metric-top"><span class="metric-label"><span class="fdot" style="display:inline-block;background:var(--warning)"></span> Importados</span></div><div class="metric-value">${t.imported != null ? t.imported : '—'}</div><div class="metric-foot"><span class="metric-period">importados, sin verificación externa</span></div></div>
+      <div class="metric"><div class="metric-top"><span class="metric-label"><span class="fdot" style="display:inline-block;background:var(--warning)"></span> Revisión</span></div><div class="metric-value">${(h.needsReviewCount||0)}</div><div class="metric-foot"><span class="metric-period">legacy + sin verificar + inconsistentes</span></div></div>
+      <div class="metric"><div class="metric-top"><span class="metric-label"><span class="fdot" style="display:inline-block;background:var(--danger)"></span> Inválidos</span></div><div class="metric-value">${h.invalidCount != null ? h.invalidCount : '—'}</div><div class="metric-foot"><span class="metric-period">contradicciones o valores imposibles</span></div></div>
     </div>
     <div style="margin-top:12px;font-size:12px;color:var(--text-3);line-height:1.6">
       <div><b>Productos</b>: ${verifiedFrac(prod)} · <b>Pedidos</b>: ${verifiedFrac(ord)} · <b>Líneas</b>: ${verifiedFrac(lin)} · <b>Clientes</b>: ${verifiedFrac(cus)}</div>
@@ -4569,7 +4569,7 @@ function pollBusinessNow(){
     if (fresh.length && typeof toast === 'function') {
       fresh.slice(0, 2).forEach(function(x){ _notifiedFindingIds[x.id] = true; });
       const n = fresh.length;
-      const label = fresh[0].category === 'problem' ? '🔴' : (fresh[0].category === 'opportunity' ? '🟡' : '🟢');
+      const label = fresh[0].category === 'problem' ? '[Riesgo]' : (fresh[0].category === 'opportunity' ? '[Oportunidad]' : '[Info]');
       toast((n > 1 ? 'Nuevos hallazgos del motor (' + n + '): ' : 'Nuevo hallazgo: ') + label + ' ' + fresh[0].title);
     }
     if (sig === _liveBusinessSignature) return;
