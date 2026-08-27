@@ -1,6 +1,8 @@
 """VANOVA Desktop Runtime launcher — started by Electron main process."""
 from __future__ import annotations
 
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -143,6 +145,37 @@ def _startup_tasks():
             log.warning("Services bootstrap unavailable: %s", exc)
 
     threading.Thread(target=services_bootstrap, name="maios-services-bootstrap", daemon=True).start()
+
+    def start_cloud_supervisor():
+        """BUG-063: launch an EXTERNAL, DETACHED supervisor for the cloud.
+
+        The in-process watchdog (health_watchdog below) dies with the runtime.
+        If the runtime also dies, nothing relaunches the cloud. Spawn a separate
+        detached process that survives the runtime's death and independently
+        watches cloud (:8000) + runtime (:8765), relaunching whichever is down.
+        """
+        try:
+            from desktop.runtime import cloud_supervisor
+            from desktop.runtime.paths import python_executable
+
+            py = str(python_executable())
+            script = Path(cloud_supervisor.__file__)
+            env = dict(os.environ)
+            env["PYTHONPATH"] = str(Path(__file__).resolve().parent.parent.parent)
+            subprocess.Popen(
+                [py, str(script)],
+                cwd=str(Path(__file__).resolve().parent.parent.parent),
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS
+                if os.name == "nt" else 0,
+            )
+            log.info("Cloud supervisor spawned (detached)")
+        except Exception as exc:
+            log.warning("Cloud supervisor spawn failed: %s", exc)
+
+    threading.Thread(target=start_cloud_supervisor, name="maios-cloud-supervisor", daemon=True).start()
 
     def health_watchdog():
         time.sleep(10)
