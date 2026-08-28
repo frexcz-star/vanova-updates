@@ -2804,7 +2804,7 @@ function ceoBanner(){
   const today = fmtLocaleDate(new Date());
   return `<div class="brief-head">
     <div>
-      <h2>${companyName()} — Daily Executive Brief</h2>
+      <h2>${companyName()} — Informe Ejecutivo Diario</h2>
       <div class="d">${today} · Generado por Copiloto de Dirección</div>
     </div>
     <div><button class="btn btn-primary" data-go="ceobrief">${ic('award')} Ver informe</button></div>
@@ -5639,7 +5639,7 @@ function viewCeo(){
     <div class="brief-head">
       <div>
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px">${companyName()}</div>
-        <h2>Daily Executive Brief</h2>
+        <h2>Informe Ejecutivo Diario</h2>
         <div class="d">${fmtLocaleDate(new Date())} · El estado completo de la empresa en un minuto</div>
       </div>
       <button class="btn btn-primary" data-act="askhermes">${ic('spark')} Preguntar al Asistente sobre este informe</button>

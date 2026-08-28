@@ -46,6 +46,12 @@ class Bug066GreetingSpanishTests(unittest.TestCase):
         self.assertIn("Buenas tardes", block)
         self.assertNotIn("Good", block)
 
+    def test_copy_informe_en_espanol(self):
+        """Regla UI en español: el título del informe no debe estar en inglés."""
+        html = DASHBOARD.read_text(encoding="utf-8")
+        self.assertNotIn("Daily Executive Brief", html, "copy en inglés visible")
+        self.assertIn("Informe Ejecutivo Diario", html, "título del informe en español ausente")
+
 
 if __name__ == "__main__":
     unittest.main()
