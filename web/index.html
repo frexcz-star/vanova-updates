@@ -7143,31 +7143,47 @@ function buildNotificationsBody(){
   return parts.join('');
 }
 function updateBellBadge(){
-  const bell = document.getElementById('hdr-bell');
-  if (!bell) return;
-  const badge = bell.querySelector('.badge');
-  if (!badge) return;
-  // VANOVA 3.0.1 / BUG-036 — el badge de la campana debe reflejar lo MISMO que
-  // muestra el drawer de notificaciones (buildNotificationsBody): aprobaciones
-  // pendientes (guardrails), riesgos (priorities type=risk), decisiones y
-  // archivos sugeridos. Antes contaba store.pendingApprovals (approval_store),
-  // que es un sistema DISTINTO al que el drawer pinta (guardrails) -> el badge
-  // y el contenido del drawer divergían (contador "mal" o "no se actualiza").
-  const gr = (store.guardrails || []).length;
-  const risks = (store.priorities || []).filter(function(p){ return p.type === 'risk'; }).length;
-  const decisions = (store.decisions || []).filter(function(dc){ return (dc.status||'pending') === 'pending'; }).length;
-  const files = (store.fileCandidates || []).length;
-  // BUG-036 (no duplicar findings): los insights kind='finding' del motor se
-  // convierten en priorities type='risk' (prioritization.build_priorities) que
-  // el drawer SÍ lista como "Riesgos detectados". Contar además newInsights
-  // (findings kind='finding' status='new') duplicaba cada riesgo en el badge
-  // (badge > drawer). El badge cuenta SOLO lo que el drawer lista, por lo que
-  // newInsights NO se suma: los risks ya los representan.
-  const pending = gr + risks + decisions + files;
-  badge.style.opacity = pending > 0 ? '1' : '0';
-  badge.textContent = pending > 0 ? String(pending) : '';
-  // PASO 1: Actualizar hero Valor Capturado (rediseño dashboard)
-  updateHeroValorCapturado(gr, risks, decisions, files);
+  try {
+    const bell = document.getElementById('hdr-bell');
+    if (!bell) return;
+    const badge = bell.querySelector('.badge');
+    if (!badge) return;
+    // VANOVA 3.0.1 / BUG-036 — el badge de la campana debe reflejar lo MISMO que
+    // muestra el drawer de notificaciones (buildNotificationsBody): aprobaciones
+    // pendientes (guardrails), riesgos (priorities type=risk), decisiones y
+    // archivos sugeridos. Antes contaba store.pendingApprovals (approval_store),
+    // que es un sistema DISTINTO al que el drawer pinta (guardrails) -> el badge
+    // y el contenido del drawer divergían (contador "mal" o "no se actualiza").
+    const gr = (store.guardrails || []).length;
+    const risks = (store.priorities || []).filter(function(p){ return p.type === 'risk'; }).length;
+    const decisions = (store.decisions || []).filter(function(dc){ return (dc.status||'pending') === 'pending'; }).length;
+    const files = (store.fileCandidates || []).length;
+    // BUG-036 (no duplicar findings): los insights kind='finding' del motor se
+    // convierten en priorities type='risk' (prioritization.build_priorities) que
+    // el drawer SÍ lista como "Riesgos detectados". Contar además newInsights
+    // (findings kind='finding' status='new') duplicaba cada riesgo en el badge
+    // (badge > drawer). El badge cuenta SOLO lo que el drawer lista, por lo que
+    // newInsights NO se suma: los risks ya los representan.
+    const pending = gr + risks + decisions + files;
+    badge.style.opacity = pending > 0 ? '1' : '0';
+    badge.textContent = pending > 0 ? String(pending) : '';
+    // PASO 1: Actualizar hero Valor Capturado (rediseño dashboard)
+    // LEAD round 98: updateHeroValorCapturado toca 6+ elementos DOM del hero y
+    // llama formatCurrency. Si un elemento falta (vista/build vieja sin hero, o
+    // un null) lanza TypeError -> abortaba updateBellBadge SILENCIOSAMENTE y el
+    // badge quedaba STALE (síntoma exacto "no se actualiza"). Envolver el hero en
+    // try/catch para que el badge SIEMPRE se pinte aunque el hero falle.
+    try {
+      updateHeroValorCapturado(gr, risks, decisions, files);
+    } catch (e) {
+      // No dejar que un fallo del hero rompa el badge de la campana.
+      if (window.console && console.warn) console.warn('VANOVA: updateHeroValorCapturado falló, el badge se pinta igual:', e);
+    }
+  } catch (e) {
+    // Defensa última: updateBellBadge nunca debe lanzar (se llama desde el poll,
+    // loadAppData y handlers). Si algo falla, dejar el badge sin tocar.
+    if (window.console && console.warn) console.warn('VANOVA: updateBellBadge error', e);
+  }
 }
 function updateHeroValorCapturado(gr, risks, decisions, files){
   const hero = document.getElementById('hero-valor-capturado');
