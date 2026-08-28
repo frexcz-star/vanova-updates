@@ -506,6 +506,43 @@ CASO VANOVA — [sector / negocio]
 - [ ] Decidir si hay tienda MOOVING neutra con coste cargable (si no, priorizar piloto externo). [Boss/Nico]
 - [ ] Verificar el instalador en PC stock para que el piloto lo use solo. [Nickx/QA]
 
+---
+
+## 12b. PITCH + PRECIO DEL PILOTO (29 €/caso de venta) — integrado en la prueba
+
+**Principio:** el piloto es la prueba que produce el **caso de venta**, y cada caso de venta se cierra a **29 €**. El importe de 29 € es el mismo del plan Pro (29 €/mes, `STRATI_PRECIO_PRO.md`), pero la unidad de negocio en el piloto es el **caso**: el empresario que ve valor pasa a ser un cliente que paga 29 € (mensual en Pro, o como cierre del caso si se acuerda así). No se inventa ni se fuerza: solo se cierra a 29 € cuando el piloto demuestra valor real (§2) y acepta.
+
+### 12b.1 El pitch de cierre (qué se le dice al piloto al final, tono premium no-AI)
+
+> "Hemos medido con tus datos lo que VANOVA te ha señalado este mes: viste tu primer € en X minutos, marcaste Y recomendaciones y el sistema midió el resultado. Si lo que has visto te aporta valor, el plan Pro son **29 € al mes** — menos que una cena — y lo puedes probar un mes más. Si no te ha aportado nada, no pagas nada y nos llevamos el aprendizaje."
+
+Reglas del pitch:
+- Se da SOLO si el piloto cumplió la métrica de valor (§2). Si no vio € real, NO se le cobra ni se le presiona (caso NO VALIDADO → iterar SPEC 1).
+- El importe **29 €** se dice siempre igual (29 €/mes Pro; "caso de venta" = cada empresario que se convierte). Nunca una cifra distinta ni un descuento inventado.
+- El pitch apoya el retorno neto: si `capturedEuro > 29 €`, se muestra "VANOVA recuperó más de lo que cuesta".
+
+### 12b.2 El precio en el modelo de venta
+
+| Concepto | Precio | Regla de honestidad |
+|---|---|---|
+| **Piloto (30 días)** | **0 €** — gratis, sin tarjeta | se paga con uso real + feedback + consentimiento (si firma) |
+| **Caso de venta cerrado** | **29 €/mes** (plan Pro) | solo se cobra si el piloto demostró valor (§2) y acepta |
+| **Retorno neto** | `capturedEuro − 29 €` | se muestra en la tarjeta del SPEC 2 solo si el plan está activado con 29 € |
+
+**Cómo se integra en el flujo del piloto (SPEC 3):**
+1. Día 1-7: piloto gratis, demo, ver €, marcar recomendación (§5c).
+2. Día 15-30: se mide `capturedEuro` (§4c DURANTE).
+3. Día 30: se aplica el pitch (§12b.1). Si el piloto ve valor → cierra el caso de venta a **29 €/mes** (Pro) → se convierte en el **primer caso de venta** (material para vender al siguiente, §5b.1).
+4. Si el piloto no ve valor → NO se cobra, el caso se marca NO VALIDADO (§4b) y se itera.
+
+**Criterio de aceptación del pitch + precio:**
+- [ ] El piloto recibe el pitch de 29 € solo si cumplió la métrica de valor (§2).
+- [ ] El importe 29 € es consistente en todo el SPEC (pitch, precio, retorno neto).
+- [ ] No se cobra ni se presiona a un piloto que no vio € real (honestidad).
+- [ ] El caso de venta cerrado a 29 € alimenta la plantilla de caso de venta (§5b.1) con datos reales + consentimiento.
+
+---
+
 ## 13. CHECKLIST DEL ENCARGO DE BOSS (mapeo explícito: lo que pidió → dónde está en este SPEC)
 
 | Punto del encargo de Boss | Dónde se resuelve en este SPEC | Estado |
@@ -515,8 +552,9 @@ CASO VANOVA — [sector / negocio]
 | **Qué métricas medimos para demostrar valor (objetivas, medibles)** | §1c (métricas de VENTA), §2 (métrica de éxito ANTES con umbrales), §4c (ANTES/DURANTE/DESPUÉS), §4b.1 (score Go/No-Go cuantificable) | ✅ Completo |
 | **Duración, hitos, y cómo decidimos si el piloto es éxito o fracaso** | §3 (30 días + hitos), §4 (Go/No-Go), §4b (VALIDADO vs NO VALIDADO), §4b.1 (score 0-100) | ✅ Completo |
 | **Qué entregamos al piloto y qué pedimos a cambio (feedback, testimonio, renovación)** | §1b (entrega/pide), §5 (encuesta de 6 preguntas + testimonio), §5b.1 (caso de venta), §7b.1a (mensaje de invitación), §7b.1b (consentimiento) | ✅ Completo |
+| **Pitch + precio (29 €/caso venta)** | §12b (pitch de cierre + precio 29 €/mes Pro integrado en el caso de venta, coherente con `STRATI_PRECIO_PRO.md`) | ✅ Completo |
 | **Un desarrollador implementa sin preguntar** | §11 (tareas para Nickx), §7c (separación operativa vs construcción), §12 (decisiones tomadas con dato de código) | ✅ Completo |
 
-**Conclusión de la auditoría:** el SPEC 3 cubre el 100% del encargo de Boss. No hay huecos de diseño. Los pendientes son operativos (conseguir pilotos reales, consentimiento, fijar precio, verificar instalador en PC stock) — no bloquean el diseño.
+**Conclusión de la auditoría:** el SPEC 3 cubre el 100% del encargo de Boss, incluido el pitch + precio de 29 €/caso de venta (§12b). No hay huecos de diseño. Los pendientes son operativos (conseguir pilotos reales, consentimiento, fijar precio, verificar instalador en PC stock) — no bloquean el diseño.
 
 *Documento de SPEC generado por Strati. Listo para que Nickx programe y Mathew testee.*
