@@ -706,7 +706,7 @@
       }
       if (diagnostics.correlationId) {
         sysHtml +=
-          '<div class="diag-sub">Correlation ID: <code class="diag-code">' +
+          '<div class="diag-sub">ID de correlación: <code class="diag-code">' +
           diagnostics.correlationId +
           "</code></div>";
       }
