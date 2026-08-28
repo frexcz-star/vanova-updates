@@ -2480,7 +2480,7 @@ function homeSystemStatusHTML(){
     </div>
     <div class="sys-tiles">
       <div class="sys-tile"><div class="st-k" style="color:#8b7cf6">${ic('cpu')} Agentes</div><div class="st-v st-ok">${agentsActive} Activo</div></div>
-      <div class="sys-tile"><div class="st-k" style="color:#38bdf8">${ic('spark')} Hermes</div><div class="st-v ${hermesOk ? 'st-ok' : 'st-warn'}">${hermesOk ? 'Activo' : 'Offline'}</div></div>
+      <div class="sys-tile"><div class="st-k" style="color:#38bdf8">${ic('spark')} Hermes</div><div class="st-v ${hermesOk ? 'st-ok' : 'st-warn'}">${hermesOk ? 'Activo' : 'Desconectado'}</div></div>
       <div class="sys-tile"><div class="st-k" style="color:#34d399">${ic('link')} Integraciones</div><div class="st-v st-ok">${integs} conectada${integs === 1 ? '' : 's'}</div></div>
       <div class="sys-tile"><div class="st-k" style="color:#fbbf24">${ic('database')} Base de datos</div><div class="st-v ${dbOk ? 'st-ok' : 'st-warn'}">${dbOk ? 'Saludable' : 'Pendiente'}</div></div>
     </div>
@@ -2728,7 +2728,7 @@ function agentColor(name){
 function statusDot(status){
   const map = {success:'ok',info:'info',warning:'warn',danger:'err',neutral:'neutral',running:'info',queued:'info',error:'err',offline:'err',idle:'neutral',waiting:'info',completed:'ok',failed:'err',needs_approval:'warn',timed_out:'err',cancelled:'neutral',blocked:'warn'};
   const cls = map[status]||'neutral';
-  const labels = {success:'Completado',info:'En curso',warning:'Atención',danger:'Error',neutral:'—',running:'En ejecución',queued:'En cola',error:'Error',offline:'Offline',idle:'Inactivo',waiting:'En espera',completed:'Completado',failed:'Error',needs_approval:'Aprobación',timed_out:'Expiró',cancelled:'Cancelado',blocked:'Bloqueado'};
+  const labels = {success:'Completado',info:'En curso',warning:'Atención',danger:'Error',neutral:'—',running:'En ejecución',queued:'En cola',error:'Error',offline:'Desconectado',idle:'Inactivo',waiting:'En espera',completed:'Completado',failed:'Error',needs_approval:'Aprobación',timed_out:'Expiró',cancelled:'Cancelado',blocked:'Bloqueado'};
   return `<span class="status-label"><span class="status-dot ${cls}"></span>${labels[status]||status}</span>`;
 }
 function normalizeAgentStatus(s){
@@ -5919,7 +5919,7 @@ function markHermesVerifiedFromHealth(health) {
 }
 
 function hermesStatusHTML(online, message) {
-  const label = online ? 'Conectado' : (message || 'Offline');
+  const label = online ? 'Conectado' : (message || 'Desconectado');
   return '<span class="status-label"><span class="status-dot ' + (online ? 'ok' : 'err') + '"></span>' + label + '</span>';
 }
 

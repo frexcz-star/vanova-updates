@@ -320,11 +320,13 @@ VANOVA permite registrar el coste en estas categorías, cada una con su fuente y
 
 | Categoría de coste | Qué es | Cómo se registra | Dónde se muestra |
 |---|---|---|---|
-| **Material / producto** | coste del producto vendido (proveedor) | coste por SKU (CSV/FacturaScripts) o alta manual "una línea a la vez" | margen por producto, cross-sell, "pierdes ≈ Z €/mes" |
+| **Material / producto** | coste del producto vendido (proveedor) | coste por SKU (CSV/FacturaScripts/Leclerc) o alta manual "una línea a la vez" | margen por producto, cross-sell, "pierdes ≈ Z €/mes" |
 | **Mano de obra** | coste de personal/operación | input declarado (€/mes o €/hora) en la Pantalla 4b o Excel de gastos | framing "coste por hora", señal "te estás dejando X €" |
 | **Energía / suministros** | electricidad, agua, etc. | Excel de gastos (importe + periodo) | señal de gastos (riesgo) |
 | **Subcontratación** | coste de servicios externos | Excel de gastos | señal de gastos (riesgo) |
 | **Otros** | cualquier gasto operativo | Excel de gastos (importe + periodo) | señal de gastos (riesgo) |
+
+**Integración de costes adicional — LECLERC (Excel de precios netos):** Leclerc es una **fuente de costes real** de MOOVING/VANOVA, ingerida vía Excel de precios netos (`NET_PRICE_LECLERC_ENGLISH_FORMATTED.xlsx`), procesada por `ingest_catalog.py` (raíz del repo) y cargada en el catálogo (referencia en `benchmark-sandbox/real-company/VANOVA/config/maios.json` como `sourceReference`). Aporta el **coste del producto (precio neto por SKU)** → alimenta la señal de margen por producto y el "pierdes ≈ Z €/mes" de la misma forma que el CSV/FacturaScripts. **Regla de honestidad:** el dato de Leclerc sale de ese Excel real ingerido; si falta el SKU o el precio neto, se marca `UNKNOWN`/sin dato, nunca se inventa.
 
 **Regla de honestidad:** ninguna categoría se rellena con un número inventado. Si el empresario no declara mano de obra o energía, esa categoría simplemente no aparece en la señal de gastos (vacío honesto, nunca "0 €").
 
@@ -334,7 +336,7 @@ VANOVA permite registrar el coste en estas categorías, cada una con su fuente y
 |---|---|---|---|---|
 | 1 | **Ventas/pedidos** | Shopify (`Order` → `line_items`) o Excel/CSV | fecha, cliente, SKU, qty, total | base del margen, cross-sell, AOV |
 | 2 | **Catálogo** | Shopify (`Product` → `variants`) o CSV | SKU, nombre, precio_venta | identifica qué se vende y a qué precio |
-| 3 | **Coste por SKU** | FacturaScripts (`articulos.preciocoste`, BUG-033) o CSV de costes / alta manual / margen global declarado | coste por SKU (o `globalMarginPct`) | el que convierte ventas en **€ de margen** (P4) |
+| 3 | **Coste por SKU** | FacturaScripts (`articulos.preciocoste`, BUG-033), CSV de costes, **Leclerc (Excel de precios netos vía `ingest_catalog.py`)** o alta manual / margen global declarado | coste por SKU (o `globalMarginPct`) | el que convierte ventas en **€ de margen** (P4) |
 | 4 | **(opcional) Gastos** | Excel de gastos operativos | importe + periodo | amplía "te estás dejando X €" (riesgo), no bloquea |
 | 5 | **(opcional) Coste mensual proveedor** | declarado por el usuario (P4b) | coste_mensual + proveedor/categoría | dispara el "aha" de coste mensual |
 

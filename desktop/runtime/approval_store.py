@@ -61,9 +61,22 @@ def create_approval(
     reason: str = "",
 ) -> dict[str, Any]:
     init_db()
+    conn = _connect()
+    # BUG-008: deduplicar aprobaciones. Una misma tarea+acción no debe generar
+    # solicitudes de aprobación duplicadas (p.ej. si la política se re-evalúa para
+    # la misma tarea). Si ya existe una 'pending' con la misma (task_id, action),
+    # se devuelve esa en vez de crear otra.
+    existing = conn.execute(
+        "SELECT * FROM approvals WHERE workspace_id=? AND task_id=? AND action=? AND status='pending' "
+        "ORDER BY created_at ASC LIMIT 1",
+        (_workspace_id(), str(task_id), str(action)),
+    ).fetchone()
+    if existing:
+        conn.close()
+        return _row_to_dict(existing)
+
     approval_id = str(uuid.uuid4())
     now = _now()
-    conn = _connect()
     conn.execute(
         """INSERT INTO approvals
            (id, workspace_id, task_id, agent_id, action, risk_level, reason, status, created_at)

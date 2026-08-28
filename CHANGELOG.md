@@ -3,6 +3,17 @@
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/).
 Las versiones siguen [SemVer](https://semver.org/lang/es/).
 
+## [3.2.1] — 2026-08-28
+
+### Corregido
+- Dashboard ahora muestra datos reales (revenue, clientes, ventas).
+- Empresa unificada a "BlisArtPaper" en toda la app.
+- Perfil Hermes `vanova-sales-analyst` creado correctamente (reconciliación del slug canónico).
+- Textos localizados a español ("Offline" → "Desconectado").
+- Aprobaciones duplicadas eliminadas.
+- Stacktraces ocultas al usuario; mensajes amigables (el detalle completo queda en los logs del servidor).
+- Ventana abre en monitor primario.
+
 ## [3.1.2] — 2026-08-21
 
 ### Añadido — PRODUCTO (hacia el MVP vendible)

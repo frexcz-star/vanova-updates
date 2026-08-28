@@ -294,8 +294,8 @@ class Handler(BaseHTTPRequestHandler):
         except RuntimeError as exc:
             return self._json({"error": str(exc)}, 503)
         except Exception as exc:
-            log.error("GET %s failed: %s", path, exc)
-            return self._json({"error": str(exc)}, 500)
+            log.exception("GET %s failed: %s", path, exc)
+            return self._json({"error": "Error al procesar la solicitud. Revisa el log para más detalles."}, 500)
         finally:
             self._clear_request_context()
         self._json({"error": "Not found"}, 404)
@@ -980,8 +980,8 @@ class Handler(BaseHTTPRequestHandler):
         except RuntimeError as exc:
             return self._json({"error": str(exc)}, 503)
         except Exception as exc:
-            log.error("POST %s failed: %s", path, exc)
-            return self._json({"error": str(exc)}, 500)
+            log.exception("POST %s failed: %s", path, exc)
+            return self._json({"error": "Error al procesar la solicitud. Revisa el log para más detalles."}, 500)
         finally:
             self._clear_request_context()
 

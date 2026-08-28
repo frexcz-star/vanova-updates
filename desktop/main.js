@@ -1,4 +1,4 @@
-﻿const { app, BrowserWindow, ipcMain, shell, session, Tray, Menu, Notification } = require('electron');
+﻿const { app, BrowserWindow, ipcMain, shell, session, Tray, Menu, Notification, screen } = require('electron');
 const path = require('path');
 const { spawn, execSync } = require('child_process');
 const fs = require('fs');
@@ -815,6 +815,25 @@ async function loadDashboardContent(win) {
   }
 }
 
+// BUG-004: por defecto la ventana debe abrirse en el MONITOR PRIMARIO. Sin x/y
+// explicito, Electron/Chromium puede colocar la ventana donde el SO "recuerda"
+// la ultima posicion (que suele quedar en un monitor secundario o fuera de
+// pantalla). Centramos explicitamente sobre el area de trabajo del display
+// primario en cada creacion de ventana.
+function centerOnPrimaryDisplay(win, width, height) {
+  try {
+    const primary = screen.getPrimaryDisplay();
+    const wa = primary.workArea;
+    win.setPosition(
+      Math.round(wa.x + (wa.width - width) / 2),
+      Math.round(wa.y + (wa.height - height) / 2)
+    );
+  } catch (e) {
+    // Si algo falla (sin display, etc.) dejamos el centrado por defecto del SO.
+    if (win && typeof win.center === 'function') { try { win.center(); } catch (_e) {} }
+  }
+}
+
 function createSetupWindow() {
   if (mainWindow) {
     mainWindow.focus();
@@ -834,6 +853,7 @@ function createSetupWindow() {
     autoHideMenuBar: true,
     frame: true,
   });
+  centerOnPrimaryDisplay(mainWindow, 960, 640);
 
   attachShellLoadHandlers(mainWindow, 'Setup');
   mainWindow.once('ready-to-show', () => mainWindow.show());
@@ -859,6 +879,7 @@ async function createDashboardWindow() {
     webPreferences: dashboardWebPreferences(),
     autoHideMenuBar: true,
   });
+  centerOnPrimaryDisplay(dashboardWindow, 1400, 900);
 
   attachDashboardLoadHandlers(dashboardWindow);
   dashboardWindow.once('ready-to-show', () => {

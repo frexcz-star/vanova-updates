@@ -314,7 +314,18 @@ def build_company_model(data: dict[str, Any] | None = None, *, now: datetime | N
         "modelVersion": MODEL_VERSION,
         "builtAt": _now(),
         "company": {
-            "name": str(data.get("companyName") or data.get("companyProfile") and (data.get("companyProfile") or {}).get("name") or ""),
+            # BUG-002: una unica fuente de verdad para el nombre de empresa. El
+            # nombre vive en companyProfile.identity.name (lo mismo que usa
+            # business_scanner para overview.companyName). Antes solo se miraba
+            # `companyName` (top-level) o `companyProfile.name` (que no existe:
+            # el nombre esta en `.identity.name`), por lo que companyModel
+            # quedaba "" y divergia del dashboard.
+            "name": str(
+                data.get("companyName")
+                or ((data.get("companyProfile") or {}).get("identity") or {}).get("name")
+                or (data.get("companyProfile") or {}).get("name")
+                or ""
+            ),
         },
         "revenuePeriods": periods,
         "summary": {

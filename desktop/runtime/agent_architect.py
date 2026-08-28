@@ -298,6 +298,15 @@ def list_agents() -> list[dict[str, Any]]:
     for agent in agents:
         row = dict(agent)
         agent_id = agent.get("id")
+        # BUG-007: reconciliar hermesBot al slug canónico (agent_slug). Evita que
+        # un valor persistido obsoleto (p.ej. 'vanova-sales-analyst') apunte a un
+        # perfil que no existe cuando el real es 'vanova-agente-de-ventas'.
+        try:
+            from . import agent_hermes_bot
+            if (row.get("hermesBot") or row.get("hermes_bot")):
+                row["hermesBot"] = agent_hermes_bot.agent_slug(agent)
+        except Exception:  # noqa: BLE001
+            pass
         latest = latest_task_by_agent.get(agent_id) or {}
         task_status = latest.get("status")
         if task_status == "running":
